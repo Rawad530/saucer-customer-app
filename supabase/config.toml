@@ -1,0 +1,4 @@
+project_id = "kgambgofdizxgcdjhxlk"
+
+[functions.send-backup-email]
+verify_jwt = false
