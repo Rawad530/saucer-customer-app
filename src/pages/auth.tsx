@@ -1,3 +1,5 @@
+// Copy this entire block and paste it into your auth.tsx file
+
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient'; // Make sure this file exists
 
@@ -6,11 +8,16 @@ const Auth = () => {
   const [email, setEmail] = useState('');
 
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault(); // This stops the page from reloading
+    event.preventDefault();
     setLoading(true);
 
+    // THIS IS THE MODIFIED PART
     const { error } = await supabase.auth.signInWithOtp({
       email: email,
+      options: {
+        // This line tells Supabase to send the user back to the current website's address
+        emailRedirectTo: window.location.origin,
+      },
     });
 
     if (error) {
