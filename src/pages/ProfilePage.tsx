@@ -16,28 +16,23 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [message, setMessage] = useState(''); // For success/error messages
 
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true);
-      // Get the currently logged-in user
       const { data: { user } } = await supabase.auth.getUser();
 
       if (user) {
         setUser(user);
-        // Fetch the profile from our new 'customer_profiles' table
         const { data, error } = await supabase
           .from('customer_profiles')
           .select('full_name, phone, stamps')
           .eq('id', user.id)
           .single();
 
-        if (error) {
-          console.error('Error fetching profile:', error);
-        }
-        if (data) {
-          setProfile(data);
-        }
+        if (error) console.error('Error fetching profile:', error);
+        if (data) setProfile(data);
       }
       setLoading(false);
     };
@@ -45,7 +40,39 @@ const ProfilePage = () => {
     fetchProfile();
   }, []);
 
-  if (loading) {
+  // NEW: Function to handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (profile) {
+      setProfile({ ...profile, [e.target.name]: e.target.value });
+    }
+  };
+
+  // NEW: Function to save the updated profile to Supabase
+  const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!user || !profile) return;
+
+    setLoading(true);
+    setMessage('');
+    
+    const { error } = await supabase
+      .from('customer_profiles')
+      .update({
+        full_name: profile.full_name,
+        phone: profile.phone,
+      })
+      .eq('id', user.id);
+
+    if (error) {
+      setMessage('Error: Could not update profile.');
+      console.error(error);
+    } else {
+      setMessage('Profile updated successfully!');
+    }
+    setLoading(false);
+  };
+
+  if (loading && !profile) {
     return <div className="text-white text-center p-8">Loading profile...</div>;
   }
 
@@ -60,26 +87,51 @@ const ProfilePage = () => {
           <h1 className="text-3xl font-bold">Your Profile</h1>
         </div>
 
-        <div className="space-y-4">
+        {/* MODIFIED: This is now a form */}
+        <form onSubmit={handleUpdateProfile} className="space-y-4">
           <div>
             <label className="text-sm font-bold text-gray-400">Email</label>
-            <p className="w-full px-4 py-2 text-white bg-gray-700 rounded-md mt-1">{user.email}</p>
+            <p className="w-full px-4 py-2 text-gray-300 bg-gray-700/50 rounded-md mt-1">{user.email}</p>
           </div>
           <div>
-            <label className="text-sm font-bold text-gray-400">Full Name</label>
-            <p className="w-full px-4 py-2 text-white bg-gray-700 rounded-md mt-1">{profile.full_name || 'Not set'}</p>
+            <label htmlFor="full_name" className="text-sm font-bold text-gray-400">Full Name</label>
+            <input
+              id="full_name"
+              name="full_name"
+              type="text"
+              value={profile.full_name || ''}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2 text-white bg-gray-700 border border-gray-600 rounded-md mt-1 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
           </div>
           <div>
-            <label className="text-sm font-bold text-gray-400">Phone</label>
-            <p className="w-full px-4 py-2 text-white bg-gray-700 rounded-md mt-1">{profile.phone || 'Not set'}</p>
+            <label htmlFor="phone" className="text-sm font-bold text-gray-400">Phone</label>
+            <input
+              id="phone"
+              name="phone"
+              type="text"
+              value={profile.phone || ''}
+              onChange={handleInputChange}
+              className="w-full px-4 py-2 text-white bg-gray-700 border border-gray-600 rounded-md mt-1 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            />
           </div>
           <div>
             <label className="text-sm font-bold text-gray-400">Loyalty Stamps</label>
-            <p className="w-full px-4 py-2 text-white bg-gray-700 rounded-md mt-1">{profile.stamps}</p>
+            <p className="w-full px-4 py-2 text-gray-300 bg-gray-700/50 rounded-md mt-1">{profile.stamps}</p>
           </div>
-        </div>
 
-        <div className="text-center pt-4">
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full px-4 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700 disabled:bg-gray-500"
+          >
+            {loading ? 'Saving...' : 'Update Profile'}
+          </button>
+
+          {message && <p className="text-center text-green-400 text-sm">{message}</p>}
+        </form>
+
+        <div className="text-center pt-2">
            <Link to="/" className="text-sm text-amber-400 hover:underline">
             Back to Account
            </Link>
