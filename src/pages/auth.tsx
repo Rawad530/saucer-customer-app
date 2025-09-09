@@ -104,4 +104,18 @@ const Auth = () => {
           <>
             <p className="text-center text-gray-400">We sent a code to {phone}. Please enter it below.</p>
             <form className="space-y-6" onSubmit={handlePhoneVerifyOtp}>
-              <div><input className="w-full px-4 py-2 text-
+              <div><input className="w-full px-4 py-2 text-white bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500" type="text" placeholder="123456" value={otp} required={true} onChange={(e) => setOtp(e.target.value)} /></div>
+              <button className="w-full px-4 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:bg-gray-500" type="submit" disabled={loading}>{loading ? 'Verifying...' : 'Verify & Sign In'}</button>
+            </form>
+            <div className="text-center">
+              <button onClick={() => setOtpSent(false)} className="text-sm text-amber-400 hover:underline">Use a different phone number</button>
+            </div>
+          </>
+        )}
+
+      </div>
+    </div>
+  );
+};
+
+export default Auth;
