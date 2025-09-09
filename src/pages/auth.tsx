@@ -18,7 +18,16 @@ const Auth = () => {
     event.preventDefault();
     setLoading(true);
     if (isSignUp) {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      // MODIFIED: Added user_type metadata for new sign-ups
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            user_type: 'customer'
+          }
+        }
+      });
       if (error) alert(error.message);
       else if (data.user && data.user.identities?.length === 0) alert('This email is already in use.');
       else alert('Account created! Check your email to verify.');
@@ -32,8 +41,14 @@ const Auth = () => {
   const handlePhoneSendOtp = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
+    // MODIFIED: Added user_type metadata for new sign-ups via phone
     const { error } = await supabase.auth.signInWithOtp({
       phone: phone,
+      options: {
+        data: {
+          user_type: 'customer'
+        }
+      }
     });
     if (error) {
       alert(error.message);
