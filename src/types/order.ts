@@ -1,4 +1,3 @@
-
 export interface MenuItem {
   id: string;
   name: string;
@@ -31,4 +30,19 @@ export interface Order {
   totalPrice: number;
   status: OrderStatus;
   paymentMode: PaymentMode;
+  remarks?: string;
+  user_id?: string;
+  created_by_email?: string;
+}
+
+export interface OrderItem {
+  menuItem: MenuItem;
+  quantity: number;
+  sauce?: string;
+  sauceCup?: string;
+  drink?: string;
+  addons: string[];
+  spicy: boolean;
+  remarks?: string;
+  discount?: number; // Add this line
 }
