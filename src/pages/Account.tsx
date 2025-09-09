@@ -1,7 +1,10 @@
+// src/pages/Account.tsx
+
+import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
-import QRCode from "react-qr-code"; // <-- 1. IMPORT THE NEW COMPONENT
+import QRCode from "react-qr-code";
 
 const Account = ({ session }: { session: Session }) => {
   const [loading, setLoading] = useState(true);
@@ -13,9 +16,10 @@ const Account = ({ session }: { session: Session }) => {
         setLoading(true);
         const { user } = session;
 
+        // CORRECTED: Fetches from the new 'customer_profiles' table and 'stamps' column
         const { data, error } = await supabase
-          .from('profiles')
-          .select(`stamp_count`)
+          .from('customer_profiles')
+          .select(`stamps`)
           .eq('id', user.id)
           .single();
 
@@ -24,7 +28,7 @@ const Account = ({ session }: { session: Session }) => {
         }
 
         if (data) {
-          setStampCount(data.stamp_count);
+          setStampCount(data.stamps);
         }
       } catch (error) {
         if (error instanceof Error) {
@@ -49,10 +53,9 @@ const Account = ({ session }: { session: Session }) => {
     <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900 text-white">
       <div className="w-full max-w-sm p-8 space-y-6 bg-gray-800 rounded-lg shadow-md text-center">
 
-        {/* 2. WE ADD A CONTAINER FOR THE QR CODE */}
         <div className="bg-white p-4 rounded-md"> 
           <QRCode
-            value={session.user.id} // <-- 3. THE QR CODE'S VALUE IS THE USER'S ID
+            value={session.user.id}
             size={256}
             viewBox={`0 0 256 256`}
           />
@@ -65,6 +68,13 @@ const Account = ({ session }: { session: Session }) => {
           <p>Your Stamps: {loading ? '...' : stampCount}</p>
         </div>
 
+        {/* ADDED: The "View Profile" button, which links to the new page */}
+        <Link to="/profile">
+          <button className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
+            View Profile
+          </button>
+        </Link>
+        
         <button
           className="w-full px-4 py-2 font-bold text-white bg-red-600 rounded-md hover:bg-red-700"
           type="button"
