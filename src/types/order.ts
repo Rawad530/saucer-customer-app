@@ -18,7 +18,7 @@ export interface OrderItem {
   remarks?: string;
 }
 
-export type OrderStatus = 'preparing' | 'completed';
+export type OrderStatus = 'pending_approval' | 'preparing' | 'completed' | 'rejected' | 'cancelled';
 
 export type PaymentMode = 'Card - Terminal' | 'Bank Transfer' | 'Cash';
 
