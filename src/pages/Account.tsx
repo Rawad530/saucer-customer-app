@@ -16,7 +16,6 @@ const Account = ({ session }: { session: Session }) => {
         setLoading(true);
         const { user } = session;
 
-        // CORRECTED: Fetches from the new 'customer_profiles' table and 'stamps' column
         const { data, error } = await supabase
           .from('customer_profiles')
           .select(`stamps`)
@@ -68,7 +67,6 @@ const Account = ({ session }: { session: Session }) => {
           <p>Your Stamps: {loading ? '...' : stampCount}</p>
         </div>
 
-        {/* ADDED: The "Place a Pick-up Order" button */}
         <Link to="/order">
           <button className="w-full px-4 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
             Place a Pick-up Order
@@ -78,6 +76,13 @@ const Account = ({ session }: { session: Session }) => {
         <Link to="/profile">
           <button className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
             View Profile
+          </button>
+        </Link>
+        
+        {/* <-- IMPROVEMENT: New button added --> */}
+        <Link to="/history">
+          <button className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
+            View Order History
           </button>
         </Link>
         
