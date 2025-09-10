@@ -115,7 +115,7 @@ const OrderPage = () => {
         timestamp: new Date(),
         items: selectedItems,
         totalPrice,
-        status: 'preparing',
+        status: 'pending_aproval',
         paymentMode: paymentMode,
         user_id: session.user.id,
     };
