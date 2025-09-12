@@ -8,7 +8,8 @@ import Auth from './pages/auth';
 import Account from './pages/Account';
 import ProfilePage from './pages/ProfilePage';
 import OrderPage from './pages/OrderPage';
-import OrderHistoryPage from './pages/OrderHistoryPage'; // <-- IMPROVEMENT: Import added
+import OrderHistoryPage from './pages/OrderHistoryPage';
+import RewardsPage from './pages/RewardsPage'; // <-- 1. IMPORT THE NEW PAGE
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -34,7 +35,8 @@ function App() {
       <Route path="/" element={<Account key={session.user.id} session={session} />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="/order" element={<OrderPage />} />
-      <Route path="/history" element={<OrderHistoryPage />} /> {/* <-- IMPROVEMENT: New route added */}
+      <Route path="/history" element={<OrderHistoryPage />} />
+      <Route path="/rewards" element={<RewardsPage />} /> {/* <-- 2. ADD THE NEW ROUTE */}
     </Routes>
   );
 }

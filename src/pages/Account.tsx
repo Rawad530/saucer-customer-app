@@ -73,13 +73,19 @@ const Account = ({ session }: { session: Session }) => {
           </button>
         </Link>
         
+        {/* ADDED THE NEW BUTTON HERE */}
+        <Link to="/rewards">
+          <button className="w-full px-4 py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700">
+            View Rewards
+          </button>
+        </Link>
+        
         <Link to="/profile">
           <button className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
             View Profile
           </button>
         </Link>
         
-        {/* <-- IMPROVEMENT: New button added --> */}
         <Link to="/history">
           <button className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
             View Order History
