@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Order } from '../types/order'; // Make sure this path is correct
+import { Order } from '../types/order';
 import { Link } from 'react-router-dom';
 
 const OrderHistoryPage = () => {
@@ -22,7 +22,6 @@ const OrderHistoryPage = () => {
         if (error) {
           console.error('Error fetching orders:', error);
         } else if (data) {
-          // We need to format the data to match our Order type
           const formattedOrders: Order[] = data.map(o => ({
             id: o.transaction_id,
             orderNumber: o.order_number,
@@ -31,7 +30,7 @@ const OrderHistoryPage = () => {
             paymentMode: o.payment_mode,
             status: o.status,
             timestamp: new Date(o.created_at),
-            created_by_email: '', // Not needed in customer view
+            created_by_email: '',
           }));
           setOrders(formattedOrders);
         }
@@ -44,7 +43,15 @@ const OrderHistoryPage = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Your Order History</h1>
+        
+        {/* MODIFIED: Moved the "Back" link here and styled it as a button */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Your Order History</h1>
+          <Link to="/" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
+            &larr; Back to Account
+          </Link>
+        </div>
+
         {loading ? (
           <p>Loading your orders...</p>
         ) : orders.length === 0 ? (
@@ -63,9 +70,8 @@ const OrderHistoryPage = () => {
             ))}
           </div>
         )}
-        <div className="text-center mt-8">
-          <Link to="/" className="text-amber-400 hover:underline">Back to Account</Link>
-        </div>
+        
+        {/* REMOVED: The old link from the bottom of the page */}
       </div>
     </div>
   );
