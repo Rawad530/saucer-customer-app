@@ -24,8 +24,8 @@ interface PendingItem {
 
 const OrderPage = () => {
   const [session, setSession] = useState<Session | null>(null);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]); // To hold menu from DB
-  const [loadingMenu, setLoadingMenu] = useState(true); // Loading state for the menu
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [loadingMenu, setLoadingMenu] = useState(true);
   const [selectedItems, setSelectedItems] = useState<OrderItem[]>([]);
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -36,7 +36,6 @@ const OrderPage = () => {
       setSession(session);
     });
 
-    // Fetches the menu from your Supabase database
     const fetchMenu = async () => {
       setLoadingMenu(true);
       const { data, error } = await supabase
@@ -193,7 +192,12 @@ const OrderPage = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Place a Pick-up Order</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Place a Pick-up Order</h1>
+          <Link to="/" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
+            &larr; Back to Account
+          </Link>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             {Object.entries(categorizedItems).map(([category, items]) => (

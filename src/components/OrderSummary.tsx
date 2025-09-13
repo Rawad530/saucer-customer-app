@@ -36,8 +36,9 @@ const OrderSummary = ({
   onCreateOrder
 }: OrderSummaryProps) => {
   return (
-    <div className="space-y-4">
-      <h3 className="text-xl font-semibold text-gray-800">Order Summary</h3>
+    <div className="space-y-4 bg-gray-800 p-6 rounded-lg">
+      {/* --- CHANGE IS HERE --- */}
+      <h3 className="text-xl font-semibold text-amber-400">Order Summary</h3>
       
       {/* Pending Item Configuration */}
       {pendingItem && (
@@ -50,10 +51,10 @@ const OrderSummary = ({
       )}
 
       {selectedItems.length === 0 && !pendingItem ? (
-        <p className="text-gray-500 text-center py-8">No items selected</p>
+        <p className="text-gray-400 text-center py-8">Your cart is empty</p>
       ) : (
         <>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
+          <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
             {selectedItems.map((item, index) => (
               <OrderItem
                 key={index}
@@ -64,16 +65,16 @@ const OrderSummary = ({
             ))}
           </div>
 
-          <div className="border-t pt-4">
+          <div className="border-t border-gray-700 pt-4">
             <div className="flex justify-between items-center text-xl font-bold">
-              <span>Total:</span>
-              <span className="text-orange-600">₾{totalPrice.toFixed(2)}</span>
+              <span className="text-white">Total:</span>
+              <span className="text-amber-500">₾{totalPrice.toFixed(2)}</span>
             </div>
           </div>
 
           <Button
             onClick={onCreateOrder}
-            className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white py-3 text-lg font-semibold"
+            className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 text-lg font-semibold"
             disabled={selectedItems.length === 0}
           >
             Select Payment Mode
