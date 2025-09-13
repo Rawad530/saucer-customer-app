@@ -31,6 +31,13 @@ const OrderPage = () => {
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
 
+  // --- NEW STATE FOR PROMO CODES ---
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [promoMessage, setPromoMessage] = useState("");
+  const [isCheckingPromo, setIsCheckingPromo] = useState(false);
+  // --- END OF NEW STATE ---
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -105,7 +112,8 @@ const OrderPage = () => {
     }
   };
 
-  const totalPrice = selectedItems.reduce((sum, item) => {
+  // --- UPDATED PRICE CALCULATION ---
+  const subtotal = selectedItems.reduce((sum, item) => {
     let itemPrice = item.menuItem.price;
     item.addons.forEach(addonName => {
         const addon = addOnOptions.find(opt => opt.name === addonName);
@@ -115,12 +123,41 @@ const OrderPage = () => {
     const finalPrice = itemPrice - discountAmount;
     return sum + (finalPrice * item.quantity);
   }, 0);
+  
+  const discountAmount = subtotal * (appliedDiscount / 100);
+  const totalPrice = subtotal - discountAmount;
+  // --- END OF UPDATED CALCULATION ---
 
   const handleCreateOrder = () => {
     if (selectedItems.length > 0) {
         setShowPaymentDialog(true);
     }
   };
+  
+  // --- NEW FUNCTION TO APPLY PROMO CODE ---
+  const handleApplyPromoCode = async () => {
+    if (!promoCode.trim()) return;
+    setIsCheckingPromo(true);
+    setPromoMessage("");
+
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-promo-code', {
+        body: { promoCode: promoCode.trim().toUpperCase() },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data.error) throw new Error(data.error);
+
+      setAppliedDiscount(data.discount);
+      setPromoMessage(`Success! ${data.discount}% discount applied.`);
+    } catch (err) {
+      setAppliedDiscount(0);
+      setPromoMessage(err instanceof Error ? err.message : "An unknown error occurred.");
+    } finally {
+      setIsCheckingPromo(false);
+    }
+  };
+  // --- END OF NEW FUNCTION ---
 
   const handleConfirmOrder = async (paymentMode: PaymentMode) => {
     if (!session?.user) {
@@ -133,7 +170,7 @@ const OrderPage = () => {
         orderNumber: getNextOrderNumber(),
         timestamp: new Date(),
         items: selectedItems,
-        totalPrice,
+        totalPrice, // Use the final calculated price
         status: 'pending_approval',
         paymentMode: paymentMode,
         user_id: session.user.id,
@@ -149,6 +186,9 @@ const OrderPage = () => {
             payment_mode: newOrder.paymentMode,
             status: newOrder.status,
             created_at: newOrder.timestamp.toISOString(),
+            // ADDED: Save promo code details
+            promo_code_used: appliedDiscount > 0 ? promoCode.toUpperCase() : null,
+            discount_applied_percent: appliedDiscount > 0 ? appliedDiscount : null,
         },
     ]);
 
@@ -214,12 +254,22 @@ const OrderPage = () => {
               <OrderSummary
                 selectedItems={selectedItems}
                 pendingItem={pendingItem}
-                totalPrice={totalPrice}
+                subtotal={subtotal} // Pass subtotal
+                discountAmount={discountAmount} // Pass discount amount
+                totalPrice={totalPrice} // Pass final total
                 onUpdateItemQuantity={updateItemQuantity}
                 onUpdatePendingItem={setPendingItem}
                 onConfirmPendingItem={confirmPendingItem}
                 onCancelPendingItem={() => setPendingItem(null)}
                 onCreateOrder={handleCreateOrder}
+                // --- PASS NEW PROPS FOR PROMO CODE ---
+                promoCode={promoCode}
+                setPromoCode={setPromoCode}
+                handleApplyPromoCode={handleApplyPromoCode}
+                promoMessage={promoMessage}
+                isCheckingPromo={isCheckingPromo}
+                appliedDiscount={appliedDiscount > 0}
+                // --- END OF NEW PROPS ---
               />
             </div>
           </div>
