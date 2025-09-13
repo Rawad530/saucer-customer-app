@@ -61,14 +61,15 @@ const ItemConfigurationCard = ({
   const totalPrice = pendingItem.menuItem.price + calculateAddonPrice();
 
   return (
-    <Card className="border-orange-500 border-2">
+    <Card className="border-orange-500 border-2 bg-white text-gray-800">
       <CardContent className="p-4">
         <h4 className="font-medium text-gray-800 mb-3">
           Configure: {pendingItem.menuItem.name}
           <span className="text-orange-600 ml-2">₾{totalPrice.toFixed(2)}</span>
         </h4>
         
-        {pendingItem.menuItem.requiresSauce && pendingItem.menuItem.category !== 'value' && (
+        {/* --- CHANGED TO SNAKE_CASE --- */}
+        {pendingItem.menuItem.requires_sauce && pendingItem.menuItem.category !== 'value' && (
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Sauce *
@@ -91,7 +92,8 @@ const ItemConfigurationCard = ({
           </div>
         )}
 
-        {pendingItem.menuItem.isCombo && (
+        {/* --- CHANGED TO SNAKE_CASE --- */}
+        {pendingItem.menuItem.is_combo && (
           <>
             <div className="mb-3">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -137,7 +139,8 @@ const ItemConfigurationCard = ({
           </>
         )}
 
-        {pendingItem.menuItem.name.includes('Meal') && !pendingItem.menuItem.isCombo && (
+        {/* --- CHANGED TO SNAKE_CASE --- */}
+        {pendingItem.menuItem.name.includes('Meal') && !pendingItem.menuItem.is_combo && (
           <>
             <div className="mb-3">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -215,7 +218,6 @@ const ItemConfigurationCard = ({
           </div>
         )}
 
-        {/* Remarks Section */}
         <div className="mb-3">
           {!showRemarks ? (
             <Button
