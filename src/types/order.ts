@@ -2,7 +2,8 @@ export interface MenuItem {
   id: string;
   name: string;
   price: number;
-  category: 'mains' | 'sides' | 'sauces' | 'drinks' | 'addons' | 'value';
+  category: string;
+  image_url?: string; // <-- ADD THIS LINE
   requiresSauce?: boolean;
   isCombo?: boolean;
 }

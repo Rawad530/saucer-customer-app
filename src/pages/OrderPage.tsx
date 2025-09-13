@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Order, OrderItem, MenuItem, PaymentMode } from "../types/order";
-import { menuItems, addOnOptions } from "../data/menu";
+import { addOnOptions } from "../data/menu";
 import { getNextOrderNumber } from "../utils/orderUtils";
 import { supabase } from "../lib/supabaseClient";
 import MenuSection from "../components/MenuSection";
@@ -24,6 +24,8 @@ interface PendingItem {
 
 const OrderPage = () => {
   const [session, setSession] = useState<Session | null>(null);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]); // To hold menu from DB
+  const [loadingMenu, setLoadingMenu] = useState(true); // Loading state for the menu
   const [selectedItems, setSelectedItems] = useState<OrderItem[]>([]);
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -33,6 +35,24 @@ const OrderPage = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
+
+    // Fetches the menu from your Supabase database
+    const fetchMenu = async () => {
+      setLoadingMenu(true);
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select('*')
+        .order('id');
+
+      if (error) {
+        console.error("Error fetching menu:", error);
+      } else if (data) {
+        setMenuItems(data);
+      }
+      setLoadingMenu(false);
+    };
+
+    fetchMenu();
   }, []);
 
   const addItemToOrder = (menuItem: MenuItem) => {
@@ -159,6 +179,14 @@ const OrderPage = () => {
                 Back to Your Account
             </Link>
         </div>
+    );
+  }
+
+  if (loadingMenu) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">
+        Loading Menu...
+      </div>
     );
   }
 
