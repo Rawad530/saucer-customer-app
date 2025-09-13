@@ -30,13 +30,10 @@ const OrderPage = () => {
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
-
-  // --- NEW STATE FOR PROMO CODES ---
   const [promoCode, setPromoCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [promoMessage, setPromoMessage] = useState("");
   const [isCheckingPromo, setIsCheckingPromo] = useState(false);
-  // --- END OF NEW STATE ---
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -62,7 +59,8 @@ const OrderPage = () => {
   }, []);
 
   const addItemToOrder = (menuItem: MenuItem) => {
-    if (menuItem.requiresSauce || menuItem.isCombo || ['mains', 'value'].includes(menuItem.category)) {
+    // UPDATED THIS LINE
+    if (menuItem.requires_sauce || menuItem.is_combo || ['mains', 'value'].includes(menuItem.category)) {
       setPendingItem({ menuItem, addons: [], spicy: false, discount: 0 });
     } else {
       addFinalItem({ menuItem, quantity: 1, addons: [], spicy: false, discount: 0 });
@@ -112,7 +110,6 @@ const OrderPage = () => {
     }
   };
 
-  // --- UPDATED PRICE CALCULATION ---
   const subtotal = selectedItems.reduce((sum, item) => {
     let itemPrice = item.menuItem.price;
     item.addons.forEach(addonName => {
@@ -126,7 +123,6 @@ const OrderPage = () => {
   
   const discountAmount = subtotal * (appliedDiscount / 100);
   const totalPrice = subtotal - discountAmount;
-  // --- END OF UPDATED CALCULATION ---
 
   const handleCreateOrder = () => {
     if (selectedItems.length > 0) {
@@ -134,7 +130,6 @@ const OrderPage = () => {
     }
   };
   
-  // --- NEW FUNCTION TO APPLY PROMO CODE ---
   const handleApplyPromoCode = async () => {
     if (!promoCode.trim()) return;
     setIsCheckingPromo(true);
@@ -157,7 +152,6 @@ const OrderPage = () => {
       setIsCheckingPromo(false);
     }
   };
-  // --- END OF NEW FUNCTION ---
 
   const handleConfirmOrder = async (paymentMode: PaymentMode) => {
     if (!session?.user) {
@@ -170,7 +164,7 @@ const OrderPage = () => {
         orderNumber: getNextOrderNumber(),
         timestamp: new Date(),
         items: selectedItems,
-        totalPrice, // Use the final calculated price
+        totalPrice,
         status: 'pending_approval',
         paymentMode: paymentMode,
         user_id: session.user.id,
@@ -186,7 +180,6 @@ const OrderPage = () => {
             payment_mode: newOrder.paymentMode,
             status: newOrder.status,
             created_at: newOrder.timestamp.toISOString(),
-            // ADDED: Save promo code details
             promo_code_used: appliedDiscount > 0 ? promoCode.toUpperCase() : null,
             discount_applied_percent: appliedDiscount > 0 ? appliedDiscount : null,
         },
@@ -254,22 +247,20 @@ const OrderPage = () => {
               <OrderSummary
                 selectedItems={selectedItems}
                 pendingItem={pendingItem}
-                subtotal={subtotal} // Pass subtotal
-                discountAmount={discountAmount} // Pass discount amount
-                totalPrice={totalPrice} // Pass final total
+                subtotal={subtotal}
+                discountAmount={discountAmount}
+                totalPrice={totalPrice}
                 onUpdateItemQuantity={updateItemQuantity}
                 onUpdatePendingItem={setPendingItem}
                 onConfirmPendingItem={confirmPendingItem}
                 onCancelPendingItem={() => setPendingItem(null)}
                 onCreateOrder={handleCreateOrder}
-                // --- PASS NEW PROPS FOR PROMO CODE ---
                 promoCode={promoCode}
                 setPromoCode={setPromoCode}
                 handleApplyPromoCode={handleApplyPromoCode}
                 promoMessage={promoMessage}
                 isCheckingPromo={isCheckingPromo}
                 appliedDiscount={appliedDiscount > 0}
-                // --- END OF NEW PROPS ---
               />
             </div>
           </div>
