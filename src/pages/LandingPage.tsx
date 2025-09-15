@@ -30,7 +30,7 @@ const LandingPage = () => {
             <p>But our innovation doesn't stop at convenience. We are committed to crafting every meal with fresh, high-quality ingredients and generous portions. By rethinking the burger, we also aim to create a more sustainable experience, reducing waste and paving the way for a tastier, cleaner future for generations to come. Welcome to Saucer Burger and Wrap, where convenience, flavor, and the future collide.</p>
           </div>
           <div className="image-content">
-            <img src="/images/wrap-image.png" alt="Saucer Beef Wrap" />
+            <img src="/images/special-sauce.png" alt="Saucer Beef Wrap" />
           </div>
         </section>
 
