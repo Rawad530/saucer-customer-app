@@ -112,7 +112,7 @@ All colors MUST be HSL.
 }
 
 .landing-page {
-  background-image: url('/images/marble-background.jpg');
+  background-color: var(--dark-bg);
   color: var(--light-text);
   font-family: sans-serif;
 }
