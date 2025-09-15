@@ -98,7 +98,6 @@ All colors MUST be HSL.
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
   }
@@ -208,6 +207,8 @@ All colors MUST be HSL.
 .story-section .image-content img {
   width: 100%;
   border-radius: 12px;
+  object-fit: contain;
+  max-height: 400px;
 }
 
 .sauce-grid {
@@ -222,10 +223,8 @@ All colors MUST be HSL.
 
 .sauce-card img {
   width: 100%;
-  height: auto;
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
-  border-radius: 12px;
+  height: 250px;
+  object-fit: contain;
   margin-bottom: 15px;
 }
 
