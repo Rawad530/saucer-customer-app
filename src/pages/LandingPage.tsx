@@ -50,7 +50,7 @@ const LandingPage = () => {
               <h3>Barbecue Sauce</h3>
             </div>
             <div className="sauce-card">
-              <img src="/images/chili-sauce.png" alt="Hot Chili Sauce" />
+              <img src="/images/chilli-sauce.png" alt="Hot Chili Sauce" />
               <h3>Hot Chili Sauce</h3>
             </div>
           </div>

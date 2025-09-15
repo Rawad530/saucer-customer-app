@@ -8,7 +8,7 @@ export interface MenuItem {
   name: string;
   price: number;
   category: 'mains' | 'sides' | 'sauces' | 'drinks' | 'addons' | 'value';
-  // --- CHANGED TO SNAKE_CASE ---
+  image_url?: string;
   requires_sauce?: boolean;
   is_combo?: boolean;
   // -----------------------------

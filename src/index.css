@@ -222,6 +222,7 @@ All colors MUST be HSL.
 
 .sauce-card img {
   width: 100%;
+  Height: auto;
   aspect-ratio: 1 / 1;
   object-fit: cover;
   border-radius: 12px;
