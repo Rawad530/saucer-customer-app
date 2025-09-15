@@ -113,7 +113,6 @@ All colors MUST be HSL.
 
 .landing-page {
   background-image: url('/images/marble-background.jpg');
-  background-repeat: repeat; /* This will tile the image like a floor */
   color: var(--light-text);
   font-family: sans-serif;
 }
