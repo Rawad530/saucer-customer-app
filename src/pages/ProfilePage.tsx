@@ -40,14 +40,12 @@ const ProfilePage = () => {
     fetchProfile();
   }, []);
 
-  // NEW: Function to handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (profile) {
       setProfile({ ...profile, [e.target.name]: e.target.value });
     }
   };
 
-  // NEW: Function to save the updated profile to Supabase
   const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user || !profile) return;
@@ -87,7 +85,6 @@ const ProfilePage = () => {
           <h1 className="text-3xl font-bold">Your Profile</h1>
         </div>
 
-        {/* MODIFIED: This is now a form */}
         <form onSubmit={handleUpdateProfile} className="space-y-4">
           <div>
             <label className="text-sm font-bold text-gray-400">Email</label>
@@ -132,9 +129,10 @@ const ProfilePage = () => {
         </form>
 
         <div className="text-center pt-2">
-           <Link to="/" className="text-sm text-amber-400 hover:underline">
-            Back to Account
-           </Link>
+            {/* --- THIS IS THE ONLY LINE THAT HAS CHANGED --- */}
+            <Link to="/account" className="text-sm text-amber-400 hover:underline">
+              Back to Account
+            </Link>
         </div>
       </div>
     </div>

@@ -25,7 +25,6 @@ const OrderHistoryPage = () => {
         if (error) {
           console.error('Error fetching orders:', error);
         } else if (data) {
-          // Map database data to our Order type
           const formattedOrders: Order[] = data.map(o => ({
             id: o.transaction_id,
             orderNumber: o.order_number,
@@ -52,7 +51,8 @@ const OrderHistoryPage = () => {
         
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Your Order History</h1>
-          <Link to="/" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
+          {/* --- THIS IS THE ONLY LINE THAT HAS CHANGED --- */}
+          <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
             &larr; Back to Account
           </Link>
         </div>

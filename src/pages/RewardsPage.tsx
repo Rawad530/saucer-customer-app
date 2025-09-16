@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Link } from 'react-router-dom';
 import { User } from '@supabase/supabase-js';
-import RedemptionModal from './RedemptionModal'; // <-- Import the new modal
+import RedemptionModal from './RedemptionModal';
 
 interface Reward {
   id: number;
@@ -18,8 +18,6 @@ const RewardsPage = () => {
   const [myStamps, setMyStamps] = useState(0);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
-
-  // NEW: State to manage the modal
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
 
   useEffect(() => {
@@ -27,8 +25,20 @@ const RewardsPage = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-        const { data: rewardsData } = await supabase.from('rewards').select('*').eq('is_active', true).order('stamps_required', { ascending: true });
-        const { data: profileData } = await supabase.from('customer_profiles').select('stamps').eq('id', user.id).single();
+        // Fetch the list of active rewards, ordered by cost
+        const { data: rewardsData } = await supabase
+          .from('rewards')
+          .select('*')
+          .eq('is_active', true)
+          .order('stamps_required', { ascending: true });
+
+        // Fetch the user's current stamp count
+        const { data: profileData } = await supabase
+          .from('customer_profiles')
+          .select('stamps')
+          .eq('id', user.id)
+          .single();
+
         if (rewardsData) setRewards(rewardsData);
         if (profileData) setMyStamps(profileData.stamps);
       }
@@ -38,12 +48,13 @@ const RewardsPage = () => {
   }, []);
 
   return (
-    <> {/* Use a Fragment to allow the modal to be a sibling */}
+    <>
       <div className="min-h-screen bg-gray-900 text-white p-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-bold">Available Rewards</h1>
-            <Link to="/" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
+            {/* --- THIS IS THE ONLY LINE THAT HAS CHANGED --- */}
+            <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
               &larr; Back to Account
             </Link>
           </div>
@@ -65,7 +76,6 @@ const RewardsPage = () => {
                     <p className="text-gray-400 text-sm mt-1">{reward.description}</p>
                     <div className="flex justify-between items-center mt-4">
                       <p className="text-lg font-semibold text-amber-400">{reward.stamps_required} Stamps</p>
-                      {/* MODIFIED: The button now opens the modal */}
                       <button 
                         onClick={() => setSelectedReward(reward)}
                         disabled={!canAfford}
@@ -82,7 +92,6 @@ const RewardsPage = () => {
         </div>
       </div>
 
-      {/* NEW: Render the modal when a reward is selected */}
       {selectedReward && user && (
         <RedemptionModal 
           reward={selectedReward}
