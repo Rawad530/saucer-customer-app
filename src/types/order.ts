@@ -1,7 +1,8 @@
 // src/types/order.ts
 
-export type OrderStatus = 'preparing' | 'completed' | 'pending_approval' | 'rejected';
-export type PaymentMode = 'Cash' | 'Card - Terminal' | 'Bank Transfer';
+export type OrderStatus = 'preparing' | 'completed' | 'pending_approval' | 'rejected' | 'pending_payment';
+// ADDED 'Card - Online' to the list of valid payment modes
+export type PaymentMode = 'Cash' | 'Card - Terminal' | 'Bank Transfer' | 'Card - Online';
 
 export interface MenuItem {
   id: string;
@@ -11,7 +12,6 @@ export interface MenuItem {
   image_url?: string;
   requires_sauce?: boolean;
   is_combo?: boolean;
-  // -----------------------------
 }
 
 export interface OrderItem {
@@ -40,4 +40,5 @@ export interface Order {
   customer_phone?: string;
   promo_code_used?: string;
   discount_applied_percent?: number;
+  is_hidden_from_pos?: boolean;
 }

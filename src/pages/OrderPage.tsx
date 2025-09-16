@@ -1,18 +1,18 @@
 // src/pages/OrderPage.tsx
 
 import { useState, useEffect } from "react";
-import { Order, OrderItem, MenuItem, PaymentMode } from "../types/order";
+import { Order, OrderItem, MenuItem } from "../types/order";
 import { addOnOptions } from "../data/menu";
 import { getNextOrderNumber } from "../utils/orderUtils";
 import { supabase } from "../lib/supabaseClient";
 import MenuSection from "../components/MenuSection";
 import OrderSummary from "../components/OrderSummary";
-import PaymentModeDialog from "../components/PaymentModeDialog";
 import { Link } from "react-router-dom";
 import { Session } from "@supabase/supabase-js";
 
 interface PendingItem {
   menuItem: MenuItem;
+  quantity: number; // Add quantity for editing
   sauce?: string;
   sauceCup?: string;
   drink?: string;
@@ -28,12 +28,13 @@ const OrderPage = () => {
   const [loadingMenu, setLoadingMenu] = useState(true);
   const [selectedItems, setSelectedItems] = useState<OrderItem[]>([]);
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [promoMessage, setPromoMessage] = useState("");
   const [isCheckingPromo, setIsCheckingPromo] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -59,15 +60,22 @@ const OrderPage = () => {
   }, []);
 
   const addItemToOrder = (menuItem: MenuItem) => {
-    // UPDATED THIS LINE
     if (menuItem.requires_sauce || menuItem.is_combo || ['mains', 'value'].includes(menuItem.category)) {
-      setPendingItem({ menuItem, addons: [], spicy: false, discount: 0 });
+      setPendingItem({ menuItem, addons: [], spicy: false, discount: 0, quantity: 1 });
     } else {
       addFinalItem({ menuItem, quantity: 1, addons: [], spicy: false, discount: 0 });
     }
   };
   
   const addFinalItem = (item: OrderItem) => {
+    if (editingItemIndex !== null) {
+      setSelectedItems(prev => prev.map((oldItem, index) => 
+        index === editingItemIndex ? item : oldItem
+      ));
+      setEditingItemIndex(null);
+      return;
+    }
+
     setSelectedItems(prev => {
         const existingIndex = prev.findIndex(existing => 
             existing.menuItem.id === item.menuItem.id &&
@@ -90,7 +98,7 @@ const OrderPage = () => {
     if (!pendingItem) return;
     addFinalItem({
         menuItem: pendingItem.menuItem,
-        quantity: 1,
+        quantity: pendingItem.quantity,
         sauce: pendingItem.sauce,
         sauceCup: pendingItem.sauceCup,
         drink: pendingItem.drink,
@@ -100,6 +108,27 @@ const OrderPage = () => {
         discount: pendingItem.discount
     });
     setPendingItem(null);
+  };
+
+  const handleEditItem = (index: number) => {
+    const itemToEdit = selectedItems[index];
+    setEditingItemIndex(index);
+    setPendingItem({
+      menuItem: itemToEdit.menuItem,
+      quantity: itemToEdit.quantity,
+      sauce: itemToEdit.sauce,
+      sauceCup: itemToEdit.sauceCup,
+      drink: itemToEdit.drink,
+      addons: itemToEdit.addons,
+      spicy: itemToEdit.spicy,
+      remarks: itemToEdit.remarks,
+      discount: itemToEdit.discount,
+    });
+  };
+
+  const handleCancelPendingItem = () => {
+    setPendingItem(null);
+    setEditingItemIndex(null);
   };
 
   const updateItemQuantity = (index: number, newQuantity: number) => {
@@ -123,12 +152,6 @@ const OrderPage = () => {
   
   const discountAmount = subtotal * (appliedDiscount / 100);
   const totalPrice = subtotal - discountAmount;
-
-  const handleCreateOrder = () => {
-    if (selectedItems.length > 0) {
-        setShowPaymentDialog(true);
-    }
-  };
   
   const handleApplyPromoCode = async () => {
     if (!promoCode.trim()) return;
@@ -153,45 +176,47 @@ const OrderPage = () => {
     }
   };
 
-  const handleConfirmOrder = async (paymentMode: PaymentMode) => {
-    if (!session?.user) {
-        alert("You must be logged in to place an order.");
-        return;
-    }
-
-    const newOrder: Order = {
-        id: crypto.randomUUID(),
-        orderNumber: getNextOrderNumber(),
-        timestamp: new Date(),
-        items: selectedItems,
-        totalPrice,
-        status: 'pending_approval',
-        paymentMode: paymentMode,
-        user_id: session.user.id,
-    };
-
-    const { error } = await supabase.from('transactions').insert([
+  const handleProceedToPayment = async () => {
+    if (!session?.user || selectedItems.length === 0) return;
+    setIsPlacingOrder(true);
+  
+    const orderId = crypto.randomUUID();
+    const orderNumber = await getNextOrderNumber();
+  
+    try {
+      // First, attempt to get the payment link from the bank
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('bog-payment', {
+        body: { orderId, amount: totalPrice },
+      });
+  
+      if (functionError) throw new Error(functionError.message);
+      if (functionData.error) throw new Error(functionData.error);
+  
+      // If we get the link, THEN save the order to our database
+      const { error: insertError } = await supabase.from('transactions').insert([
         { 
-            transaction_id: newOrder.id,
-            user_id: newOrder.user_id,
-            order_number: newOrder.orderNumber,
-            items: newOrder.items as any,
-            total_price: newOrder.totalPrice,
-            payment_mode: newOrder.paymentMode,
-            status: newOrder.status,
-            created_at: newOrder.timestamp.toISOString(),
-            promo_code_used: appliedDiscount > 0 ? promoCode.toUpperCase() : null,
-            discount_applied_percent: appliedDiscount > 0 ? appliedDiscount : null,
+          transaction_id: orderId,
+          user_id: session.user.id,
+          order_number: orderNumber,
+          items: selectedItems as any,
+          total_price: totalPrice,
+          payment_mode: 'Card - Online',
+          status: 'pending_payment',
+          created_at: new Date().toISOString(),
+          promo_code_used: appliedDiscount > 0 ? promoCode.toUpperCase() : null,
+          discount_applied_percent: appliedDiscount > 0 ? appliedDiscount : null,
         },
-    ]);
-
-    if (error) {
-        alert("Error placing order: ".concat(error.message));
-    } else {
-        setSelectedItems([]);
-        setOrderPlaced(true);
+      ]);
+  
+      if (insertError) throw new Error(`Failed to save order: ${insertError.message}`);
+  
+      // If saving was successful, redirect the user to the payment page
+      window.location.href = functionData.redirectUrl;
+  
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "An unknown error occurred while trying to process the payment.");
+      setIsPlacingOrder(false);
     }
-    setShowPaymentDialog(false);
   };
 
   const categorizedItems = {
@@ -253,24 +278,21 @@ const OrderPage = () => {
                 onUpdateItemQuantity={updateItemQuantity}
                 onUpdatePendingItem={setPendingItem}
                 onConfirmPendingItem={confirmPendingItem}
-                onCancelPendingItem={() => setPendingItem(null)}
-                onCreateOrder={handleCreateOrder}
+                onCancelPendingItem={handleCancelPendingItem}
+                onProceedToPayment={handleProceedToPayment}
                 promoCode={promoCode}
                 setPromoCode={setPromoCode}
                 handleApplyPromoCode={handleApplyPromoCode}
                 promoMessage={promoMessage}
                 isCheckingPromo={isCheckingPromo}
                 appliedDiscount={appliedDiscount > 0}
+                isPlacingOrder={isPlacingOrder}
+                onEditItem={handleEditItem}
               />
             </div>
           </div>
         </div>
       </div>
-      <PaymentModeDialog
-        isOpen={showPaymentDialog}
-        onClose={() => setShowPaymentDialog(false)}
-        onConfirm={handleConfirmOrder}
-      />
     </div>
   );
 };

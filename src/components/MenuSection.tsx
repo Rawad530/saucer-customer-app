@@ -20,16 +20,13 @@ const MenuSection = ({ title, items, onAddItem }: MenuSectionProps) => {
           <Card key={item.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700/50 transition-colors">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
-                {/* 1. Image Display: An image tag is added here. */}
-                {/* It will only appear if 'item.image_url' exists. */}
                 {item.image_url && (
                   <img
                     src={item.image_url}
                     alt={item.name}
-                    className="w-20 h-20 rounded-md object-cover"
+                    className="w-24 h-24 rounded-md object-cover shrink-0"
                   />
                 )}
-                {/* 2. Layout Adjustment: The text and button now grow to fill the remaining space. */}
                 <div className="flex-grow flex justify-between items-center">
                   <div>
                     <h5 className="font-semibold text-white">{item.name}</h5>

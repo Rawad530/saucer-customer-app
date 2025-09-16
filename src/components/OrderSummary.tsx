@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input"; // Import Input component
+import { Input } from "@/components/ui/input";
 import { OrderItem as OrderItemType } from "@/types/order";
 import OrderItem from "./OrderItem";
 import ItemConfigurationCard from "./ItemConfigurationCard";
 import { MenuItem } from "@/types/order";
+import { addOnOptions } from "@/data/menu";
 
 interface PendingItem {
   menuItem: MenuItem;
@@ -22,18 +23,18 @@ interface OrderSummaryProps {
   discountAmount: number;
   totalPrice: number;
   onUpdateItemQuantity: (index: number, newQuantity: number) => void;
-  onUpdatePendingItem: (updater: (prev: PendingItem | null) => PendingItem | null) => void;
+  onUpdatePendingItem: React.Dispatch<React.SetStateAction<PendingItem | null>>;
   onConfirmPendingItem: () => void;
   onCancelPendingItem: () => void;
-  onCreateOrder: () => void;
-  // --- NEW PROPS FOR PROMO CODE ---
+  onProceedToPayment: () => void; // Changed from onCreateOrder
   promoCode: string;
   setPromoCode: (code: string) => void;
   handleApplyPromoCode: () => void;
   promoMessage: string;
   isCheckingPromo: boolean;
   appliedDiscount: boolean;
-  // --- END OF NEW PROPS ---
+  isPlacingOrder: boolean;
+  onEditItem: (index: number) => void;
 }
 
 const OrderSummary = ({
@@ -46,14 +47,15 @@ const OrderSummary = ({
   onUpdatePendingItem,
   onConfirmPendingItem,
   onCancelPendingItem,
-  onCreateOrder,
-  // --- DESTRUCTURE NEW PROPS ---
+  onProceedToPayment, // Changed from onCreateOrder
   promoCode,
   setPromoCode,
   handleApplyPromoCode,
   promoMessage,
   isCheckingPromo,
   appliedDiscount,
+  isPlacingOrder,
+  onEditItem,
 }: OrderSummaryProps) => {
   return (
     <div className="space-y-4 bg-gray-800 p-6 rounded-lg">
@@ -79,11 +81,12 @@ const OrderSummary = ({
                 item={item}
                 index={index}
                 onUpdateQuantity={onUpdateItemQuantity}
+                onEdit={onEditItem}
+                addOnOptions={addOnOptions} // Pass addOnOptions down
               />
             ))}
           </div>
 
-          {/* --- NEW PROMO CODE SECTION --- */}
           <div className="border-t border-b border-gray-700 py-4 space-y-2">
             <div className="flex gap-2">
               <Input
@@ -92,7 +95,7 @@ const OrderSummary = ({
                 className="bg-gray-700 border-gray-600 text-white"
                 value={promoCode}
                 onChange={(e) => setPromoCode(e.target.value)}
-                disabled={appliedDiscount} // Disable if a code is already applied
+                disabled={appliedDiscount}
               />
               <Button
                 onClick={handleApplyPromoCode}
@@ -108,7 +111,6 @@ const OrderSummary = ({
               </p>
             )}
           </div>
-          {/* --- END OF NEW SECTION --- */}
 
           <div className="space-y-2 pt-2">
             <div className="flex justify-between items-center text-md">
@@ -128,11 +130,11 @@ const OrderSummary = ({
           </div>
 
           <Button
-            onClick={onCreateOrder}
+            onClick={onProceedToPayment} // Changed from onCreateOrder
             className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 text-lg font-semibold"
-            disabled={selectedItems.length === 0}
+            disabled={selectedItems.length === 0 || isPlacingOrder}
           >
-            Select Payment Mode
+            {isPlacingOrder ? "Processing..." : "Confirm and Pay"}
           </Button>
         </>
       )}
