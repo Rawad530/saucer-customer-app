@@ -232,7 +232,7 @@ const OrderPage = () => {
         <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900 text-white text-center p-4">
             <h1 className="text-4xl font-bold text-amber-500 mb-4">Thank You!</h1>
             <p className="text-lg mb-8">Your order has been placed successfully. It will be ready for pickup shortly at our Tbilisi location.</p>
-            <Link to="/" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
+            <Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
                 Back to Your Account
             </Link>
         </div>
@@ -252,7 +252,8 @@ const OrderPage = () => {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Place a Pick-up Order</h1>
-          <Link to="/" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
+          {/* --- THIS IS THE ONLY CHANGE IN THIS FILE --- */}
+          <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
             &larr; Back to Account
           </Link>
         </div>
