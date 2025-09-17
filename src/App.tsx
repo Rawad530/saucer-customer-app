@@ -10,7 +10,9 @@ import ProfilePage from './pages/ProfilePage';
 import OrderPage from './pages/OrderPage';
 import OrderHistoryPage from './pages/OrderHistoryPage';
 import RewardsPage from './pages/RewardsPage';
-import LandingPage from './pages/LandingPage'; // 1. Import the new LandingPage
+import LandingPage from './pages/LandingPage';
+import WalletPage from './pages/WalletPage'; // <-- Import the new page
+import PaymentStatusPage from './pages/PaymentStatusPage';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -27,18 +29,14 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // The new structure handles public and private routes
   return (
     <Routes>
-      {/* --- PUBLIC ROUTES --- */}
-      {/* The LandingPage is now the homepage, visible to everyone */}
+      {/* PUBLIC ROUTES */}
       <Route path="/" element={<LandingPage />} />
-      
-      {/* The Auth page now has its own dedicated path */}
       <Route path="/login" element={<Auth />} />
+      <Route path="/payment-status" element={<PaymentStatusPage />} />
 
-      {/* --- PROTECTED ROUTES --- */}
-      {/* If a session exists, show the account page. If not, show the login page. */}
+      {/* PROTECTED ROUTES */}
       <Route 
         path="/account" 
         element={!session ? <Auth /> : <Account key={session.user.id} session={session} />} 
@@ -58,6 +56,11 @@ function App() {
       <Route 
         path="/rewards" 
         element={!session ? <Auth /> : <RewardsPage />} 
+      />
+      {/* ADDED THIS NEW ROUTE */}
+      <Route 
+        path="/wallet" 
+        element={!session ? <Auth /> : <WalletPage />} 
       />
     </Routes>
   );

@@ -50,7 +50,7 @@ const Account = ({ session }: { session: Session }) => {
 
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900 text-white">
-      <div className="w-full max-w-sm p-8 space-y-6 bg-gray-800 rounded-lg shadow-md text-center">
+      <div className="w-full max-w-sm p-8 space-y-4 bg-gray-800 rounded-lg shadow-md text-center">
 
         <div className="bg-white p-4 rounded-md"> 
           <QRCode
@@ -73,7 +73,13 @@ const Account = ({ session }: { session: Session }) => {
           </button>
         </Link>
         
-        {/* ADDED THE NEW BUTTON HERE */}
+        {/* ADDED THIS NEW BUTTON */}
+        <Link to="/wallet">
+          <button className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700">
+            View Wallet
+          </button>
+        </Link>
+
         <Link to="/rewards">
           <button className="w-full px-4 py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700">
             View Rewards

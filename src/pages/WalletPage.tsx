@@ -1,0 +1,131 @@
+// src/pages/WalletPage.tsx
+
+import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import { Link } from 'react-router-dom';
+import { User } from '@supabase/supabase-js';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+
+interface WalletTransaction {
+  id: number;
+  transaction_type: string;
+  amount: number;
+  description: string;
+  created_at: string;
+}
+
+const WalletPage = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [addAmount, setAddAmount] = useState('');
+  const [isAddingFunds, setIsAddingFunds] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUser(user);
+
+        const [profileResponse, transactionsResponse] = await Promise.all([
+          supabase.from('customer_profiles').select('wallet_balance').eq('id', user.id).single(),
+          supabase.from('wallet_transactions').select('*').eq('customer_id', user.id).order('created_at', { ascending: false })
+        ]);
+        
+        if (profileResponse.error) console.error("Error fetching wallet balance:", profileResponse.error);
+        if (profileResponse.data) setBalance(profileResponse.data.wallet_balance);
+
+        if (transactionsResponse.error) console.error("Error fetching transactions:", transactionsResponse.error);
+        if (transactionsResponse.data) setTransactions(transactionsResponse.data);
+      }
+      setLoading(false);
+    };
+    fetchData();
+  }, []);
+
+  const handleAddFunds = async () => {
+    const amount = parseFloat(addAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+    if (!user) {
+      alert("You must be logged in.");
+      return;
+    }
+
+    setIsAddingFunds(true);
+    const transactionId = crypto.randomUUID();
+
+    // We store the details in localStorage to retrieve after the bank redirects back
+    localStorage.setItem('wallet_top_up', JSON.stringify({
+      customerId: user.id,
+      amount: amount,
+      description: `Wallet top-up via card.`
+    }));
+
+    try {
+      const { data, error } = await supabase.functions.invoke('bog-payment', {
+        body: { orderId: transactionId, amount: amount },
+      });
+
+      if (error) throw new Error(error.message);
+      if (data.error) throw new Error(data.error);
+
+      window.location.href = data.redirectUrl;
+
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "An unknown error occurred.");
+      localStorage.removeItem('wallet_top_up'); // Clean up on error
+      setIsAddingFunds(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900 text-white p-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Your Wallet</h1>
+          <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
+            &larr; Back to Account
+          </Link>
+        </div>
+
+        <div className="bg-gray-800 p-6 rounded-lg mb-6">
+          <p className="text-gray-400 text-center">Current Balance</p>
+          <p className="text-5xl font-bold text-amber-400 mt-2 text-center">
+            {loading ? '...' : `₾${(balance || 0).toFixed(2)}`}
+          </p>
+          <div className="mt-6 border-t border-gray-700 pt-4">
+            <h3 className="text-lg font-semibold text-center">Add Funds</h3>
+            <div className="flex gap-2 mt-2 max-w-xs mx-auto">
+              <Input
+                type="number"
+                placeholder="Amount in ₾"
+                className="bg-gray-700 border-gray-600 text-white text-center"
+                value={addAmount}
+                onChange={(e) => setAddAmount(e.target.value)}
+              />
+              <Button
+                onClick={handleAddFunds}
+                disabled={isAddingFunds}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isAddingFunds ? "..." : "Add"}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 className="text-xl font-bold mb-4">Transaction History</h2>
+          {/* ... Transaction history mapping remains the same ... */}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default WalletPage;
