@@ -11,34 +11,46 @@ Deno.serve(async (_req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get the current date and time in Tbilisi
-    const now = DateTime.now().setZone('Asia/Tbilisi');
-    const currentDay = now.weekday === 7 ? 0 : now.weekday; // Luxon uses 1-7 for Mon-Sun, DB uses 0-6 for Sun-Sat
-    const currentTime = now.toFormat('HH:mm:ss'); // Format as HH:mm:ss
+    // --- Check 1: The Manual Override Switch ---
+    const { data: statusData, error: statusError } = await supabaseAdmin
+      .from('store_status')
+      .select('is_ordering_enabled')
+      .eq('id', 1)
+      .single();
 
-    // Fetch today's operational hours from the database
-    const { data, error } = await supabaseAdmin
+    if (statusError) {
+      throw new Error(`Database error: Could not fetch store status. ${statusError.message}`);
+    }
+
+    const isOrderingManuallyEnabled = statusData.is_ordering_enabled;
+
+    // --- Check 2: The Scheduled Hours ---
+    const now = DateTime.now().setZone('Asia/Tbilisi');
+    const currentDay = now.weekday === 7 ? 0 : now.weekday;
+    const currentTime = now.toFormat('HH:mm:ss');
+
+    const { data: hoursData, error: hoursError } = await supabaseAdmin
       .from('operational_hours')
       .select('open_time, close_time')
       .eq('id', currentDay)
       .single();
 
-    if (error) {
-      throw new Error(`Database error: Could not fetch hours for today. ${error.message}`);
+    if (hoursError) {
+      throw new Error(`Database error: Could not fetch hours for today. ${hoursError.message}`);
     }
 
-    const { open_time, close_time } = data;
+    const { open_time, close_time } = hoursData;
     
-    // Check if the current time is within the open hours
-    // This logic correctly handles overnight hours (e.g., closing at 2:00 AM)
-    let isOpen = false;
+    let isWithinHours = false;
     if (open_time < close_time) {
-        // Standard day (e.g., 09:00 to 17:00)
-        isOpen = currentTime >= open_time && currentTime < close_time;
+      isWithinHours = currentTime >= open_time && currentTime < close_time;
     } else {
-        // Overnight hours (e.g., 12:00 PM to 02:00 AM)
-        isOpen = currentTime >= open_time || currentTime < close_time;
+      isWithinHours = currentTime >= open_time || currentTime < close_time;
     }
+
+    // --- Final Decision ---
+    // The store is only open if BOTH checks are true
+    const isOpen = isOrderingManuallyEnabled && isWithinHours;
 
     return new Response(JSON.stringify({ isOpen }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -53,3 +65,10 @@ Deno.serve(async (_req) => {
     });
   }
 });
+```
+
+After you have saved the changes to this file, you **must re-deploy it** for the new logic to take effect. Please run this command in your terminal:
+
+```bash
+npx supabase functions deploy check-restaurant-status --no-verify-jwt
+
