@@ -4,8 +4,16 @@ import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
-import { User, Wallet, Star, History, Truck, Megaphone } from 'lucide-react';
-import { Order, OrderItem, MenuItem } from '../types/order';
+import { User, Wallet, Star, History, Truck, Megaphone, QrCode } from 'lucide-react';
+import QRCode from "react-qr-code";
+import { Order, OrderItem } from '../types/order';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 // Define types for the new data we will fetch
 interface ProfileData {
@@ -35,7 +43,6 @@ const Account = ({ session }: { session: Session }) => {
       setLoading(true);
       const { user } = session;
 
-      // --- Fetch all data in parallel for efficiency ---
       const [profileRes, rewardsRes, ordersRes, announcementRes] = await Promise.all([
         supabase.from('customer_profiles').select('full_name, stamps, wallet_balance').eq('id', user.id).single(),
         supabase.from('rewards').select('title, stamps_required').order('stamps_required', { ascending: true }),
@@ -43,35 +50,23 @@ const Account = ({ session }: { session: Session }) => {
         supabase.from('announcements').select('title, content').eq('is_active', true).order('created_at', { ascending: false }).limit(1).single()
       ]);
 
-      // --- Process Profile and Wallet Data ---
-      if (profileRes.data) {
-        setProfileData(profileRes.data);
-      }
+      if (profileRes.data) setProfileData(profileRes.data);
 
-      // --- Process Rewards Data ---
       if (profileRes.data && rewardsRes.data) {
         const currentStamps = profileRes.data.stamps;
         const next = rewardsRes.data.find(reward => reward.stamps_required > currentStamps);
-        if (next) {
-          setNextReward(next);
-        }
+        if (next) setNextReward(next);
       }
 
-      // --- Process Orders Data ---
       if (ordersRes.data && ordersRes.data.length > 0) {
         const formattedOrders: Order[] = ordersRes.data.map(o => ({
-            id: o.transaction_id,
-            orderNumber: o.order_number,
-            items: o.items,
-            totalPrice: o.total_price,
-            paymentMode: o.payment_mode,
-            status: o.status,
+            id: o.transaction_id, orderNumber: o.order_number, items: o.items,
+            totalPrice: o.total_price, paymentMode: o.payment_mode, status: o.status,
             timestamp: new Date(o.created_at),
         }));
         
         setLastOrder(formattedOrders[0]);
 
-        // Calculate most ordered item
         const itemCounts = new Map<string, number>();
         formattedOrders.forEach(order => {
             order.items.forEach((item: OrderItem) => {
@@ -85,10 +80,7 @@ const Account = ({ session }: { session: Session }) => {
         }
       }
       
-      // --- Process Announcement Data ---
-      if (announcementRes.data) {
-        setAnnouncement(announcementRes.data);
-      }
+      if (announcementRes.data) setAnnouncement(announcementRes.data);
 
       setLoading(false);
     };
@@ -121,12 +113,10 @@ const Account = ({ session }: { session: Session }) => {
           </button>
         </div>
 
-        {/* --- Main Dashboard Grid --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* --- Left Column --- */}
           <div className="lg:col-span-2 space-y-6">
-            {/* --- Main Action Card --- */}
             <div className="bg-amber-600 p-8 rounded-lg text-center">
                 <h2 className="text-3xl font-bold mb-4">Ready for another round?</h2>
                 <Link to="/order" className="inline-block px-12 py-4 text-lg font-bold bg-white text-amber-700 rounded-md hover:bg-gray-200">
@@ -134,7 +124,6 @@ const Account = ({ session }: { session: Session }) => {
                 </Link>
             </div>
 
-            {/* --- Next Reward Panel --- */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><Star className="w-6 h-6 mr-2 text-amber-400"/> Your Next Reward</h3>
               {nextReward && profileData ? (
@@ -150,13 +139,24 @@ const Account = ({ session }: { session: Session }) => {
                     You're {stampsNeeded} stamps away! Spend ₾{moneyNeeded.toFixed(2)} more to unlock.
                   </p>
                 </div>
-              ) : (
-                <p className="text-gray-400">You've unlocked all available rewards!</p>
-              )}
+              ) : ( <p className="text-gray-400">You've unlocked all available rewards!</p> )}
               <Link to="/rewards" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View All Rewards &rarr;</Link>
             </div>
             
-            {/* --- What's New Panel --- */}
+            <div className="bg-gray-800 p-6 rounded-lg">
+                <h3 className="flex items-center text-xl font-bold mb-4"><History className="w-6 h-6 mr-2 text-gray-300"/> Recent Activity</h3>
+                {lastOrder ? (
+                    <div>
+                        <p className="text-sm text-gray-400">Last Order: #{lastOrder.orderNumber}</p>
+                        <p className="font-semibold truncate">{lastOrder.items.map(i => i.menuItem.name).join(', ')}</p>
+                        <hr className="border-gray-700 my-3" />
+                        <p className="text-sm text-gray-400">Your Favorite Item:</p>
+                        <p className="font-semibold">{mostOrderedItem || 'Not enough data'}</p>
+                    </div>
+                ) : ( <p className="text-gray-400">You haven't placed any orders yet.</p> )}
+                <Link to="/history" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View Full History &rarr;</Link>
+            </div>
+
             {announcement && (
                 <div className="bg-gray-800 p-6 rounded-lg">
                     <h3 className="flex items-center text-xl font-bold mb-2"><Megaphone className="w-6 h-6 mr-2 text-blue-400"/> What's New?</h3>
@@ -168,7 +168,6 @@ const Account = ({ session }: { session: Session }) => {
 
           {/* --- Right Column --- */}
           <div className="space-y-6">
-            {/* --- Profile & Wallet Panel --- */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><User className="w-6 h-6 mr-2 text-gray-300"/> Profile & Wallet</h3>
               <div className="text-center bg-gray-700/50 p-4 rounded-md mb-4">
@@ -181,31 +180,21 @@ const Account = ({ session }: { session: Session }) => {
               </div>
             </div>
 
-            {/* --- Recent History Panel --- */}
-            <div className="bg-gray-800 p-6 rounded-lg">
-                <h3 className="flex items-center text-xl font-bold mb-4"><History className="w-6 h-6 mr-2 text-gray-300"/> Recent Activity</h3>
-                {lastOrder ? (
-                    <div>
-                        <p className="text-sm text-gray-400">Last Order: #{lastOrder.orderNumber}</p>
-                        <p className="font-semibold truncate">{lastOrder.items.map(i => i.menuItem.name).join(', ')}</p>
-                        <hr className="border-gray-700 my-3" />
-                        <p className="text-sm text-gray-400">Your Favorite Item:</p>
-                        <p className="font-semibold">{mostOrderedItem || 'Not enough data'}</p>
-                    </div>
-                ) : (
-                    <p className="text-gray-400">You haven't placed any orders yet.</p>
-                )}
-                <Link to="/history" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View Full History &rarr;</Link>
+            <div className="bg-gray-800 p-6 rounded-lg text-center">
+                <h3 className="flex items-center justify-center text-xl font-bold mb-4"><QrCode className="w-6 h-6 mr-2 text-gray-300"/> Your Loyalty Code</h3>
+                <div className="bg-white p-4 rounded-md inline-block"> 
+                  <QRCode value={session.user.id} size={200} viewBox={`0 0 256 256`}/>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">Scan this code at the counter for cashback & rewards.</p>
             </div>
             
-            {/* --- Delivery Partners Panel --- */}
             <div className="bg-gray-800 p-6 rounded-lg">
                 <h3 className="flex items-center text-xl font-bold mb-4"><Truck className="w-6 h-6 mr-2 text-gray-300"/> Delivery Partners</h3>
                 <p className="text-gray-400 mb-4 text-sm">Order for delivery through our official partners:</p>
                 <div className="flex justify-around items-center">
-                    <a href="https://wolt.com/en/geo/tbilisi" target="_blank" rel="noopener noreferrer"><img src="/images/wolt-logo.png" alt="Wolt" className="h-8"/></a>
-                    <a href="https://bolt.eu/en-ge/food/" target="_blank" rel="noopener noreferrer"><img src="/images/bolt-logo.png" alt="Bolt Food" className="h-8"/></a>
-                    <a href="https://glovoapp.com/ge/en/tbilisi/" target="_blank" rel="noopener noreferrer"><img src="/images/glovo-logo.png" alt="Glovo" className="h-5"/></a>
+                    <a href="https://wolt.com/en/geo/tbilisi" target="_blank" rel="noopener noreferrer"><img src="/images/wolt-logo.png" alt="Wolt" className="h-8 w-auto object-contain"/></a>
+                    <a href="https://bolt.eu/en-ge/food/" target="_blank" rel="noopener noreferrer"><img src="/images/bolt-logo.png" alt="Bolt Food" className="h-8 w-auto object-contain"/></a>
+                    <a href="https://glovoapp.com/ge/en/tbilisi/" target="_blank" rel="noopener noreferrer"><img src="/images/glovo-logo.png" alt="Glovo" className="h-8 w-auto object-contain"/></a>
                 </div>
             </div>
           </div>
