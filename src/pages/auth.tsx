@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { useNavigate } from 'react-router-dom'; // 1. Import the navigation hook
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
@@ -13,6 +14,7 @@ const Auth = () => {
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
   const [isSignUp, setIsSignUp] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
+  const navigate = useNavigate(); // 2. Get the navigate function to use for redirects
 
   const handleEmailAuth = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -33,7 +35,11 @@ const Auth = () => {
       else alert('Account created! Check your email to verify.');
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) alert(error.message);
+      if (error) {
+        alert(error.message);
+      } else {
+        navigate('/account'); // 3. On successful sign-in, redirect to the account page
+      }
     }
     setLoading(false);
   };
@@ -69,6 +75,8 @@ const Auth = () => {
     });
     if (error) {
       alert(error.message);
+    } else {
+      navigate('/account'); // 3. On successful verification, redirect to the account page
     }
     setLoading(false);
   };
