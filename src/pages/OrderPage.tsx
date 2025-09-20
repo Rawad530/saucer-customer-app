@@ -46,7 +46,7 @@ const OrderPage = () => {
       const { data, error } = await supabase
         .from('menu_items')
         .select('*')
-        .eq('is_available', true) // <-- THIS IS THE ONLY CHANGE
+        .eq('is_available', true)
         .order('id');
 
       if (error) {
@@ -67,10 +67,10 @@ const OrderPage = () => {
       addFinalItem({ menuItem, quantity: 1, addons: [], spicy: false, discount: 0 });
     }
   };
-  
+
   const addFinalItem = (item: OrderItem) => {
     if (editingItemIndex !== null) {
-      setSelectedItems(prev => prev.map((oldItem, index) => 
+      setSelectedItems(prev => prev.map((oldItem, index) =>
         index === editingItemIndex ? item : oldItem
       ));
       setEditingItemIndex(null);
@@ -78,7 +78,7 @@ const OrderPage = () => {
     }
 
     setSelectedItems(prev => {
-        const existingIndex = prev.findIndex(existing => 
+        const existingIndex = prev.findIndex(existing =>
             existing.menuItem.id === item.menuItem.id &&
             existing.sauce === item.sauce &&
             existing.sauceCup === item.sauceCup &&
@@ -206,6 +206,8 @@ const OrderPage = () => {
           created_at: new Date().toISOString(),
           promo_code_used: appliedDiscount > 0 ? promoCode.toUpperCase() : null,
           discount_applied_percent: appliedDiscount > 0 ? appliedDiscount : null,
+          // --- THIS IS THE ONLY LINE THAT HAS BEEN ADDED ---
+          order_type: 'pick_up', 
         },
       ]);
   
@@ -253,7 +255,6 @@ const OrderPage = () => {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Place a Pick-up Order</h1>
-          {/* --- THIS IS THE ONLY CHANGE IN THIS FILE --- */}
           <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
             &larr; Back to Account
           </Link>

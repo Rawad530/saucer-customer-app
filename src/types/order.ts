@@ -41,4 +41,5 @@ export interface Order {
   promo_code_used?: string;
   discount_applied_percent?: number;
   is_hidden_from_pos?: boolean;
+  order_type?: 'dine_in' | 'pick_up';
 }
