@@ -21,7 +21,6 @@ Deno.serve(async (_req) => {
     if (statusError) {
       throw new Error(`Database error: Could not fetch store status. ${statusError.message}`);
     }
-
     const isOrderingManuallyEnabled = statusData.is_ordering_enabled;
 
     // --- Check 2: The Scheduled Hours ---
@@ -38,7 +37,6 @@ Deno.serve(async (_req) => {
     if (hoursError) {
       throw new Error(`Database error: Could not fetch hours for today. ${hoursError.message}`);
     }
-
     const { open_time, close_time } = hoursData;
     
     let isWithinHours = false;
@@ -49,11 +47,18 @@ Deno.serve(async (_req) => {
     }
 
     // --- Final Decision ---
-    // The store is only open if BOTH checks are true
     const isOpen = isOrderingManuallyEnabled && isWithinHours;
 
+    // --- THIS IS THE FIX ---
+    // We add a Cache-Control header to prevent the server from saving the response.
+    const responseHeaders = { 
+      ...corsHeaders, 
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate', // Prevents caching
+    };
+
     return new Response(JSON.stringify({ isOpen }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: responseHeaders,
       status: 200,
     });
 
@@ -67,7 +72,7 @@ Deno.serve(async (_req) => {
 });
 ```
 
-After you have saved the changes to this file, you **must re-deploy it** for the new logic to take effect. Please run this command in your terminal:
+After you have replaced the code in this file, you must **re-deploy the function** for the changes to take effect. Please run this command in your terminal:
 
 ```bash
 npx supabase functions deploy check-restaurant-status --no-verify-jwt
