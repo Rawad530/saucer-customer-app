@@ -7,13 +7,6 @@ import { Session } from '@supabase/supabase-js';
 import { User, Wallet, Star, History, Truck, Megaphone, QrCode } from 'lucide-react';
 import QRCode from "react-qr-code";
 import { Order, OrderItem } from '../types/order';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 
 // Define types for the new data we will fetch
 interface ProfileData {
@@ -188,15 +181,26 @@ const Account = ({ session }: { session: Session }) => {
                 <p className="text-xs text-gray-400 mt-2">Scan this code at the counter for cashback & rewards.</p>
             </div>
             
+            {/* --- THIS SECTION IS UPDATED --- */}
             <div className="bg-gray-800 p-6 rounded-lg">
                 <h3 className="flex items-center text-xl font-bold mb-4"><Truck className="w-6 h-6 mr-2 text-gray-300"/> Delivery Partners</h3>
                 <p className="text-gray-400 mb-4 text-sm">Order for delivery through our official partners:</p>
-                <div className="flex justify-around items-center">
-                    <a href="https://wolt.com/en/geo/tbilisi" target="_blank" rel="noopener noreferrer"><img src="/images/wolt-logo.png" alt="Wolt" className="h-8 w-auto object-contain"/></a>
-                    <a href="https://bolt.eu/en-ge/food/" target="_blank" rel="noopener noreferrer"><img src="/images/bolt-logo.png" alt="Bolt Food" className="h-8 w-auto object-contain"/></a>
-                    <a href="https://glovoapp.com/ge/en/tbilisi/" target="_blank" rel="noopener noreferrer"><img src="/images/glovo-logo.png" alt="Glovo" className="h-8 w-auto object-contain"/></a>
+                <div className="grid grid-cols-3 gap-4">
+                    <a href="https://wolt.com/en/geo/tbilisi" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 text-center">
+                        <img src="/images/wolt-logo.png" alt="Wolt" className="h-10 w-auto object-contain"/>
+                        <span className="text-xs text-gray-400">Wolt</span>
+                    </a>
+                    <a href="https://bolt.eu/en-ge/food/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 text-center">
+                        <img src="/images/bolt-logo.png" alt="Bolt Food" className="h-10 w-auto object-contain"/>
+                        <span className="text-xs text-gray-400">Bolt Food</span>
+                    </a>
+                    <a href="https://glovoapp.com/ge/en/tbilisi/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 text-center">
+                        <img src="/images/glovo-logo.png" alt="Glovo" className="h-10 w-auto object-contain"/>
+                        <span className="text-xs text-gray-400">Glovo</span>
+                    </a>
                 </div>
             </div>
+            {/* --- END OF UPDATED SECTION --- */}
           </div>
         </div>
       </div>
