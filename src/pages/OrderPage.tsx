@@ -46,6 +46,7 @@ const OrderPage = () => {
       const { data, error } = await supabase
         .from('menu_items')
         .select('*')
+        .eq('is_available', true) // <-- THIS IS THE ONLY CHANGE
         .order('id');
 
       if (error) {

@@ -53,9 +53,3 @@ Deno.serve(async (_req) => {
     });
   }
 });
-```
-
-Finally, save the file and deploy your new function by running this command in your terminal:
-
-```bash
-npx supabase functions deploy check-restaurant-status --no-verify-jwt
