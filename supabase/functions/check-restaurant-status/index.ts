@@ -11,7 +11,7 @@ Deno.serve(async (_req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // --- Check 1: The Manual Override Switch ---
+    // Check 1: The Manual Override Switch
     const { data: statusData, error: statusError } = await supabaseAdmin
       .from('store_status')
       .select('is_ordering_enabled')
@@ -23,7 +23,7 @@ Deno.serve(async (_req) => {
     }
     const isOrderingManuallyEnabled = statusData.is_ordering_enabled;
 
-    // --- Check 2: The Scheduled Hours ---
+    // Check 2: The Scheduled Hours
     const now = DateTime.now().setZone('Asia/Tbilisi');
     const currentDay = now.weekday === 7 ? 0 : now.weekday;
     const currentTime = now.toFormat('HH:mm:ss');
@@ -37,24 +37,27 @@ Deno.serve(async (_req) => {
     if (hoursError) {
       throw new Error(`Database error: Could not fetch hours for today. ${hoursError.message}`);
     }
-    const { open_time, close_time } = hoursData;
+
+    // --- THIS IS THE FIX ---
+    // We strip the timezone from the database times to ensure a direct, reliable string comparison.
+    // e.g., "12:00:00+04" becomes "12:00:00"
+    const openTime = hoursData.open_time.substring(0, 8);
+    const closeTime = hoursData.close_time.substring(0, 8);
     
     let isWithinHours = false;
-    if (open_time < close_time) {
-      isWithinHours = currentTime >= open_time && currentTime < close_time;
+    if (openTime < closeTime) {
+      isWithinHours = currentTime >= openTime && currentTime < closeTime;
     } else {
-      isWithinHours = currentTime >= open_time || currentTime < close_time;
+      isWithinHours = currentTime >= openTime || currentTime < closeTime;
     }
 
     // --- Final Decision ---
     const isOpen = isOrderingManuallyEnabled && isWithinHours;
 
-    // --- THIS IS THE FIX ---
-    // We add a Cache-Control header to prevent the server from saving the response.
     const responseHeaders = { 
       ...corsHeaders, 
       'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate', // Prevents caching
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
     };
 
     return new Response(JSON.stringify({ isOpen }), {
@@ -70,10 +73,3 @@ Deno.serve(async (_req) => {
     });
   }
 });
-```
-
-After you have replaced the code in this file, you must **re-deploy the function** for the changes to take effect. Please run this command in your terminal:
-
-```bash
-npx supabase functions deploy check-restaurant-status --no-verify-jwt
-
