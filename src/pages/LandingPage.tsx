@@ -1,8 +1,56 @@
-// src/pages/LandingPage.tsx
-
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
 
 const LandingPage = () => {
+  const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('check-restaurant-status');
+        if (error) {
+          throw error;
+        }
+        setIsRestaurantOpen(data.isOpen);
+      } catch (error) {
+        console.error("Error checking restaurant status:", error);
+        // Default to closed if we can't verify
+        setIsRestaurantOpen(false);
+      }
+    };
+    checkStatus();
+  }, []);
+
+  const OrderButton = ({ to, text }: { to: string, text: string }) => {
+    if (isRestaurantOpen === null) {
+      return (
+        <button className="button" disabled>
+          Checking Hours...
+        </button>
+      );
+    }
+
+    if (isRestaurantOpen) {
+      return (
+        <Link to={to} className="button">
+          {text}
+        </Link>
+      );
+    }
+
+    return (
+      <div className="text-center">
+        <button className="button" disabled style={{ backgroundColor: '#9CA3AF', cursor: 'not-allowed' }}>
+          {text}
+        </button>
+        <p className="text-sm text-gray-400 mt-2">
+          We're currently closed. Open daily 12:00 PM - 2:00 AM.
+        </p>
+      </div>
+    );
+  };
+
   return (
     <div className="landing-page">
       <header className="landing-header">
@@ -11,7 +59,7 @@ const LandingPage = () => {
           <a href="#story">OUR STORY</a>
           <a href="#sauces">THE SAUCES</a>
         </nav>
-        <Link to="/account" className="button">ORDER NOW</Link>
+        <OrderButton to="/login" text="ORDER NOW" />
       </header>
 
       <main>
@@ -19,7 +67,7 @@ const LandingPage = () => {
           <div className="hero-content">
             <h1>More Sauce. Less Mess.</h1>
             <p>Your favorite burgers, your way. Choose a timeless Classic Bun or upgrade to the revolutionary <strong>Saucer Bun</strong> — perfectly sealed for zero drips. The future of flavor is in your hands.</p>
-            <Link to="/account" className="button">ORDER ONLINE</Link>
+            <OrderButton to="/login" text="ORDER ONLINE" />
           </div>
         </section>
 
@@ -67,7 +115,7 @@ const LandingPage = () => {
           <div>
             <h4>Quick Links</h4>
             <a href="#">Home</a>
-            <Link to="/account">Full Menu / Order</Link>
+            <Link to="/login">Full Menu / Order</Link>
           </div>
           <div>
             <h4>Contact Us</h4>

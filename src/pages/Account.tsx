@@ -1,5 +1,3 @@
-// src/pages/Account.tsx
-
 import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -9,6 +7,7 @@ import QRCode from "react-qr-code";
 const Account = ({ session }: { session: Session }) => {
   const [loading, setLoading] = useState(true);
   const [stampCount, setStampCount] = useState<number | null>(null);
+  const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
     const getProfile = async () => {
@@ -38,7 +37,21 @@ const Account = ({ session }: { session: Session }) => {
       }
     };
 
+    const checkStatus = async () => {
+        try {
+          const { data, error } = await supabase.functions.invoke('check-restaurant-status');
+          if (error) {
+            throw error;
+          }
+          setIsRestaurantOpen(data.isOpen);
+        } catch (error) {
+          console.error("Error checking restaurant status:", error);
+          setIsRestaurantOpen(false);
+        }
+      };
+
     getProfile();
+    checkStatus();
   }, [session]);
 
   const handleSignOut = async () => {
@@ -46,6 +59,35 @@ const Account = ({ session }: { session: Session }) => {
     if (error) {
       console.error('Error signing out:', error);
     }
+  };
+
+  const OrderButton = () => {
+    if (isRestaurantOpen === null) {
+        return (
+            <button className="w-full px-4 py-2 font-bold text-white bg-gray-500 rounded-md cursor-not-allowed" disabled>
+                Checking Hours...
+            </button>
+        );
+    }
+    if (isRestaurantOpen) {
+        return (
+            <Link to="/order" className="block w-full">
+                <button className="w-full px-4 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
+                    Place a Pick-up Order
+                </button>
+            </Link>
+        );
+    }
+    return (
+        <div>
+            <button className="w-full px-4 py-2 font-bold text-white bg-gray-500 rounded-md cursor-not-allowed" disabled>
+                Place a Pick-up Order
+            </button>
+            <p className="text-xs text-gray-400 mt-1">
+                Online ordering is currently unavailable.
+            </p>
+        </div>
+    );
   };
 
   return (
@@ -67,13 +109,8 @@ const Account = ({ session }: { session: Session }) => {
           <p>Your Stamps: {loading ? '...' : stampCount}</p>
         </div>
 
-        <Link to="/order">
-          <button className="w-full px-4 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
-            Place a Pick-up Order
-          </button>
-        </Link>
+        <OrderButton />
         
-        {/* ADDED THIS NEW BUTTON */}
         <Link to="/wallet">
           <button className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700">
             View Wallet
