@@ -22,6 +22,7 @@ const LandingPage = () => {
     checkStatus();
   }, []);
 
+  // This component now ONLY controls the "ORDER ONLINE" button in the hero section
   const OrderButton = ({ to, text }: { to: string, text: string }) => {
     if (isRestaurantOpen === null) {
       return (
@@ -59,7 +60,9 @@ const LandingPage = () => {
           <a href="#story">OUR STORY</a>
           <a href="#sauces">THE SAUCES</a>
         </nav>
-        <OrderButton to="/login" text="REGISTER NOW" />
+        {/* --- THIS IS THE FIX --- */}
+        {/* This is now a simple Link component, not tied to the open/closed status */}
+        <Link to="/login" className="button">Register Now</Link>
       </header>
 
       <main>
@@ -67,6 +70,7 @@ const LandingPage = () => {
           <div className="hero-content">
             <h1>More Sauce. Less Mess.</h1>
             <p>Your favorite burgers, your way. Choose a timeless Classic Bun or upgrade to the revolutionary <strong>Saucer Bun</strong> — perfectly sealed for zero drips. The future of flavor is in your hands.</p>
+            {/* This button remains controlled by the open/closed logic */}
             <OrderButton to="/login" text="ORDER ONLINE" />
           </div>
         </section>
