@@ -189,7 +189,7 @@ const Account = ({ session }: { session: Session }) => {
                         <span className="text-xs text-gray-400">Wolt</span>
                     </a>
                     <a href="https://food.bolt.eu/en-US/15-tbilisi/p/150123-saucer-burger" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
-                        <img src="/images/bolt-logo.png" alt="Bolt Food" className="h-8 object-contain"/>
+                        <img src="/images/bolt-logo.png" alt="Bolt Food" className="h-10 object-contain"/>
                         <span className="text-xs text-gray-400">Bolt Food</span>
                     </a>
                     <a href="https://glovoapp.com/ge/en/tbilisi/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
