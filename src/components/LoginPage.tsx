@@ -1,81 +1,141 @@
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { supabase } from '../lib/supabaseClient';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Award, Wallet, History, Truck, Bell } from "lucide-react";
 
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { User, LogIn } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+const LandingPage = () => {
+  const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
 
-const LoginPage = () => {
-  const [username, setUsername] = useState('');
-  const [error, setError] = useState('');
-  const { login } = useAuth();
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('check-restaurant-status');
+        if (error) {
+          throw error;
+        }
+        setIsRestaurantOpen(data.isOpen);
+      } catch (error) {
+        console.error("Error checking restaurant status:", error);
+        setIsRestaurantOpen(false);
+      }
+    };
+    checkStatus();
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!username.trim()) {
-      setError('Please enter a username');
-      return;
+  const OrderButton = ({ to, text }: { to: string, text: string }) => {
+    if (isRestaurantOpen === null) {
+      return (
+        <button className="button" disabled>
+          Checking Hours...
+        </button>
+      );
     }
 
-    const success = login(username.trim());
-    if (!success) {
-      setError('Invalid username. Please contact your manager for access.');
+    if (isRestaurantOpen) {
+      return (
+        <Link to={to} className="button">
+          {text}
+        </Link>
+      );
     }
+
+    return (
+      <div className="text-center">
+        <button className="button" disabled style={{ backgroundColor: '#9CA3AF', cursor: 'not-allowed' }}>
+          {text}
+        </button>
+        <p className="text-sm text-gray-400 mt-2">
+          We're currently closed. Open daily 12:00 PM - 2:00 AM.
+        </p>
+      </div>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-white shadow-lg">
-        <CardHeader className="text-center pb-6">
-          <div className="mx-auto w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mb-4">
-            <User className="h-8 w-8 text-white" />
-          </div>
-          <CardTitle className="text-2xl font-bold text-gray-800">
-            Saucer Burger
-          </CardTitle>
-          <p className="text-gray-600">Restaurant Management System</p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="username" className="text-sm font-medium text-gray-700">
-                Username
-              </Label>
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value);
-                  setError('');
-                }}
-                placeholder="Enter your username"
-                className="mt-1"
-                autoFocus
-              />
-            </div>
-            {error && (
-              <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded p-2">
-                {error}
+    <div className="landing-page">
+      <header className="landing-header">
+        <img src="/images/logo.png" alt="Saucer Burger Logo" className="logo-img" />
+        <nav className="landing-nav">
+          <a href="#story">OUR STORY</a>
+          <a href="#sauces">THE SAUCES</a>
+        </nav>
+        
+        {/* --- THIS SECTION IS REPLACED WITH THE POPOVER --- */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button className="button">Register Now</button>
+          </PopoverTrigger>
+          <PopoverContent className="w-96 bg-gray-800 border-gray-700 text-white mr-4">
+            <div className="p-4">
+              <h3 className="text-lg font-bold text-amber-400 mb-4">Unlock Exclusive Benefits</h3>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <Award className="h-5 w-5 text-amber-400 shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-semibold">Loyalty Rewards</h4>
+                    <p className="text-sm text-gray-400">Earn stamps and redeem them for free food.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Wallet className="h-5 w-5 text-amber-400 shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-semibold">Wallet & Cashback</h4>
+                    <p className="text-sm text-gray-400">Get 5% cashback on dine-in orders.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <History className="h-5 w-5 text-amber-400 shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-semibold">Order History</h4>
+                    <p className="text-sm text-gray-400">Track past orders and see your favorites.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Truck className="h-5 w-5 text-amber-400 shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-semibold">Delivery Partners</h4>
+                    <p className="text-sm text-gray-400">Quickly find us on Wolt, Bolt, and Glovo.</p>
+                  </div>
+                </div>
+                 <div className="flex items-start gap-3">
+                  <Bell className="h-5 w-5 text-amber-400 shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-semibold">Latest News</h4>
+                    <p className="text-sm text-gray-400">Stay updated on our newest offers.</p>
+                  </div>
+                </div>
               </div>
-            )}
-            <Button
-              type="submit"
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white"
-            >
-              <LogIn className="h-4 w-4 mr-2" />
-              Sign In
-            </Button>
-          </form>
-          <div className="mt-6 text-xs text-gray-500 text-center">
-            <p>Allowed users: admin, manager, worker1, worker2, chef, cashier</p>
+            </div>
+          </PopoverContent>
+        </Popover>
+        {/* --- END OF REPLACEMENT --- */}
+
+      </header>
+
+      <main>
+        <section className="hero">
+          <div className="hero-content">
+            <h1>More Sauce. Less Mess.</h1>
+            <p>Your favorite burgers, your way. Choose a timeless Classic Bun or upgrade to the revolutionary <strong>Saucer Bun</strong> — perfectly sealed for zero drips. The future of flavor is in your hands.</p>
+            <OrderButton to="/login" text="ORDER ONLINE" />
           </div>
-        </CardContent>
-      </Card>
+        </section>
+
+        <section id="story" className="container story-section">
+          {/* ...your story section... */}
+        </section>
+
+        <section id="sauces" className="container sauce-section">
+          {/* ...your sauces section... */}
+        </section>
+      </main>
+
+      <footer className="landing-footer">
+        {/* ...your footer... */}
+      </footer>
     </div>
   );
 };
 
-export default LoginPage;
+export default LandingPage;
