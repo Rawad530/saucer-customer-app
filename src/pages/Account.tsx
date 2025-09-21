@@ -179,32 +179,25 @@ const Account = ({ session }: { session: Session }) => {
                 <p className="text-xs text-gray-400 mt-2">Scan this code at the counter for cashback & rewards.</p>
             </div>
             
-            {/* --- THIS SECTION HAS BEEN UPDATED FOR VISUAL CONSISTENCY --- */}
             <div className="bg-gray-800 p-6 rounded-lg">
                 <h3 className="flex items-center text-xl font-bold mb-4"><Truck className="w-6 h-6 mr-2 text-gray-300"/> Delivery Partners</h3>
                 <p className="text-gray-400 mb-4 text-sm">Order for delivery through our official partners:</p>
                 <div className="grid grid-cols-3 gap-2">
-                    <a href="https://wolt.com/en/geo/tbilisi" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg hover:bg-gray-700/50">
-                        <div className="h-10 w-full flex items-center justify-center">
-                            <img src="/images/logo-wolt.png" alt="Wolt" className="max-h-full max-w-full object-contain"/>
-                        </div>
+                    {/* --- THIS IS THE FINAL FIX --- */}
+                    <a href="https://wolt.com/en/geo/tbilisi" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                        <div className="h-12 w-full bg-contain bg-no-repeat bg-center" style={{ backgroundImage: `url(/images/logo-wolt.png)` }}></div>
                         <span className="text-xs text-gray-400">Wolt</span>
                     </a>
-                    <a href="https://bolt.eu/en-ge/food/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg hover:bg-gray-700/50">
-                        <div className="h-10 w-full flex items-center justify-center">
-                            <img src="/images/bolt-logo.png" alt="Bolt Food" className="max-h-full max-w-full object-contain"/>
-                        </div>
+                    <a href="https://bolt.eu/en-ge/food/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                         <div className="h-12 w-full bg-contain bg-no-repeat bg-center" style={{ backgroundImage: `url(/images/bolt-logo.png)` }}></div>
                         <span className="text-xs text-gray-400">Bolt Food</span>
                     </a>
-                    <a href="https://glovoapp.com/ge/en/tbilisi/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-center gap-2 p-2 rounded-lg hover:bg-gray-700/50">
-                        <div className="h-10 w-full flex items-center justify-center">
-                           <img src="/images/glovo-logo.png" alt="Glovo" className="max-h-full max-w-full object-contain"/>
-                        </div>
+                    <a href="https://glovoapp.com/ge/en/tbilisi/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                        <div className="h-12 w-full bg-contain bg-no-repeat bg-center" style={{ backgroundImage: `url(/images/glovo-logo.png)` }}></div>
                         <span className="text-xs text-gray-400">Glovo</span>
                     </a>
                 </div>
             </div>
-            
           </div>
         </div>
       </div>
