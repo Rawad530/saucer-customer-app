@@ -108,6 +108,7 @@ const Account = ({ session }: { session: Session }) => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
+          {/* --- Left Column --- */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-amber-600 p-8 rounded-lg text-center">
                 <h2 className="text-3xl font-bold mb-4">Ready for another round?</h2>
@@ -158,6 +159,7 @@ const Account = ({ session }: { session: Session }) => {
             )}
           </div>
 
+          {/* --- Right Column --- */}
           <div className="space-y-6">
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><User className="w-6 h-6 mr-2 text-gray-300"/> Profile & Wallet</h3>
@@ -179,12 +181,13 @@ const Account = ({ session }: { session: Session }) => {
                 <p className="text-xs text-gray-400 mt-2">Scan this code at the counter for cashback & rewards.</p>
             </div>
             
+            {/* --- THIS SECTION IS UPDATED --- */}
             <div className="bg-gray-800 p-6 rounded-lg">
                 <h3 className="flex items-center text-xl font-bold mb-4"><Truck className="w-6 h-6 mr-2 text-gray-300"/> Delivery Partners</h3>
                 <p className="text-gray-400 mb-4 text-sm">Order for delivery through our official partners:</p>
                 <div className="grid grid-cols-3 gap-4">
                     <a href="https://wolt.com/en/geo/tbilisi" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 text-center">
-                        <img src="/images/bolt-logo.png" alt="Wolt" className="h-10 w-auto object-contain"/>
+                        <img src="/images/wolt-logo.png" alt="Wolt" className="h-10 w-auto object-contain"/>
                         <span className="text-xs text-gray-400">Wolt</span>
                     </a>
                     <a href="https://bolt.eu/en-ge/food/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 text-center">
@@ -197,6 +200,7 @@ const Account = ({ session }: { session: Session }) => {
                     </a>
                 </div>
             </div>
+            {/* --- END OF UPDATED SECTION --- */}
           </div>
         </div>
       </div>
