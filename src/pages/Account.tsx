@@ -184,11 +184,11 @@ const Account = ({ session }: { session: Session }) => {
                 <p className="text-gray-400 mb-4 text-sm">Order for delivery through our official partners:</p>
                 <div className="grid grid-cols-3 gap-2 items-center">
                     {/* --- THIS IS THE FINAL FIX --- */}
-                    <a href="https://wolt.com/en/geo/tbilisi" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                    <a href="https://wolt.com/ka/geo/tbilisi/restaurant/saucer-burger" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
                         <img src="/images/logo-wolt.png" alt="Wolt" className="h-10 object-contain"/>
                         <span className="text-xs text-gray-400">Wolt</span>
                     </a>
-                    <a href="https://bolt.eu/en-ge/food/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                    <a href="https://food.bolt.eu/en-US/15-tbilisi/p/150123-saucer-burger" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
                         <img src="/images/bolt-logo.png" alt="Bolt Food" className="h-8 object-contain"/>
                         <span className="text-xs text-gray-400">Bolt Food</span>
                     </a>
