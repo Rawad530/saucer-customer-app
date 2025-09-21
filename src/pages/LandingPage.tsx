@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Award, Wallet, History, Truck, Bell } from "lucide-react";
 
 const LandingPage = () => {
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
@@ -17,6 +15,7 @@ const LandingPage = () => {
         setIsRestaurantOpen(data.isOpen);
       } catch (error) {
         console.error("Error checking restaurant status:", error);
+        // Default to closed if we can't verify
         setIsRestaurantOpen(false);
       }
     };
@@ -60,57 +59,7 @@ const LandingPage = () => {
           <a href="#story">OUR STORY</a>
           <a href="#sauces">THE SAUCES</a>
         </nav>
-        
-        {/* --- THIS SECTION IS REPLACED WITH THE POPOVER --- */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <button className="button">Register Now</button>
-          </PopoverTrigger>
-          <PopoverContent className="w-96 bg-gray-800 border-gray-700 text-white mr-4">
-            <div className="p-4">
-              <h3 className="text-lg font-bold text-amber-400 mb-4">Unlock Exclusive Benefits</h3>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <Award className="h-5 w-5 text-amber-400 shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-semibold">Loyalty Rewards</h4>
-                    <p className="text-sm text-gray-400">Earn stamps and redeem them for free food.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Wallet className="h-5 w-5 text-amber-400 shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-semibold">Wallet & Cashback</h4>
-                    <p className="text-sm text-gray-400">Get 5% cashback on dine-in orders.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <History className="h-5 w-5 text-amber-400 shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-semibold">Order History</h4>
-                    <p className="text-sm text-gray-400">Track past orders and see your favorites.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Truck className="h-5 w-5 text-amber-400 shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-semibold">Delivery Partners</h4>
-                    <p className="text-sm text-gray-400">Quickly find us on Wolt, Bolt, and Glovo.</p>
-                  </div>
-                </div>
-                 <div className="flex items-start gap-3">
-                  <Bell className="h-5 w-5 text-amber-400 shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-semibold">Latest News</h4>
-                    <p className="text-sm text-gray-400">Stay updated on our newest offers.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-        {/* --- END OF REPLACEMENT --- */}
-
+        <OrderButton to="/login" text="REGISTER NOW" />
       </header>
 
       <main>
@@ -123,16 +72,57 @@ const LandingPage = () => {
         </section>
 
         <section id="story" className="container story-section">
-          {/* ...your story section... */}
+          <div className="text-content">
+            <h2 className="section-title">The Future of Flavor is Here.</h2>
+            <p>Ever wondered if you could enjoy a deliciously messy, sauce-filled burger without the actual mess? We did. Saucer Burger and Wrap was born from a simple mission: to revolutionize the way you eat. We've redesigned the burger into a unique, futuristic saucer shape, perfectly sealed at the edges. Our motto is "more sauce, less mess," allowing you to enjoy generous, authentic flavors on the go—in your car, on a walk, wherever your day takes you—without a single drip.</p>
+            <p>But our innovation doesn't stop at convenience. We are committed to crafting every meal with fresh, high-quality ingredients and generous portions. By rethinking the burger, we also aim to create a more sustainable experience, reducing waste and paving the way for a tastier, cleaner future for generations to come. Welcome to Saucer Burger and Wrap, where convenience, flavor, and the future collide.</p>
+          </div>
+          <div className="image-content">
+            <img src="/images/sauce-man.png" alt="Saucer Beef Wrap" />
+          </div>
         </section>
 
         <section id="sauces" className="container sauce-section">
-          {/* ...your sauces section... */}
+          <h2 className="section-title">The Sauces Behind the Saucer.</h2>
+          <div className="sauce-grid">
+            <div className="sauce-card">
+              <img src="/images/special-sauce.png" alt="Saucer Special Sauce" />
+              <h3>Special Saucer Sauce</h3>
+            </div>
+            <div className="sauce-card">
+              <img src="/images/garlic-sauce.png" alt="Garlic Sauce" />
+              <h3>Garlic Sauce</h3>
+            </div>
+            <div className="sauce-card">
+              <img src="/images/bbq-sauce.png" alt="Barbecue Sauce" />
+              <h3>Barbecue Sauce</h3>
+            </div>
+            <div className="sauce-card">
+              <img src="/images/chilli-sauce.png" alt="Hot Chili Sauce" />
+              <h3>Hot Chili Sauce</h3>
+            </div>
+          </div>
         </section>
       </main>
 
       <footer className="landing-footer">
-        {/* ...your footer... */}
+        <div className="footer-grid">
+          <div>
+            <h4>Saucer Burger & Wrap</h4>
+            <p>45 Petre Kavtaradze St<br />Tbilisi, Georgia</p>
+            <p><strong>Hours:</strong> 12:00 PM - 2:00 AM</p>
+          </div>
+          <div>
+            <h4>Quick Links</h4>
+            <a href="#">Home</a>
+            <Link to="/login">Full Menu / Order</Link>
+          </div>
+          <div>
+            <h4>Contact Us</h4>
+            <p>Phone: +995 591 22 96 58</p>
+            <p>Email: saucerburger@gmail.com</p>
+          </div>
+        </div>
       </footer>
     </div>
   );
