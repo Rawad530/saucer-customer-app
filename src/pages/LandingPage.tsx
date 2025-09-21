@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
+import { Award, Wallet, History, Truck, Bell } from 'lucide-react';
 
 const LandingPage = () => {
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
@@ -15,14 +16,12 @@ const LandingPage = () => {
         setIsRestaurantOpen(data.isOpen);
       } catch (error) {
         console.error("Error checking restaurant status:", error);
-        // Default to closed if we can't verify
         setIsRestaurantOpen(false);
       }
     };
     checkStatus();
   }, []);
 
-  // This component now ONLY controls the "ORDER ONLINE" button in the hero section
   const OrderButton = ({ to, text }: { to: string, text: string }) => {
     if (isRestaurantOpen === null) {
       return (
@@ -58,10 +57,10 @@ const LandingPage = () => {
         <img src="/images/logo.png" alt="Saucer Burger Logo" className="logo-img" />
         <nav className="landing-nav">
           <a href="#story">OUR STORY</a>
+          {/* ADDED THIS LINK */}
+          <a href="#benefits">BENEFITS</a>
           <a href="#sauces">THE SAUCES</a>
         </nav>
-        {/* --- THIS IS THE FIX --- */}
-        {/* This is now a simple Link component, not tied to the open/closed status */}
         <Link to="/login" className="button">Register Now</Link>
       </header>
 
@@ -70,7 +69,6 @@ const LandingPage = () => {
           <div className="hero-content">
             <h1>More Sauce. Less Mess.</h1>
             <p>Your favorite burgers, your way. Choose a timeless Classic Bun or upgrade to the revolutionary <strong>Saucer Bun</strong> — perfectly sealed for zero drips. The future of flavor is in your hands.</p>
-            {/* This button remains controlled by the open/closed logic */}
             <OrderButton to="/login" text="ORDER ONLINE" />
           </div>
         </section>
@@ -85,6 +83,40 @@ const LandingPage = () => {
             <img src="/images/sauce-man.png" alt="Saucer Beef Wrap" />
           </div>
         </section>
+
+        {/* --- NEW BENEFITS SECTION --- */}
+        <section id="benefits" className="container benefits-section">
+          <h2 className="section-title">Unlock Exclusive Benefits</h2>
+          <p className="section-subtitle">Create an account to get the full Saucer Burger experience.</p>
+          <div className="benefits-grid">
+            <div className="benefit-card">
+              <Award className="benefit-icon" />
+              <h3>Loyalty & Rewards</h3>
+              <p>Earn royalty points (stamps) for your purchases and redeem them for free food and drinks.</p>
+            </div>
+            <div className="benefit-card">
+              <Wallet className="benefit-icon" />
+              <h3>Wallet & Cashback</h3>
+              <p>Get 5% cashback on dine-in orders and pay for future meals with your secure wallet balance.</p>
+            </div>
+            <div className="benefit-card">
+              <History className="benefit-icon" />
+              <h3>Order History</h3>
+              <p>Easily track your past orders and see your favorite, most-ordered items at a glance.</p>
+            </div>
+            <div className="benefit-card">
+              <Truck className="benefit-icon" />
+              <h3>Delivery Partners</h3>
+              <p>Quickly access our official partners (Wolt, Bolt Food, Glovo) for delivery options.</p>
+            </div>
+            <div className="benefit-card">
+              <Bell className="benefit-icon" />
+              <h3>Latest News</h3>
+              <p>Be the first to know about our newest menu items, special offers, and updates.</p>
+            </div>
+          </div>
+        </section>
+        {/* --- END OF NEW SECTION --- */}
 
         <section id="sauces" className="container sauce-section">
           <h2 className="section-title">The Sauces Behind the Saucer.</h2>
