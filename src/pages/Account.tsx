@@ -182,24 +182,18 @@ const Account = ({ session }: { session: Session }) => {
             <div className="bg-gray-800 p-6 rounded-lg">
                 <h3 className="flex items-center text-xl font-bold mb-4"><Truck className="w-6 h-6 mr-2 text-gray-300"/> Delivery Partners</h3>
                 <p className="text-gray-400 mb-4 text-sm">Order for delivery through our official partners:</p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-2 items-center">
                     {/* --- THIS IS THE FINAL FIX --- */}
-                    <a href="https://wolt.com/en/geo/tbilisi" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2 rounded-lg">
-                        <div className="w-20 h-12 flex items-center justify-center">
-                            <img src="/images/logo-wolt.png" alt="Wolt" className="max-h-full max-w-full object-contain"/>
-                        </div>
+                    <a href="https://wolt.com/en/geo/tbilisi" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                        <img src="/images/logo-wolt.png" alt="Wolt" className="h-10 object-contain"/>
                         <span className="text-xs text-gray-400">Wolt</span>
                     </a>
-                    <a href="https://bolt.eu/en-ge/food/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2 rounded-lg">
-                         <div className="w-20 h-12 flex items-center justify-center">
-                            <img src="/images/bolt-logo.png" alt="Bolt Food" className="max-h-full max-w-full object-contain"/>
-                        </div>
+                    <a href="https://bolt.eu/en-ge/food/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                        <img src="/images/bolt-logo.png" alt="Bolt Food" className="h-8 object-contain"/>
                         <span className="text-xs text-gray-400">Bolt Food</span>
                     </a>
-                    <a href="https://glovoapp.com/ge/en/tbilisi/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2 rounded-lg">
-                        <div className="w-20 h-12 flex items-center justify-center">
-                           <img src="/images/glovo-logo.png" alt="Glovo" className="max-h-full max-w-full object-contain"/>
-                        </div>
+                    <a href="https://glovoapp.com/ge/en/tbilisi/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                        <img src="/images/glovo-logo.png" alt="Glovo" className="h-10 object-contain"/>
                         <span className="text-xs text-gray-400">Glovo</span>
                     </a>
                 </div>
