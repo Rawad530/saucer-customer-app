@@ -185,7 +185,7 @@ const Account = ({ session }: { session: Session }) => {
                 <div className="grid grid-cols-3 gap-2">
                     {/* --- THIS IS THE FINAL FIX --- */}
                     <a href="https://wolt.com/en/geo/tbilisi" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
-                        <div className="h-12 w-full bg-contain bg-no-repeat bg-center" style={{ backgroundImage: `url(/images/logo-wolt.png)` }}></div>
+                        <div className="h-16 w-full bg-contain bg-no-repeat bg-center" style={{ backgroundImage: `url(/images/logo-wolt.png)` }}></div>
                         <span className="text-xs text-gray-400">Wolt</span>
                     </a>
                     <a href="https://bolt.eu/en-ge/food/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
