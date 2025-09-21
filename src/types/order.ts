@@ -43,3 +43,17 @@ export interface Order {
   is_hidden_from_pos?: boolean;
   order_type?: 'dine_in' | 'pick_up';
 }
+
+// Add this to the bottom of src/types/order.ts
+
+export interface PendingItem {
+  menuItem: MenuItem;
+  quantity: number;
+  sauce?: string;
+  sauceCup?: string;
+  drink?: string;
+  addons: string[];
+  spicy: boolean;
+  remarks?: string;
+  discount?: number;
+}

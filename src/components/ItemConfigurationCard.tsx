@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,19 +7,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { MenuItem } from "@/types/order";
 import { sauceOptions, drinkOptions, addOnOptions } from "@/data/menu";
 
+// --- THIS INTERFACE IS NOW CORRECTED ---
 interface PendingItem {
   menuItem: MenuItem;
+  quantity: number; // This was missing
   sauce?: string;
   sauceCup?: string;
   drink?: string;
   addons: string[];
   spicy: boolean;
   remarks?: string;
+  discount?: number;
 }
+// --- END OF CORRECTION ---
 
 interface ItemConfigurationCardProps {
   pendingItem: PendingItem;
-  onUpdatePendingItem: (updater: (prev: PendingItem | null) => PendingItem | null) => void;
+  onUpdatePendingItem: React.Dispatch<React.SetStateAction<PendingItem | null>>;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -30,7 +34,7 @@ const ItemConfigurationCard = ({
   onConfirm, 
   onCancel 
 }: ItemConfigurationCardProps) => {
-  const [showRemarks, setShowRemarks] = useState(false);
+  const [showRemarks, setShowRemarks] = useState(!!pendingItem.remarks);
   const isMainItem = pendingItem.menuItem.category === 'mains' || pendingItem.menuItem.category === 'value';
   
   const handleAddonChange = (addonName: string, checked: boolean) => {
@@ -58,7 +62,9 @@ const ItemConfigurationCard = ({
     }, 0);
   };
 
-  const totalPrice = pendingItem.menuItem.price + calculateAddonPrice();
+  const totalPrice = (pendingItem.menuItem.price + calculateAddonPrice()) * pendingItem.quantity;
+  const isConfirmDisabled = (pendingItem.menuItem.requires_sauce && pendingItem.menuItem.category !== 'value' && !pendingItem.sauce) || (pendingItem.menuItem.is_combo && !pendingItem.drink);
+
 
   return (
     <Card className="border-orange-500 border-2 bg-white text-gray-800">
@@ -68,7 +74,6 @@ const ItemConfigurationCard = ({
           <span className="text-orange-600 ml-2">₾{totalPrice.toFixed(2)}</span>
         </h4>
         
-        {/* --- CHANGED TO SNAKE_CASE --- */}
         {pendingItem.menuItem.requires_sauce && pendingItem.menuItem.category !== 'value' && (
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -92,55 +97,7 @@ const ItemConfigurationCard = ({
           </div>
         )}
 
-        {/* --- CHANGED TO SNAKE_CASE --- */}
         {pendingItem.menuItem.is_combo && (
-          <>
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Sauce Cup
-              </label>
-              <Select 
-                value={pendingItem.sauceCup} 
-                onValueChange={(value) => 
-                  onUpdatePendingItem(prev => prev ? {...prev, sauceCup: value} : null)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select sauce cup (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sauceOptions.map(sauce => (
-                    <SelectItem key={sauce} value={sauce}>{sauce}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Drink *
-              </label>
-              <Select 
-                value={pendingItem.drink} 
-                onValueChange={(value) => 
-                  onUpdatePendingItem(prev => prev ? {...prev, drink: value} : null)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select drink" />
-                </SelectTrigger>
-                <SelectContent>
-                  {drinkOptions.map(drink => (
-                    <SelectItem key={drink} value={drink}>{drink}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </>
-        )}
-
-        {/* --- CHANGED TO SNAKE_CASE --- */}
-        {pendingItem.menuItem.name.includes('Meal') && !pendingItem.menuItem.is_combo && (
           <>
             <div className="mb-3">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -257,8 +214,8 @@ const ItemConfigurationCard = ({
         </div>
 
         <div className="flex space-x-2">
-          <Button onClick={onConfirm} className="bg-green-500 hover:bg-green-600">
-            Add to Order
+          <Button onClick={onConfirm} className="bg-green-500 hover:bg-green-600" disabled={isConfirmDisabled}>
+            {pendingItem.quantity > 1 ? 'Update Items' : 'Add to Order'}
           </Button>
           <Button onClick={onCancel} variant="outline">
             Cancel

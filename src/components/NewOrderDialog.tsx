@@ -5,7 +5,7 @@ import { menuItems, addOnOptions } from "@/data/menu";
 import { getNextOrderNumber } from "@/utils/orderUtils";
 import MenuSection from "./MenuSection";
 import OrderSummary from "./OrderSummary";
-import PaymentModeDialog from "@/components/PaymentModeDialog";
+import PaymentModeDialog from "./PaymentModeDialog"; // <-- FIX 1: Corrected import path
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,6 +17,7 @@ interface NewOrderDialogProps {
 
 interface PendingItem {
   menuItem: MenuItem;
+  quantity: number; // <-- FIX 2: Added quantity property
   sauce?: string;
   sauceCup?: string;
   drink?: string;
@@ -32,8 +33,9 @@ const NewOrderDialog = ({ isOpen, onClose, onAddOrder }: NewOrderDialogProps) =>
   const { toast } = useToast();
 
   const addItemToOrder = (menuItem: MenuItem) => {
-    if (menuItem.requiresSauce || menuItem.isCombo || menuItem.category === 'mains' || menuItem.category === 'value') {
-      setPendingItem({ menuItem, addons: [], spicy: false });
+    if (menuItem.requires_sauce || menuItem.is_combo || menuItem.category === 'mains' || menuItem.category === 'value') {
+      // --- FIX 2: Set default quantity ---
+      setPendingItem({ menuItem, addons: [], spicy: false, quantity: 1 });
     } else {
       addFinalItem({ menuItem, quantity: 1, addons: [], spicy: false });
     }
@@ -65,12 +67,11 @@ const NewOrderDialog = ({ isOpen, onClose, onAddOrder }: NewOrderDialogProps) =>
   const confirmPendingItem = () => {
     if (!pendingItem) return;
     
-    const requiredSauce = pendingItem.menuItem.requiresSauce && pendingItem.menuItem.category !== 'value' && !pendingItem.sauce;
-    const requiredDrink = (pendingItem.menuItem.isCombo || pendingItem.menuItem.name.includes('Meal')) && !pendingItem.drink;
+    const requiredSauce = pendingItem.menuItem.requires_sauce && pendingItem.menuItem.category !== 'value' && !pendingItem.sauce;
+    const requiredDrink = (pendingItem.menuItem.is_combo || pendingItem.menuItem.name.includes('Meal')) && !pendingItem.drink;
     
     if (requiredSauce || requiredDrink) return;
 
-    // Calculate add-on price
     const addonPrice = pendingItem.addons.reduce((total, addon) => {
       const addonOption = addOnOptions.find(option => option.name === addon);
       return total + (addonOption?.price || 0);
@@ -80,7 +81,7 @@ const NewOrderDialog = ({ isOpen, onClose, onAddOrder }: NewOrderDialogProps) =>
 
     addFinalItem({
       menuItem: { ...pendingItem.menuItem, price: finalPrice },
-      quantity: 1,
+      quantity: 1, // This can be adjusted if you allow changing quantity in config
       sauce: pendingItem.sauce,
       sauceCup: pendingItem.sauceCup,
       drink: pendingItem.drink,
@@ -116,7 +117,6 @@ const NewOrderDialog = ({ isOpen, onClose, onAddOrder }: NewOrderDialogProps) =>
 
   const handleConfirmOrder = async (paymentMode: PaymentMode) => {
     try {
-      // Check app version before submitting order
       const { error } = await supabase.functions.invoke('version-check', {
         headers: {
           'x-app-version': '3'
@@ -184,7 +184,6 @@ const NewOrderDialog = ({ isOpen, onClose, onAddOrder }: NewOrderDialogProps) =>
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Menu Items */}
           <div className="space-y-6">
             <h3 className="text-xl font-semibold text-gray-800">Menu</h3>
             
@@ -198,7 +197,6 @@ const NewOrderDialog = ({ isOpen, onClose, onAddOrder }: NewOrderDialogProps) =>
             ))}
           </div>
 
-          {/* Order Summary */}
           <OrderSummary
             selectedItems={selectedItems}
             pendingItem={pendingItem}

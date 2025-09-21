@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Order, OrderItem, MenuItem } from "../types/order";
 import { addOnOptions } from "../data/menu";
-import { getNextOrderNumber } from "../utils/orderUtils";
 import { supabase } from "../lib/supabaseClient";
 import MenuSection from "../components/MenuSection";
 import OrderSummary from "../components/OrderSummary";
@@ -35,29 +34,46 @@ const OrderPage = () => {
   const [isCheckingPromo, setIsCheckingPromo] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [useWallet, setUseWallet] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
-    const fetchMenu = async () => {
+    const fetchData = async () => {
       setLoadingMenu(true);
-      const { data, error } = await supabase
-        .from('menu_items')
-        .select('*')
-        .eq('is_available', true)
-        .order('id');
+      const authSession = await supabase.auth.getSession();
+      const user = authSession.data.session?.user;
+      setSession(authSession.data.session);
 
-      if (error) {
-        console.error("Error fetching menu:", error);
-      } else if (data) {
-        setMenuItems(data);
+      const menuPromise = supabase.from('menu_items').select('*').eq('is_available', true).order('id');
+      
+      let walletPromise;
+      if (user) {
+        walletPromise = supabase.from('customer_profiles').select('wallet_balance').eq('id', user.id).single();
       }
+
+      const [menuResult, walletResult] = await Promise.all([menuPromise, walletPromise]);
+
+      if (menuResult.error) {
+        console.error("Error fetching menu:", menuResult.error);
+      } else if (menuResult.data) {
+        setMenuItems(menuResult.data);
+      }
+      
+      if (walletResult?.error) {
+        console.error("Error fetching wallet balance:", walletResult.error);
+      } else if (walletResult?.data) {
+        setWalletBalance(walletResult.data.wallet_balance);
+      }
+      
       setLoadingMenu(false);
     };
 
-    fetchMenu();
+    fetchData();
+    return () => subscription.unsubscribe();
   }, []);
 
   const addItemToOrder = (menuItem: MenuItem) => {
@@ -70,28 +86,26 @@ const OrderPage = () => {
 
   const addFinalItem = (item: OrderItem) => {
     if (editingItemIndex !== null) {
-      setSelectedItems(prev => prev.map((oldItem, index) =>
-        index === editingItemIndex ? item : oldItem
-      ));
+      setSelectedItems(prev => prev.map((oldItem, index) => index === editingItemIndex ? item : oldItem));
       setEditingItemIndex(null);
       return;
     }
 
     setSelectedItems(prev => {
-        const existingIndex = prev.findIndex(existing =>
-            existing.menuItem.id === item.menuItem.id &&
-            existing.sauce === item.sauce &&
-            existing.sauceCup === item.sauceCup &&
-            existing.drink === item.drink &&
-            JSON.stringify(existing.addons.sort()) === JSON.stringify(item.addons.sort()) &&
-            existing.spicy === item.spicy &&
-            existing.remarks === item.remarks &&
-            existing.discount === item.discount
-        );
-        if (existingIndex >= 0) {
-            return prev.map((existing, index) => index === existingIndex ? { ...existing, quantity: existing.quantity + 1 } : existing);
-        }
-        return [...prev, item];
+      const existingIndex = prev.findIndex(existing =>
+        existing.menuItem.id === item.menuItem.id &&
+        existing.sauce === item.sauce &&
+        existing.sauceCup === item.sauceCup &&
+        existing.drink === item.drink &&
+        JSON.stringify(existing.addons.sort()) === JSON.stringify(item.addons.sort()) &&
+        existing.spicy === item.spicy &&
+        existing.remarks === item.remarks &&
+        existing.discount === item.discount
+      );
+      if (existingIndex >= 0) {
+        return prev.map((existing, index) => index === existingIndex ? { ...existing, quantity: existing.quantity + 1 } : existing);
+      }
+      return [...prev, item];
     });
   };
 
@@ -151,22 +165,21 @@ const OrderPage = () => {
     return sum + (finalPrice * item.quantity);
   }, 0);
   
-  const discountAmount = subtotal * (appliedDiscount / 100);
-  const totalPrice = subtotal - discountAmount;
-  
+  const promoDiscountAmount = subtotal * (appliedDiscount / 100);
+  const priceAfterPromo = subtotal - promoDiscountAmount;
+  const walletAmountToApply = useWallet ? Math.min(priceAfterPromo, walletBalance) : 0;
+  const finalAmountToPay = priceAfterPromo - walletAmountToApply;
+
   const handleApplyPromoCode = async () => {
     if (!promoCode.trim()) return;
     setIsCheckingPromo(true);
     setPromoMessage("");
-
     try {
       const { data, error } = await supabase.functions.invoke('validate-promo-code', {
         body: { promoCode: promoCode.trim().toUpperCase() },
       });
-
       if (error) throw new Error(error.message);
       if (data.error) throw new Error(data.error);
-
       setAppliedDiscount(data.discount);
       setPromoMessage(`Success! ${data.discount}% discount applied.`);
     } catch (err) {
@@ -182,42 +195,43 @@ const OrderPage = () => {
     setIsPlacingOrder(true);
   
     const orderId = crypto.randomUUID();
-    const orderNumber = await getNextOrderNumber();
   
     try {
-      // First, attempt to get the payment link from the bank
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('bog-payment', {
-        body: { orderId, amount: totalPrice },
-      });
+      const { data: orderNumberData, error: orderNumberError } = await supabase.functions.invoke('get-next-order-number');
+      if (orderNumberError) throw new Error(`Could not get order number: ${orderNumberError.message}`);
+      const orderNumber = orderNumberData.nextOrderNumber;
   
-      if (functionError) throw new Error(functionError.message);
-      if (functionData.error) throw new Error(functionData.error);
+      const { error: insertError } = await supabase.from('transactions').insert([{ 
+        transaction_id: orderId, user_id: session.user.id, order_number: orderNumber, items: selectedItems as any,
+        total_price: priceAfterPromo,
+        payment_mode: 'Card - Online', status: 'pending_payment', created_at: new Date().toISOString(),
+        promo_code_used: appliedDiscount > 0 ? promoCode.toUpperCase() : null,
+        discount_applied_percent: appliedDiscount > 0 ? appliedDiscount : null,
+        wallet_payment_amount: walletAmountToApply
+      }]);
   
-      // If we get the link, THEN save the order to our database
-      const { error: insertError } = await supabase.from('transactions').insert([
-        { 
-          transaction_id: orderId,
-          user_id: session.user.id,
-          order_number: orderNumber,
-          items: selectedItems as any,
-          total_price: totalPrice,
-          payment_mode: 'Card - Online',
-          status: 'pending_payment',
-          created_at: new Date().toISOString(),
-          promo_code_used: appliedDiscount > 0 ? promoCode.toUpperCase() : null,
-          discount_applied_percent: appliedDiscount > 0 ? appliedDiscount : null,
-          // --- THIS IS THE ONLY LINE THAT HAS BEEN ADDED ---
-          order_type: 'pick_up', 
-        },
-      ]);
+      if (insertError) throw new Error(`Failed to save initial order: ${insertError.message}`);
   
-      if (insertError) throw new Error(`Failed to save order: ${insertError.message}`);
-  
-      // If saving was successful, redirect the user to the payment page
-      window.location.href = functionData.redirectUrl;
-  
+      if (useWallet && walletAmountToApply > 0) {
+        const { error: walletError } = await supabase.functions.invoke('debit-wallet', {
+          body: { customerId: session.user.id, amount: walletAmountToApply, orderId: orderId }
+        });
+        if (walletError) throw new Error(`Wallet payment failed: ${walletError.message}`);
+      }
+      
+      if (finalAmountToPay > 0) {
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('bog-payment', {
+          body: { orderId, amount: finalAmountToPay },
+        });
+        if (functionError) throw new Error(functionError.message);
+        if (functionData.error) throw new Error(functionData.error);
+        window.location.href = functionData.redirectUrl;
+      } else {
+        await supabase.from('transactions').update({ status: 'pending_approval' }).eq('transaction_id', orderId);
+        setOrderPlaced(true);
+      }
     } catch (err) {
-      alert(err instanceof Error ? err.message : "An unknown error occurred while trying to process the payment.");
+      alert(err instanceof Error ? err.message : "An unknown error occurred.");
       setIsPlacingOrder(false);
     }
   };
@@ -262,35 +276,25 @@ const OrderPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             {Object.entries(categorizedItems).map(([category, items]) => (
-              <MenuSection
-                key={category}
-                title={category.charAt(0).toUpperCase() + category.slice(1)}
-                items={items}
-                onAddItem={addItemToOrder}
-              />
+              items.length > 0 && <MenuSection key={category} title={category.charAt(0).toUpperCase() + category.slice(1)} items={items} onAddItem={addItemToOrder}/>
             ))}
           </div>
           <div>
             <div className="sticky top-4">
               <OrderSummary
-                selectedItems={selectedItems}
-                pendingItem={pendingItem}
-                subtotal={subtotal}
-                discountAmount={discountAmount}
-                totalPrice={totalPrice}
-                onUpdateItemQuantity={updateItemQuantity}
-                onUpdatePendingItem={setPendingItem}
-                onConfirmPendingItem={confirmPendingItem}
-                onCancelPendingItem={handleCancelPendingItem}
+                selectedItems={selectedItems} pendingItem={pendingItem}
+                subtotal={subtotal} promoDiscountAmount={promoDiscountAmount}
+                totalPrice={finalAmountToPay}
+                onUpdateItemQuantity={updateItemQuantity} onUpdatePendingItem={setPendingItem}
+                onConfirmPendingItem={confirmPendingItem} onCancelPendingItem={handleCancelPendingItem}
                 onProceedToPayment={handleProceedToPayment}
-                promoCode={promoCode}
-                setPromoCode={setPromoCode}
-                handleApplyPromoCode={handleApplyPromoCode}
-                promoMessage={promoMessage}
-                isCheckingPromo={isCheckingPromo}
-                appliedDiscount={appliedDiscount > 0}
-                isPlacingOrder={isPlacingOrder}
-                onEditItem={handleEditItem}
+                promoCode={promoCode} setPromoCode={setPromoCode} handleApplyPromoCode={handleApplyPromoCode}
+                promoMessage={promoMessage} isCheckingPromo={isCheckingPromo} appliedDiscount={appliedDiscount > 0}
+                isPlacingOrder={isPlacingOrder} onEditItem={handleEditItem}
+                walletBalance={walletBalance}
+                useWallet={useWallet}
+                setUseWallet={setUseWallet}
+                walletAmountApplied={walletAmountToApply}
               />
             </div>
           </div>

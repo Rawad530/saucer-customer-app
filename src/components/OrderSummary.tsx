@@ -1,32 +1,39 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { OrderItem as OrderItemType } from "@/types/order";
 import OrderItem from "./OrderItem";
 import ItemConfigurationCard from "./ItemConfigurationCard";
 import { MenuItem } from "@/types/order";
 import { addOnOptions } from "@/data/menu";
+import React from "react";
 
+// --- THIS INTERFACE IS NOW CORRECTED ---
 interface PendingItem {
   menuItem: MenuItem;
+  quantity: number; // This was missing
   sauce?: string;
   sauceCup?: string;
   drink?: string;
   addons: string[];
   spicy: boolean;
   remarks?: string;
+  discount?: number;
 }
+// --- END OF CORRECTION ---
 
 interface OrderSummaryProps {
   selectedItems: OrderItemType[];
   pendingItem: PendingItem | null;
   subtotal: number;
-  discountAmount: number;
+  promoDiscountAmount: number;
   totalPrice: number;
   onUpdateItemQuantity: (index: number, newQuantity: number) => void;
   onUpdatePendingItem: React.Dispatch<React.SetStateAction<PendingItem | null>>;
   onConfirmPendingItem: () => void;
   onCancelPendingItem: () => void;
-  onProceedToPayment: () => void; // Changed from onCreateOrder
+  onProceedToPayment: () => void;
   promoCode: string;
   setPromoCode: (code: string) => void;
   handleApplyPromoCode: () => void;
@@ -35,27 +42,18 @@ interface OrderSummaryProps {
   appliedDiscount: boolean;
   isPlacingOrder: boolean;
   onEditItem: (index: number) => void;
+  walletBalance: number;
+  useWallet: boolean;
+  setUseWallet: (value: boolean) => void;
+  walletAmountApplied: number;
 }
 
 const OrderSummary = ({
-  selectedItems,
-  pendingItem,
-  subtotal,
-  discountAmount,
-  totalPrice,
-  onUpdateItemQuantity,
-  onUpdatePendingItem,
-  onConfirmPendingItem,
-  onCancelPendingItem,
-  onProceedToPayment, // Changed from onCreateOrder
-  promoCode,
-  setPromoCode,
-  handleApplyPromoCode,
-  promoMessage,
-  isCheckingPromo,
-  appliedDiscount,
-  isPlacingOrder,
-  onEditItem,
+  selectedItems, pendingItem, subtotal, promoDiscountAmount, totalPrice,
+  onUpdateItemQuantity, onUpdatePendingItem, onConfirmPendingItem, onCancelPendingItem,
+  onProceedToPayment, promoCode, setPromoCode, handleApplyPromoCode,
+  promoMessage, isCheckingPromo, appliedDiscount, isPlacingOrder, onEditItem,
+  walletBalance, useWallet, setUseWallet, walletAmountApplied
 }: OrderSummaryProps) => {
   return (
     <div className="space-y-4 bg-gray-800 p-6 rounded-lg">
@@ -77,12 +75,12 @@ const OrderSummary = ({
           <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
             {selectedItems.map((item, index) => (
               <OrderItem
-                key={index}
+                key={`${item.menuItem.id}-${index}`}
                 item={item}
                 index={index}
                 onUpdateQuantity={onUpdateItemQuantity}
                 onEdit={onEditItem}
-                addOnOptions={addOnOptions} // Pass addOnOptions down
+                addOnOptions={addOnOptions}
               />
             ))}
           </div>
@@ -112,6 +110,21 @@ const OrderSummary = ({
             )}
           </div>
 
+          <div className="border-b border-gray-700 pb-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="use-wallet" className="flex flex-col cursor-pointer">
+                <span className="font-medium text-white">Use Wallet Balance</span>
+                <span className="text-sm text-gray-400">Available: ₾{walletBalance.toFixed(2)}</span>
+              </Label>
+              <Switch
+                id="use-wallet"
+                checked={useWallet}
+                onCheckedChange={setUseWallet}
+                disabled={walletBalance <= 0}
+              />
+            </div>
+          </div>
+
           <div className="space-y-2 pt-2">
             <div className="flex justify-between items-center text-md">
               <span className="text-gray-400">Subtotal:</span>
@@ -119,8 +132,14 @@ const OrderSummary = ({
             </div>
             {appliedDiscount && (
               <div className="flex justify-between items-center text-md text-green-400">
-                <span>Discount:</span>
-                <span>- ₾{discountAmount.toFixed(2)}</span>
+                <span>Promo Discount:</span>
+                <span>- ₾{promoDiscountAmount.toFixed(2)}</span>
+              </div>
+            )}
+            {useWallet && walletAmountApplied > 0 && (
+              <div className="flex justify-between items-center text-md text-green-400">
+                <span>Wallet Credit:</span>
+                <span>- ₾{walletAmountApplied.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between items-center text-xl font-bold">
@@ -130,11 +149,11 @@ const OrderSummary = ({
           </div>
 
           <Button
-            onClick={onProceedToPayment} // Changed from onCreateOrder
+            onClick={onProceedToPayment}
             className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 text-lg font-semibold"
             disabled={selectedItems.length === 0 || isPlacingOrder}
           >
-            {isPlacingOrder ? "Processing..." : "Confirm and Pay"}
+            {isPlacingOrder ? "Processing..." : `Pay ${totalPrice > 0 ? '₾' + totalPrice.toFixed(2) : 'with Wallet'}`}
           </Button>
         </>
       )}
