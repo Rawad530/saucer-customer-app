@@ -187,7 +187,7 @@ const Account = ({ session }: { session: Session }) => {
                 <p className="text-gray-400 mb-4 text-sm">Order for delivery through our official partners:</p>
                 <div className="grid grid-cols-3 gap-4">
                     <a href="https://wolt.com/en/geo/tbilisi" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 text-center">
-                        <img src="/images/wolt-logo.png" alt="Wolt" className="h-10 w-auto object-contain"/>
+                        <img src="/images/logo-wolt.png" alt="Wolt" className="h-10 w-auto object-contain"/>
                         <span className="text-xs text-gray-400">Wolt</span>
                     </a>
                     <a href="https://bolt.eu/en-ge/food/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center gap-2 text-center">
