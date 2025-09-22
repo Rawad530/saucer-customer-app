@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Award, Wallet, History, Truck, Bell } from 'lucide-react';
+import { Award, Wallet, History, Truck, Bell, ArrowRight } from 'lucide-react'; // Added ArrowRight icon
 
 const LandingPage = () => {
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
@@ -57,7 +57,6 @@ const LandingPage = () => {
         <img src="/images/logo.png" alt="Saucer Burger Logo" className="logo-img" />
         <nav className="landing-nav">
           <a href="#story">OUR STORY</a>
-          {/* ADDED THIS LINK */}
           <a href="#benefits">BENEFITS</a>
           <a href="#sauces">THE SAUCES</a>
         </nav>
@@ -84,7 +83,6 @@ const LandingPage = () => {
           </div>
         </section>
 
-        {/* --- NEW BENEFITS SECTION --- */}
         <section id="benefits" className="container benefits-section">
           <h2 className="section-title">Unlock Exclusive Benefits</h2>
           <p className="section-subtitle">Create an account to get the full Saucer Burger experience.</p>
@@ -114,9 +112,18 @@ const LandingPage = () => {
               <h3>Latest News</h3>
               <p>Be the first to know about our newest menu items, special offers, and updates.</p>
             </div>
+
+            {/* --- THIS IS THE NEW SIXTH CARD --- */}
+            <Link to="/login" className="benefit-card-cta">
+              <div className="cta-content">
+                <h3>Create an Account</h3>
+                <ArrowRight className="cta-arrow" />
+              </div>
+            </Link>
+            {/* --- END OF NEW CARD --- */}
+
           </div>
         </section>
-        {/* --- END OF NEW SECTION --- */}
 
         <section id="sauces" className="container sauce-section">
           <h2 className="section-title">The Sauces Behind the Saucer.</h2>

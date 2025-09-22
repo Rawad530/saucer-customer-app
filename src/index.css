@@ -308,3 +308,33 @@ All colors MUST be HSL.
 .benefit-card p {
   color: var(--secondary-text);
 }
+/* --- New CTA Card Styles --- */
+
+.benefit-card-cta {
+  background-color: var(--primary-color);
+  padding: 30px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: background-color 0.3s;
+  text-decoration: none; /* Removes underline from link */
+}
+
+.benefit-card-cta:hover {
+  background-color: #EA580C; /* A slightly darker orange */
+}
+
+.benefit-card-cta h3 {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: white;
+}
+
+.benefit-card-cta .cta-arrow {
+  width: 30px;
+  height: 30px;
+  color: white;
+  margin-top: 10px;
+}
