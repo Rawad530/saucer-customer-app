@@ -30,8 +30,6 @@ const Account = ({ session }: { session: Session }) => {
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [mostOrderedItem, setMostOrderedItem] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
-
-  // --- NEW STATE ADDED ---
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -39,13 +37,12 @@ const Account = ({ session }: { session: Session }) => {
       setLoading(true);
       const { user } = session;
 
-      // --- USEEFFECT UPDATED TO FETCH STATUS ---
       const [profileRes, rewardsRes, ordersRes, announcementRes, statusRes] = await Promise.all([
         supabase.from('customer_profiles').select('full_name, stamps, wallet_balance').eq('id', user.id).single(),
         supabase.from('rewards').select('title, stamps_required').order('stamps_required', { ascending: true }),
         supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
         supabase.from('announcements').select('title, content').eq('is_active', true).order('created_at', { ascending: false }).limit(1).single(),
-        supabase.functions.invoke('check-restaurant-status') // Fetches open/closed status
+        supabase.functions.invoke('check-restaurant-status')
       ]);
 
       if (profileRes.data) setProfileData(profileRes.data);
@@ -80,7 +77,6 @@ const Account = ({ session }: { session: Session }) => {
       
       if (announcementRes.data) setAnnouncement(announcementRes.data);
       
-      // Set the restaurant status from the fetch result
       if (statusRes.error) {
         console.error("Error checking restaurant status:", statusRes.error);
         setIsRestaurantOpen(false);
@@ -98,7 +94,6 @@ const Account = ({ session }: { session: Session }) => {
     await supabase.auth.signOut();
   };
 
-  // --- NEW BUTTON COMPONENT TO HANDLE DISABLED/ENABLED LOGIC ---
   const PlaceOrderButton = () => {
     if (isRestaurantOpen === null) {
       return (
@@ -119,7 +114,8 @@ const Account = ({ session }: { session: Session }) => {
             <button className="inline-block w-full text-center px-12 py-4 text-lg font-bold bg-gray-500 text-white rounded-md cursor-not-allowed">
                 Place a Pick-up Order
             </button>
-            <p className="text-xs text-gray-400 mt-2">
+            {/* --- THIS IS THE ONLY LINE THAT HAS BEEN CHANGED --- */}
+            <p className="text-sm font-semibold text-red-500 mt-2">
                 We're currently closed for online orders.
             </p>
         </div>
@@ -152,7 +148,6 @@ const Account = ({ session }: { session: Session }) => {
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-amber-600 p-8 rounded-lg text-center">
                 <h2 className="text-3xl font-bold mb-4">Ready for another round?</h2>
-                {/* --- JSX UPDATED TO USE THE NEW BUTTON COMPONENT --- */}
                 <PlaceOrderButton />
             </div>
 
