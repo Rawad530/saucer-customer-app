@@ -60,7 +60,7 @@ const LandingPage = () => {
           <a href="#benefits">BENEFITS</a>
           <a href="#sauces">THE SAUCES</a>
         </nav>
-        <Link to="/login" className="button">Register Now</Link>
+        <Link to="/login" className="button">Sign-in / Register Now</Link>
       </header>
 
       <main>
