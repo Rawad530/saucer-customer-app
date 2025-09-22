@@ -30,8 +30,8 @@ const Account = ({ session }: { session: Session }) => {
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [mostOrderedItem, setMostOrderedItem] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
-  
-  // --- NEW STATE ---
+
+  // --- NEW STATE ADDED ---
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -39,13 +39,13 @@ const Account = ({ session }: { session: Session }) => {
       setLoading(true);
       const { user } = session;
 
-      // --- UPDATED to fetch restaurant status at the same time ---
+      // --- USEEFFECT UPDATED TO FETCH STATUS ---
       const [profileRes, rewardsRes, ordersRes, announcementRes, statusRes] = await Promise.all([
         supabase.from('customer_profiles').select('full_name, stamps, wallet_balance').eq('id', user.id).single(),
         supabase.from('rewards').select('title, stamps_required').order('stamps_required', { ascending: true }),
         supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
         supabase.from('announcements').select('title, content').eq('is_active', true).order('created_at', { ascending: false }).limit(1).single(),
-        supabase.functions.invoke('check-restaurant-status')
+        supabase.functions.invoke('check-restaurant-status') // Fetches open/closed status
       ]);
 
       if (profileRes.data) setProfileData(profileRes.data);
@@ -79,11 +79,11 @@ const Account = ({ session }: { session: Session }) => {
       }
       
       if (announcementRes.data) setAnnouncement(announcementRes.data);
-
-      // --- NEW: Set restaurant status state ---
+      
+      // Set the restaurant status from the fetch result
       if (statusRes.error) {
         console.error("Error checking restaurant status:", statusRes.error);
-        setIsRestaurantOpen(false); // Default to closed on error
+        setIsRestaurantOpen(false);
       } else {
         setIsRestaurantOpen(statusRes.data.isOpen);
       }
@@ -98,8 +98,8 @@ const Account = ({ session }: { session: Session }) => {
     await supabase.auth.signOut();
   };
 
-  // --- NEW BUTTON COMPONENT ---
-  const OrderButton = () => {
+  // --- NEW BUTTON COMPONENT TO HANDLE DISABLED/ENABLED LOGIC ---
+  const PlaceOrderButton = () => {
     if (isRestaurantOpen === null) {
       return (
         <button className="inline-block w-full text-center px-12 py-4 text-lg font-bold bg-gray-500 text-white rounded-md cursor-not-allowed">
@@ -125,7 +125,6 @@ const Account = ({ session }: { session: Session }) => {
         </div>
     );
   };
-
 
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">Loading Dashboard...</div>;
@@ -153,36 +152,90 @@ const Account = ({ session }: { session: Session }) => {
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-amber-600 p-8 rounded-lg text-center">
                 <h2 className="text-3xl font-bold mb-4">Ready for another round?</h2>
-                {/* --- UPDATED JSX --- */}
-                <OrderButton />
+                {/* --- JSX UPDATED TO USE THE NEW BUTTON COMPONENT --- */}
+                <PlaceOrderButton />
             </div>
 
             <div className="bg-gray-800 p-6 rounded-lg">
-              {/* ... Your Next Reward section ... */}
+              <h3 className="flex items-center text-xl font-bold mb-4"><Star className="w-6 h-6 mr-2 text-amber-400"/> Your Next Reward</h3>
+              {nextReward && profileData ? (
+                <div>
+                  <div className="flex justify-between items-end mb-1">
+                    <p className="font-semibold">{nextReward.title}</p>
+                    <p className="text-sm font-bold text-gray-300">{profileData.stamps} / {nextReward.stamps_required} Stamps</p>
+                  </div>
+                  <div className="w-full bg-gray-700 rounded-full h-4">
+                    <div className="bg-amber-500 h-4 rounded-full" style={{ width: `${rewardProgress}%` }}></div>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">
+                    You're {stampsNeeded} stamps away! Spend ₾{moneyNeeded.toFixed(2)} more to unlock.
+                  </p>
+                </div>
+              ) : ( <p className="text-gray-400">You've unlocked all available rewards!</p> )}
+              <Link to="/rewards" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View All Rewards &rarr;</Link>
             </div>
             
             <div className="bg-gray-800 p-6 rounded-lg">
-                {/* ... Your Recent Activity section ... */}
+                <h3 className="flex items-center text-xl font-bold mb-4"><History className="w-6 h-6 mr-2 text-gray-300"/> Recent Activity</h3>
+                {lastOrder ? (
+                    <div>
+                        <p className="text-sm text-gray-400">Last Order: #{lastOrder.orderNumber}</p>
+                        <p className="font-semibold truncate">{lastOrder.items.map(i => i.menuItem.name).join(', ')}</p>
+                        <hr className="border-gray-700 my-3" />
+                        <p className="text-sm text-gray-400">Your Favorite Item:</p>
+                        <p className="font-semibold">{mostOrderedItem || 'Not enough data'}</p>
+                    </div>
+                ) : ( <p className="text-gray-400">You haven't placed any orders yet.</p> )}
+                <Link to="/history" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View Full History &rarr;</Link>
             </div>
 
             {announcement && (
                 <div className="bg-gray-800 p-6 rounded-lg">
-                    {/* ... Your What's New section ... */}
+                    <h3 className="flex items-center text-xl font-bold mb-2"><Megaphone className="w-6 h-6 mr-2 text-blue-400"/> What's New?</h3>
+                    <h4 className="font-semibold text-lg">{announcement.title}</h4>
+                    <p className="text-gray-400">{announcement.content}</p>
                 </div>
             )}
           </div>
 
           <div className="space-y-6">
             <div className="bg-gray-800 p-6 rounded-lg">
-              {/* ... Your Profile & Wallet section ... */}
+              <h3 className="flex items-center text-xl font-bold mb-4"><User className="w-6 h-6 mr-2 text-gray-300"/> Profile & Wallet</h3>
+              <div className="text-center bg-gray-700/50 p-4 rounded-md mb-4">
+                  <p className="text-gray-400">Wallet Balance</p>
+                  <p className="text-3xl font-bold text-green-400">₾{profileData?.wallet_balance.toFixed(2) || '0.00'}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                  <Link to="/wallet" className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 text-sm">Add Funds</Link>
+                  <Link to="/profile" className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700 text-sm">Edit Profile</Link>
+              </div>
             </div>
 
             <div className="bg-gray-800 p-6 rounded-lg text-center">
-                {/* ... Your Loyalty Code section ... */}
+                <h3 className="flex items-center justify-center text-xl font-bold mb-4"><QrCode className="w-6 h-6 mr-2 text-gray-300"/> Your Loyalty Code</h3>
+                <div className="bg-white p-4 rounded-md inline-block"> 
+                    <QRCode value={session.user.id} size={200} viewBox={`0 0 256 256`}/>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">Scan this code at the counter for cashback & rewards.</p>
             </div>
             
             <div className="bg-gray-800 p-6 rounded-lg">
-                {/* ... Your Delivery Partners section ... */}
+                <h3 className="flex items-center text-xl font-bold mb-4"><Truck className="w-6 h-6 mr-2 text-gray-300"/> Delivery Partners</h3>
+                <p className="text-gray-400 mb-4 text-sm">Order for delivery through our official partners:</p>
+                <div className="grid grid-cols-3 gap-2 items-center">
+                    <a href="https://wolt.com/ka/geo/tbilisi/restaurant/saucer-burger" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                        <img src="/images/logo-wolt.png" alt="Wolt" className="h-10 object-contain"/>
+                        <span className="text-xs text-gray-400">Wolt</span>
+                    </a>
+                    <a href="https://food.bolt.eu/en-US/15-tbilisi/p/150123-saucer-burger" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                        <img src="/images/bolt-logo.png" alt="Bolt Food" className="h-10 object-contain"/>
+                        <span className="text-xs text-gray-400">Bolt Food</span>
+                    </a>
+                    <a href="https://glovoapp.com/ge/en/tbilisi/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                        <img src="/images/glovo-logo.png" alt="Glovo" className="h-10 object-contain"/>
+                        <span className="text-xs text-gray-400">Glovo</span>
+                    </a>
+                </div>
             </div>
           </div>
         </div>
