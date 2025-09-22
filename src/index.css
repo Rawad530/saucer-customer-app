@@ -346,7 +346,7 @@ All colors MUST be HSL.
 }
 .divider-text {
   text-align: center;
-  margin: 40px 0 0 0;
+  margin: 40px 0; /* Creates equal space above and below */
   font-weight: bold;
   color: var(--secondary-text);
   position: relative;
@@ -357,7 +357,7 @@ All colors MUST be HSL.
   content: '';
   position: absolute;
   top: 50%;
-  width: calc(50% - 30px); /* Adjust 30px to control gap */
+  width: calc(50% - 30px);
   height: 1px;
   background-color: #374151;
 }
@@ -366,4 +366,9 @@ All colors MUST be HSL.
 }
 .divider-text::after {
   right: 0;
+}
+.benefits-section {
+  text-align: center;
+  margin-top: 0; /* Removed the top margin to rely on the divider's margin */
+  margin-bottom: 80px; /* Kept the bottom margin */
 }
