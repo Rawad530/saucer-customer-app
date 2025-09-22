@@ -338,3 +338,32 @@ All colors MUST be HSL.
   color: white;
   margin-top: 10px;
 }
+/* --- New Divider Style --- */
+.divider-text-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+.divider-text {
+  text-align: center;
+  margin: 40px 0 0 0;
+  font-weight: bold;
+  color: var(--secondary-text);
+  position: relative;
+  width: 100%;
+}
+.divider-text::before,
+.divider-text::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: calc(50% - 30px); /* Adjust 30px to control gap */
+  height: 1px;
+  background-color: #374151;
+}
+.divider-text::before {
+  left: 0;
+}
+.divider-text::after {
+  right: 0;
+}

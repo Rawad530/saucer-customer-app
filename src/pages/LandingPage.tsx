@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Award, Wallet, History, Truck, Bell, ArrowRight } from 'lucide-react'; // Added ArrowRight icon
+import { Award, Wallet, History, Truck, Bell, ArrowRight } from 'lucide-react';
 
 const LandingPage = () => {
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
@@ -44,8 +44,8 @@ const LandingPage = () => {
         <button className="button" disabled style={{ backgroundColor: '#9CA3AF', cursor: 'not-allowed' }}>
           {text}
         </button>
-        <p className="text-sm text-gray-400 mt-2">
-          We're currently closed. Open daily 12:00 PM - 2:00 AM.
+        <p className="text-sm font-semibold text-red-500 mt-2">
+          We're currently closed for online orders.
         </p>
       </div>
     );
@@ -60,7 +60,7 @@ const LandingPage = () => {
           <a href="#benefits">BENEFITS</a>
           <a href="#sauces">THE SAUCES</a>
         </nav>
-        <Link to="/login" className="button">Sign-in / Register Now</Link>
+        <Link to="/login" className="button">Sign-in / Register</Link>
       </header>
 
       <main>
@@ -68,25 +68,22 @@ const LandingPage = () => {
           <div className="hero-content">
             <h1>More Sauce. Less Mess.</h1>
             <p>Your favorite burgers, your way. Choose a timeless Classic Bun or upgrade to the revolutionary <strong>Saucer Bun</strong> — perfectly sealed for zero drips. The future of flavor is in your hands.</p>
-            <OrderButton to="/login" text="ORDER ONLINE" />
+            <OrderButton to="/login" text="View Menu & Order as a Guest" />
           </div>
         </section>
 
-        <section id="story" className="container story-section">
-          <div className="text-content">
-            <h2 className="section-title">The Future of Flavor is Here.</h2>
-            <p>Ever wondered if you could enjoy a deliciously messy, sauce-filled burger without the actual mess? We did. Saucer Burger and Wrap was born from a simple mission: to revolutionize the way you eat. We've redesigned the burger into a unique, futuristic saucer shape, perfectly sealed at the edges. Our motto is "more sauce, less mess," allowing you to enjoy generous, authentic flavors on the go—in your car, on a walk, wherever your day takes you—without a single drip.</p>
-            <p>But our innovation doesn't stop at convenience. We are committed to crafting every meal with fresh, high-quality ingredients and generous portions. By rethinking the burger, we also aim to create a more sustainable experience, reducing waste and paving the way for a tastier, cleaner future for generations to come. Welcome to Saucer Burger and Wrap, where convenience, flavor, and the future collide.</p>
-          </div>
-          <div className="image-content">
-            <img src="/images/sauce-man.png" alt="Saucer Beef Wrap" />
-          </div>
-        </section>
+        <div className="divider-text-container">
+          <div className="divider-text">OR</div>
+        </div>
 
         <section id="benefits" className="container benefits-section">
           <h2 className="section-title">Unlock Exclusive Benefits</h2>
           <p className="section-subtitle">Create an account to get the full Saucer Burger experience.</p>
           <div className="benefits-grid">
+            <Link to="/login" className="benefit-card-cta">
+              <h3>Create an Account</h3>
+              <ArrowRight className="cta-arrow" />
+            </Link>
             <div className="benefit-card">
               <Award className="benefit-icon" />
               <h3>Loyalty & Rewards</h3>
@@ -112,16 +109,17 @@ const LandingPage = () => {
               <h3>Latest News</h3>
               <p>Be the first to know about our newest menu items, special offers, and updates.</p>
             </div>
+          </div>
+        </section>
 
-            {/* --- THIS IS THE NEW SIXTH CARD --- */}
-            <Link to="/login" className="benefit-card-cta">
-              <div className="cta-content">
-                <h3>Create an Account</h3>
-                <ArrowRight className="cta-arrow" />
-              </div>
-            </Link>
-            {/* --- END OF NEW CARD --- */}
-
+        <section id="story" className="container story-section">
+          <div className="text-content">
+            <h2 className="section-title">The Future of Flavor is Here.</h2>
+            <p>Ever wondered if you could enjoy a deliciously messy, sauce-filled burger without the actual mess? We did. Saucer Burger and Wrap was born from a simple mission: to revolutionize the way you eat. We've redesigned the burger into a unique, futuristic saucer shape, perfectly sealed at the edges. Our motto is "more sauce, less mess," allowing you to enjoy generous, authentic flavors on the go—in your car, on a walk, wherever your day takes you—without a single drip.</p>
+            <p>But our innovation doesn't stop at convenience. We are committed to crafting every meal with fresh, high-quality ingredients and generous portions. By rethinking the burger, we also aim to create a more sustainable experience, reducing waste and paving the way for a tastier, cleaner future for generations to come. Welcome to Saucer Burger and Wrap, where convenience, flavor, and the future collide.</p>
+          </div>
+          <div className="image-content">
+            <img src="/images/sauce-man.png" alt="Saucer Burger Character" />
           </div>
         </section>
 
