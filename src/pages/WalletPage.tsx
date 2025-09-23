@@ -28,16 +28,12 @@ const WalletPage = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-
         const [profileResponse, transactionsResponse] = await Promise.all([
           supabase.from('customer_profiles').select('wallet_balance').eq('id', user.id).single(),
           supabase.from('wallet_transactions').select('*').eq('customer_id', user.id).order('created_at', { ascending: false })
         ]);
         
-        if (profileResponse.error) console.error("Error fetching wallet balance:", profileResponse.error);
         if (profileResponse.data) setBalance(profileResponse.data.wallet_balance);
-
-        if (transactionsResponse.error) console.error("Error fetching transactions:", transactionsResponse.error);
         if (transactionsResponse.data) setTransactions(transactionsResponse.data);
       }
       setLoading(false);
@@ -51,15 +47,12 @@ const WalletPage = () => {
       alert("Please enter a valid amount.");
       return;
     }
-    if (!user) {
-      alert("You must be logged in.");
-      return;
-    }
+    if (!user) return;
 
     setIsAddingFunds(true);
-    const transactionId = crypto.randomUUID();
+    const transactionId = crypto.randomUUID(); // A unique ID for this specific transaction
 
-    // We store the details in localStorage to retrieve after the bank redirects back
+    // Store details in localStorage to retrieve after the bank redirects back
     localStorage.setItem('wallet_top_up', JSON.stringify({
       customerId: user.id,
       amount: amount,
@@ -67,8 +60,9 @@ const WalletPage = () => {
     }));
 
     try {
-      const { data, error } = await supabase.functions.invoke('bog-payment', {
-        body: { orderId: transactionId, amount: amount },
+      // --- THIS NOW CALLS THE NEW, DEDICATED FUNCTION ---
+      const { data, error } = await supabase.functions.invoke('add-funds-to-wallet', {
+        body: { transactionId, amount },
       });
 
       if (error) throw new Error(error.message);
@@ -78,7 +72,7 @@ const WalletPage = () => {
 
     } catch (err) {
       alert(err instanceof Error ? err.message : "An unknown error occurred.");
-      localStorage.removeItem('wallet_top_up'); // Clean up on error
+      localStorage.removeItem('wallet_top_up');
       setIsAddingFunds(false);
     }
   };
@@ -121,7 +115,25 @@ const WalletPage = () => {
 
         <div>
           <h2 className="text-xl font-bold mb-4">Transaction History</h2>
-          {/* ... Transaction history mapping remains the same ... */}
+          {loading ? (
+            <p>Loading history...</p>
+          ) : transactions.length === 0 ? (
+            <p className="text-gray-400">No transactions yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {transactions.map(tx => (
+                <div key={tx.id} className="bg-gray-800 p-4 rounded-lg flex justify-between items-center">
+                  <div>
+                    <p className="font-medium capitalize">{tx.description}</p>
+                    <p className="text-xs text-gray-500">{new Date(tx.created_at).toLocaleString()}</p>
+                  </div>
+                  <p className={`font-semibold text-lg ${tx.transaction_type === 'credit' ? 'text-green-400' : 'text-red-400'}`}>
+                    {tx.transaction_type === 'credit' ? '+' : '-'} ₾{tx.amount.toFixed(2)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
