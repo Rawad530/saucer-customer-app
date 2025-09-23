@@ -9,15 +9,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // --- NEW DEBUGGING LOGS ---
-    console.log("Request received. Headers:", Object.fromEntries(req.headers));
-    const bodyText = await req.text();
-    console.log("Request body text:", bodyText);
-    // --- END OF LOGS ---
-
-    // Now, we parse the text we logged
-    const { amount, transactionId } = JSON.parse(bodyText);
-    
+    const { amount, transactionId } = await req.json();
     if (!amount || !transactionId) {
       throw new Error("Amount and a unique transaction ID are required.");
     }
@@ -26,7 +18,8 @@ Deno.serve(async (req) => {
     const clientSecret = Deno.env.get('BOG_CLIENT_SECRET');
     const authHeader = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
 
-    const tokenResponse = await fetch('https://api.businessonline.ge/api/v1/oauth2/token', {
+    // --- THIS IS THE FINAL, CORRECT AUTHENTICATION URL FROM YOUR NEW DOCUMENTATION ---
+    const tokenResponse = await fetch('https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': authHeader },
         body: 'grant_type=client_credentials',
@@ -68,7 +61,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error("Caught error in function:", error.message);
+    console.error("Add-funds-to-wallet function error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,

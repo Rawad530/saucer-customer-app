@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
       .eq('transaction_id', orderId)
       .single();
 
-    if (orderError) throw new Error("Order not found.");
+    if (orderError) throw new Error(`Order not found: ${orderError.message}`);
 
     let amountToPayByCard = orderData.total_price;
 
@@ -49,8 +49,8 @@ Deno.serve(async (req) => {
     const clientSecret = Deno.env.get('BOG_CLIENT_SECRET');
     const authHeader = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
 
-    // --- THIS IS THE CORRECTED AUTHENTICATION URL ---
-    const tokenResponse = await fetch('https://ipay.ge/opay/api/v1/oauth2/token', {
+    // --- THIS IS THE FINAL, CORRECT AUTHENTICATION URL FROM YOUR NEW DOCUMENTATION ---
+    const tokenResponse = await fetch('https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': authHeader },
         body: 'grant_type=client_credentials',
@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
 
     if (!bogOrderResponse.ok) {
         const errorBody = await bogOrderResponse.json();
-        throw new Error(`Bank Error: ${JSON.stringify(errorBody)}`);
+        throw new Error(`Bank Error Creating Order: ${JSON.stringify(errorBody)}`);
     }
 
     const bogOrderData = await bogOrderResponse.json();
@@ -92,6 +92,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
+    console.error("Finalize-order function error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
