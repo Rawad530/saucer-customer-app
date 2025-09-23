@@ -18,7 +18,8 @@ Deno.serve(async (req) => {
     const clientSecret = Deno.env.get('BOG_CLIENT_SECRET');
     const authHeader = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
 
-    const tokenResponse = await fetch('https://api.businessonline.ge/api/v1/oauth2/token', {
+    // --- THIS IS THE URL WE ARE NOW TESTING ---
+    const tokenResponse = await fetch('https://ipay.ge/opay/api/v1/oauth2/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': authHeader },
         body: 'grant_type=client_credentials',
@@ -36,7 +37,7 @@ Deno.serve(async (req) => {
         intent: "CAPTURE",
         purchase_units: [{ amount: { currency_code: "GEL", value: amount.toFixed(2) } }],
         redirect_url: "https://saucerburger.ge/payment-status",
-        shop_order_id: transactionId, // Use the unique ID from the app
+        shop_order_id: transactionId,
     };
 
     const bogOrderResponse = await fetch('https://ipay.ge/opay/api/v1/checkout/orders', {
