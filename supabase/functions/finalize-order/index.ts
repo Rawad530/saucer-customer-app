@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
 
     // Step 2: Create Payment Order (Rewritten to match new documentation)
     const orderPayload = {
-        callback_url: "https://<YOUR_CALLBACK_HANDLER_URL>", // Note: We will need to build this later
+        callback_url: 'https://kgambgofdizxgcdjhxlk.supabase.co/functions/v1/bog-callback-handler', // Note: We will need to build this later
         external_order_id: orderId,
         purchase_units: [{
             currency: "GEL",
