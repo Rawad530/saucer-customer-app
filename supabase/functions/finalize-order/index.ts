@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
 
     const { data: orderData, error: orderError } = await supabaseAdmin
       .from('transactions')
-      .select('total_price')
+      .select('total_price, order_number') // Also get order_number for the basket
       .eq('transaction_id', orderId)
       .single();
 
@@ -33,7 +33,6 @@ Deno.serve(async (req) => {
       const { data: remainingAmount, error: rpcError } = await supabaseAdmin.rpc('process_wallet_payment', {
         order_id_to_process: orderId
       });
-
       if (rpcError) throw rpcError;
       amountToPayByCard = remainingAmount;
     }
@@ -45,11 +44,11 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Step 1: Authentication (This part is already correct)
     const clientId = Deno.env.get('BOG_CLIENT_ID');
     const clientSecret = Deno.env.get('BOG_CLIENT_SECRET');
     const authHeader = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
 
-    // --- THIS IS THE FINAL, CORRECT AUTHENTICATION URL FROM YOUR NEW DOCUMENTATION ---
     const tokenResponse = await fetch('https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': authHeader },
@@ -64,14 +63,26 @@ Deno.serve(async (req) => {
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
+    // Step 2: Create Payment Order (Rewritten to match new documentation)
     const orderPayload = {
-        intent: "CAPTURE",
-        purchase_units: [{ amount: { currency_code: "GEL", value: amountToPayByCard.toFixed(2) } }],
-        redirect_url: "https://saucerburger.ge/payment-status",
-        shop_order_id: orderId,
+        callback_url: "https://<YOUR_CALLBACK_HANDLER_URL>", // Note: We will need to build this later
+        external_order_id: orderId,
+        purchase_units: [{
+            currency: "GEL",
+            total_amount: amountToPayByCard,
+            basket: [{
+                quantity: 1,
+                unit_price: amountToPayByCard,
+                product_id: `ORDER-${orderData.order_number}`
+            }]
+        }],
+        redirect_urls: {
+            fail: "https://saucerburger.ge/payment-status?status=fail",
+            success: "https://saucerburger.ge/payment-status?status=success"
+        }
     };
 
-    const bogOrderResponse = await fetch('https://ipay.ge/opay/api/v1/checkout/orders', {
+    const bogOrderResponse = await fetch('https://api.bog.ge/payments/v1/ecommerce/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
         body: JSON.stringify(orderPayload),
@@ -83,11 +94,12 @@ Deno.serve(async (req) => {
     }
 
     const bogOrderData = await bogOrderResponse.json();
-    const redirectLink = bogOrderData.links?.find((link: any) => link.rel === 'approve');
+    // The new docs say the redirect link is in the '_links' object
+    const redirectLink = bogOrderData._links?.redirect?.href;
 
-    if (!redirectLink?.href) throw new Error("Could not find payment redirect link from bank.");
+    if (!redirectLink) throw new Error("Could not find payment redirect link from bank.");
 
-    return new Response(JSON.stringify({ paymentComplete: false, redirectUrl: redirectLink.href }), {
+    return new Response(JSON.stringify({ paymentComplete: false, redirectUrl: redirectLink }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 

@@ -14,11 +14,11 @@ Deno.serve(async (req) => {
       throw new Error("Amount and a unique transaction ID are required.");
     }
 
+    // Step 1: Authentication (This part is already correct)
     const clientId = Deno.env.get('BOG_CLIENT_ID');
     const clientSecret = Deno.env.get('BOG_CLIENT_SECRET');
     const authHeader = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
 
-    // --- THIS IS THE FINAL, CORRECT AUTHENTICATION URL FROM YOUR NEW DOCUMENTATION ---
     const tokenResponse = await fetch('https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': authHeader },
@@ -33,14 +33,26 @@ Deno.serve(async (req) => {
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
+    // Step 2: Create Payment Order (Rewritten to match new documentation)
     const orderPayload = {
-        intent: "CAPTURE",
-        purchase_units: [{ amount: { currency_code: "GEL", value: amount.toFixed(2) } }],
-        redirect_url: "https://saucerburger.ge/payment-status",
-        shop_order_id: transactionId,
+        callback_url: "https://<YOUR_CALLBACK_HANDLER_URL>", // Note: We will need to build this later
+        external_order_id: transactionId,
+        purchase_units: [{
+            currency: "GEL",
+            total_amount: amount,
+            basket: [{
+                quantity: 1,
+                unit_price: amount,
+                product_id: "WALLET-TOP-UP"
+            }]
+        }],
+        redirect_urls: {
+            fail: "https://saucerburger.ge/payment-status?status=fail",
+            success: "https://saucerburger.ge/payment-status?status=success"
+        }
     };
 
-    const bogOrderResponse = await fetch('https://ipay.ge/opay/api/v1/checkout/orders', {
+    const bogOrderResponse = await fetch('https://api.bog.ge/payments/v1/ecommerce/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
         body: JSON.stringify(orderPayload),
@@ -48,15 +60,15 @@ Deno.serve(async (req) => {
 
     if (!bogOrderResponse.ok) {
         const errorBody = await bogOrderResponse.json();
-        throw new Error(`Bank Error: ${JSON.stringify(errorBody)}`);
+        throw new Error(`Bank Error Creating Order: ${JSON.stringify(errorBody)}`);
     }
 
     const bogOrderData = await bogOrderResponse.json();
-    const redirectLink = bogOrderData.links?.find((link: any) => link.rel === 'approve');
+    const redirectLink = bogOrderData._links?.redirect?.href;
 
-    if (!redirectLink?.href) throw new Error("Could not find payment redirect link from bank.");
+    if (!redirectLink) throw new Error("Could not find payment redirect link from bank.");
 
-    return new Response(JSON.stringify({ redirectUrl: redirectLink.href }), {
+    return new Response(JSON.stringify({ redirectUrl: redirectLink }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
