@@ -25,7 +25,8 @@ Deno.serve(async (req) => {
 
     const authHeader = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
 
-    const tokenResponse = await fetch('https://api.businessonline.ge/api/v1/oauth2/token', {
+    // --- THIS IS THE CORRECTED URL ---
+    const tokenResponse = await fetch('https://ipay.ge/opay/api/v1/oauth2/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -33,15 +34,13 @@ Deno.serve(async (req) => {
       },
       body: 'grant_type=client_credentials',
     });
+    // --- END OF CORRECTION ---
 
-    // --- THIS IS THE UPDATED PART ---
     if (!tokenResponse.ok) {
-      // We will now log the specific error response from the bank
-      const errorBody = await tokenResponse.text(); // Use .text() in case the error isn't JSON
+      const errorBody = await tokenResponse.text();
       console.error('Bank authentication failed:', tokenResponse.status, tokenResponse.statusText, errorBody);
       throw new Error(`Failed to get authorization token from the bank. Status: ${tokenResponse.status}. Response: ${errorBody}`);
     }
-    // --- END OF UPDATE ---
 
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
