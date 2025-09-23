@@ -35,39 +35,29 @@ const OrderPage = () => {
   const [isCheckingPromo, setIsCheckingPromo] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
-  const [walletBalance, setWalletBalance] = useState(0);
-  const [useWallet, setUseWallet] = useState(false);
 
   useEffect(() => {
-    const fetchData = async () => {
-      setLoadingMenu(true);
-      
-      const { data: { session } } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+    });
 
-      const menuPromise = supabase.from('menu_items').select('*').eq('is_available', true).order('id');
-      
-      let walletPromise;
-      if (session?.user) {
-        walletPromise = supabase.from('customer_profiles').select('wallet_balance').eq('id', session.user.id).single();
+    const fetchMenu = async () => {
+      setLoadingMenu(true);
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select('*')
+        .eq('is_available', true) // Only fetch available items
+        .order('id');
+
+      if (error) {
+        console.error("Error fetching menu:", error);
+      } else if (data) {
+        setMenuItems(data);
       }
-
-      const [menuResult, walletResult] = await Promise.all([menuPromise, walletPromise]);
-
-      if (menuResult.error) {
-        console.error("Error fetching menu:", menuResult.error);
-      } else if (menuResult.data) {
-        setMenuItems(menuResult.data);
-      }
-      
-      if (walletResult?.data) {
-        setWalletBalance(walletResult.data.wallet_balance || 0);
-      }
-
       setLoadingMenu(false);
     };
 
-    fetchData();
+    fetchMenu();
   }, []);
 
   const addItemToOrder = (menuItem: MenuItem) => {
@@ -77,10 +67,10 @@ const OrderPage = () => {
       addFinalItem({ menuItem, quantity: 1, addons: [], spicy: false, discount: 0 });
     }
   };
-
+  
   const addFinalItem = (item: OrderItem) => {
     if (editingItemIndex !== null) {
-      setSelectedItems(prev => prev.map((oldItem, index) =>
+      setSelectedItems(prev => prev.map((oldItem, index) => 
         index === editingItemIndex ? item : oldItem
       ));
       setEditingItemIndex(null);
@@ -88,7 +78,7 @@ const OrderPage = () => {
     }
 
     setSelectedItems(prev => {
-        const existingIndex = prev.findIndex(existing =>
+        const existingIndex = prev.findIndex(existing => 
             existing.menuItem.id === item.menuItem.id &&
             existing.sauce === item.sauce &&
             existing.sauceCup === item.sauceCup &&
@@ -124,7 +114,17 @@ const OrderPage = () => {
   const handleEditItem = (index: number) => {
     const itemToEdit = selectedItems[index];
     setEditingItemIndex(index);
-    setPendingItem({ ...itemToEdit });
+    setPendingItem({
+      menuItem: itemToEdit.menuItem,
+      quantity: itemToEdit.quantity,
+      sauce: itemToEdit.sauce,
+      sauceCup: itemToEdit.sauceCup,
+      drink: itemToEdit.drink,
+      addons: itemToEdit.addons,
+      spicy: itemToEdit.spicy,
+      remarks: itemToEdit.remarks,
+      discount: itemToEdit.discount,
+    });
   };
 
   const handleCancelPendingItem = () => {
@@ -139,21 +139,20 @@ const OrderPage = () => {
         setSelectedItems(prev => prev.map((item, i) => i === index ? { ...item, quantity: newQuantity } : item));
     }
   };
-  
+
   const subtotal = selectedItems.reduce((sum, item) => {
     let itemPrice = item.menuItem.price;
     item.addons.forEach(addonName => {
         const addon = addOnOptions.find(opt => opt.name === addonName);
         if (addon) itemPrice += addon.price;
     });
-    const itemDiscount = itemPrice * ((item.discount || 0) / 100);
-    return sum + ((itemPrice - itemDiscount) * item.quantity);
+    const discountAmount = itemPrice * ((item.discount || 0) / 100);
+    const finalPrice = itemPrice - discountAmount;
+    return sum + (finalPrice * item.quantity);
   }, 0);
   
-  const promoDiscountAmount = subtotal * (appliedDiscount / 100);
-  const priceAfterPromo = subtotal - promoDiscountAmount;
-  const walletCreditApplied = useWallet ? Math.min(walletBalance, priceAfterPromo) : 0;
-  const totalPrice = priceAfterPromo - walletCreditApplied;
+  const discountAmount = subtotal * (appliedDiscount / 100);
+  const totalPrice = subtotal - discountAmount;
   
   const handleApplyPromoCode = async () => {
     if (!promoCode.trim()) return;
@@ -186,39 +185,34 @@ const OrderPage = () => {
     const orderNumber = await getNextOrderNumber();
   
     try {
+      // --- THIS IS THE CRITICAL LINE ---
+      // It now correctly calls the 'bog-payment' function
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('bog-payment', {
+        body: { orderId, amount: totalPrice },
+      });
+  
+      if (functionError) throw new Error(functionError.message);
+      if (functionData.error) throw new Error(functionData.error);
+  
       const { error: insertError } = await supabase.from('transactions').insert([
         { 
           transaction_id: orderId,
           user_id: session.user.id,
           order_number: orderNumber,
           items: selectedItems as any,
-          total_price: priceAfterPromo,
+          total_price: totalPrice,
           payment_mode: 'Card - Online',
           status: 'pending_payment',
           created_at: new Date().toISOString(),
           promo_code_used: appliedDiscount > 0 ? promoCode.toUpperCase() : null,
           discount_applied_percent: appliedDiscount > 0 ? appliedDiscount : null,
-          order_type: 'pick_up', 
         },
       ]);
   
       if (insertError) throw new Error(`Failed to save order: ${insertError.message}`);
   
-      // --- THIS IS THE FIX: IT NOW CALLS THE CORRECT FUNCTION ---
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('finalize-order', {
-        body: { orderId, useWallet },
-      });
+      window.location.href = functionData.redirectUrl;
   
-      if (functionError) throw new Error(functionError.message);
-      if (functionData.error) throw new Error(functionData.error);
-  
-      if (functionData.paymentComplete) {
-        setOrderPlaced(true);
-      } else if (functionData.redirectUrl) {
-        window.location.href = functionData.redirectUrl;
-      } else {
-        throw new Error("Invalid response from payment function.");
-      }
     } catch (err) {
       alert(err instanceof Error ? err.message : "An unknown error occurred while trying to process the payment.");
       setIsPlacingOrder(false);
@@ -237,7 +231,7 @@ const OrderPage = () => {
     return (
         <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900 text-white text-center p-4">
             <h1 className="text-4xl font-bold text-amber-500 mb-4">Thank You!</h1>
-            <p className="text-lg mb-8">Your order has been placed successfully. It will be ready for pickup shortly.</p>
+            <p className="text-lg mb-8">Your order has been placed successfully. It will be ready for pickup shortly at our Tbilisi location.</p>
             <Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
                 Back to Your Account
             </Link>
@@ -279,7 +273,7 @@ const OrderPage = () => {
                 selectedItems={selectedItems}
                 pendingItem={pendingItem}
                 subtotal={subtotal}
-                discountAmount={promoDiscountAmount}
+                discountAmount={discountAmount}
                 totalPrice={totalPrice}
                 onUpdateItemQuantity={updateItemQuantity}
                 onUpdatePendingItem={setPendingItem}
@@ -294,10 +288,6 @@ const OrderPage = () => {
                 appliedDiscount={appliedDiscount > 0}
                 isPlacingOrder={isPlacingOrder}
                 onEditItem={handleEditItem}
-                walletBalance={walletBalance}
-                useWallet={useWallet}
-                onUseWalletChange={setUseWallet}
-                walletCreditApplied={walletCreditApplied}
               />
             </div>
           </div>
