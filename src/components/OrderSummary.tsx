@@ -1,33 +1,18 @@
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { OrderItem as OrderItemType } from "@/types/order";
+import { OrderItem as OrderItemType, MenuItem, PendingItem } from "@/types/order";
 import OrderItem from "./OrderItem";
 import ItemConfigurationCard from "./ItemConfigurationCard";
-import { MenuItem } from "@/types/order";
 import { addOnOptions } from "@/data/menu";
-import React from "react";
-
-// --- THIS INTERFACE IS NOW CORRECTED ---
-interface PendingItem {
-  menuItem: MenuItem;
-  quantity: number; // This was missing
-  sauce?: string;
-  sauceCup?: string;
-  drink?: string;
-  addons: string[];
-  spicy: boolean;
-  remarks?: string;
-  discount?: number;
-}
-// --- END OF CORRECTION ---
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface OrderSummaryProps {
   selectedItems: OrderItemType[];
   pendingItem: PendingItem | null;
   subtotal: number;
-  promoDiscountAmount: number;
+  discountAmount: number;
   totalPrice: number;
   onUpdateItemQuantity: (index: number, newQuantity: number) => void;
   onUpdatePendingItem: React.Dispatch<React.SetStateAction<PendingItem | null>>;
@@ -44,17 +29,35 @@ interface OrderSummaryProps {
   onEditItem: (index: number) => void;
   walletBalance: number;
   useWallet: boolean;
-  setUseWallet: (value: boolean) => void;
-  walletAmountApplied: number;
+  onUseWalletChange: (use: boolean) => void;
+  walletCreditApplied: number;
 }
 
 const OrderSummary = ({
-  selectedItems, pendingItem, subtotal, promoDiscountAmount, totalPrice,
-  onUpdateItemQuantity, onUpdatePendingItem, onConfirmPendingItem, onCancelPendingItem,
-  onProceedToPayment, promoCode, setPromoCode, handleApplyPromoCode,
-  promoMessage, isCheckingPromo, appliedDiscount, isPlacingOrder, onEditItem,
-  walletBalance, useWallet, setUseWallet, walletAmountApplied
+  selectedItems,
+  pendingItem,
+  subtotal,
+  discountAmount,
+  totalPrice,
+  onUpdateItemQuantity,
+  onUpdatePendingItem,
+  onConfirmPendingItem,
+  onCancelPendingItem,
+  onProceedToPayment,
+  promoCode,
+  setPromoCode,
+  handleApplyPromoCode,
+  promoMessage,
+  isCheckingPromo,
+  appliedDiscount,
+  isPlacingOrder,
+  onEditItem,
+  walletBalance,
+  useWallet,
+  onUseWalletChange,
+  walletCreditApplied,
 }: OrderSummaryProps) => {
+
   return (
     <div className="space-y-4 bg-gray-800 p-6 rounded-lg">
       <h3 className="text-xl font-semibold text-amber-400">Order Summary</h3>
@@ -75,7 +78,7 @@ const OrderSummary = ({
           <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
             {selectedItems.map((item, index) => (
               <OrderItem
-                key={`${item.menuItem.id}-${index}`}
+                key={index}
                 item={item}
                 index={index}
                 onUpdateQuantity={onUpdateItemQuantity}
@@ -110,20 +113,21 @@ const OrderSummary = ({
             )}
           </div>
 
-          <div className="border-b border-gray-700 pb-4">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="use-wallet" className="flex flex-col cursor-pointer">
-                <span className="font-medium text-white">Use Wallet Balance</span>
-                <span className="text-sm text-gray-400">Available: ₾{walletBalance.toFixed(2)}</span>
-              </Label>
-              <Switch
-                id="use-wallet"
-                checked={useWallet}
-                onCheckedChange={setUseWallet}
-                disabled={walletBalance <= 0}
-              />
+          {walletBalance > 0 && (
+            <div className="border-b border-gray-700 pb-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="use-wallet" className="flex flex-col cursor-pointer">
+                  <span className="font-medium">Use Wallet Balance</span>
+                  <span className="text-sm text-gray-400">Available: ₾{walletBalance.toFixed(2)}</span>
+                </Label>
+                <Switch
+                  id="use-wallet"
+                  checked={useWallet}
+                  onCheckedChange={onUseWalletChange}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="space-y-2 pt-2">
             <div className="flex justify-between items-center text-md">
@@ -132,14 +136,14 @@ const OrderSummary = ({
             </div>
             {appliedDiscount && (
               <div className="flex justify-between items-center text-md text-green-400">
-                <span>Promo Discount:</span>
-                <span>- ₾{promoDiscountAmount.toFixed(2)}</span>
+                <span>Discount:</span>
+                <span>- ₾{discountAmount.toFixed(2)}</span>
               </div>
             )}
-            {useWallet && walletAmountApplied > 0 && (
+             {useWallet && walletCreditApplied > 0 && (
               <div className="flex justify-between items-center text-md text-green-400">
                 <span>Wallet Credit:</span>
-                <span>- ₾{walletAmountApplied.toFixed(2)}</span>
+                <span>- ₾{walletCreditApplied.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between items-center text-xl font-bold">
@@ -153,7 +157,7 @@ const OrderSummary = ({
             className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 text-lg font-semibold"
             disabled={selectedItems.length === 0 || isPlacingOrder}
           >
-            {isPlacingOrder ? "Processing..." : `Pay ${totalPrice > 0 ? '₾' + totalPrice.toFixed(2) : 'with Wallet'}`}
+            {isPlacingOrder ? "Processing..." : `Confirm and Pay ₾${totalPrice.toFixed(2)}`}
           </Button>
         </>
       )}

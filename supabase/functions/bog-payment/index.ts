@@ -5,7 +5,6 @@ import { corsHeaders } from '../_shared/cors.ts'
 console.log("BOG Payment function initialized");
 
 Deno.serve(async (req) => {
-  // This is needed to handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -17,7 +16,6 @@ Deno.serve(async (req) => {
     }
 
     // --- Step 1: Authentication ---
-    // Get the secret keys we stored in the Vault
     const clientId = Deno.env.get('BOG_CLIENT_ID');
     const clientSecret = Deno.env.get('BOG_CLIENT_SECRET');
 
@@ -25,7 +23,6 @@ Deno.serve(async (req) => {
       throw new Error("API credentials are not configured correctly.");
     }
 
-    // Encode the credentials for Basic Auth
     const authHeader = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
 
     const tokenResponse = await fetch('https://api.businessonline.ge/api/v1/oauth2/token', {
@@ -37,9 +34,14 @@ Deno.serve(async (req) => {
       body: 'grant_type=client_credentials',
     });
 
+    // --- THIS IS THE UPDATED PART ---
     if (!tokenResponse.ok) {
-      throw new Error('Failed to get authorization token from the bank.');
+      // We will now log the specific error response from the bank
+      const errorBody = await tokenResponse.text(); // Use .text() in case the error isn't JSON
+      console.error('Bank authentication failed:', tokenResponse.status, tokenResponse.statusText, errorBody);
+      throw new Error(`Failed to get authorization token from the bank. Status: ${tokenResponse.status}. Response: ${errorBody}`);
     }
+    // --- END OF UPDATE ---
 
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
@@ -50,10 +52,10 @@ Deno.serve(async (req) => {
       purchase_units: [{
         amount: {
           currency_code: "GEL",
-          value: amount.toFixed(2), // Ensure amount is a string with 2 decimal places
+          value: amount.toFixed(2),
         }
       }],
-      redirect_url: "https://saucerburger.ge/payment-status", // A page we will create later
+      redirect_url: "https://saucerburger.ge/payment-status",
       shop_order_id: orderId,
     };
 
@@ -72,8 +74,6 @@ Deno.serve(async (req) => {
     }
 
     const orderData = await orderResponse.json();
-    
-    // Find the redirect link from the bank's response
     const redirectLink = orderData.links?.find((link: any) => link.rel === 'approve');
 
     if (!redirectLink || !redirectLink.href) {

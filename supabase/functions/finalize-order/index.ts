@@ -19,7 +19,6 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get the order total first to ensure it exists
     const { data: orderData, error: orderError } = await supabaseAdmin
       .from('transactions')
       .select('total_price')
@@ -30,7 +29,6 @@ Deno.serve(async (req) => {
 
     let amountToPayByCard = orderData.total_price;
 
-    // If the user wants to use their wallet, process that first
     if (useWallet) {
       const { data: remainingAmount, error: rpcError } = await supabaseAdmin.rpc('process_wallet_payment', {
         order_id_to_process: orderId
@@ -40,7 +38,6 @@ Deno.serve(async (req) => {
       amountToPayByCard = remainingAmount;
     }
 
-    // If the wallet covered the full amount, the order is complete.
     if (amountToPayByCard <= 0) {
       await supabaseAdmin.from('transactions').update({ status: 'pending_approval' }).eq('transaction_id', orderId);
       return new Response(JSON.stringify({ paymentComplete: true }), {
@@ -48,7 +45,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // --- If there is a remaining balance, proceed to Bank of Georgia payment ---
     const clientId = Deno.env.get('BOG_CLIENT_ID');
     const clientSecret = Deno.env.get('BOG_CLIENT_SECRET');
     const authHeader = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
@@ -58,7 +54,13 @@ Deno.serve(async (req) => {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Authorization': authHeader },
         body: 'grant_type=client_credentials',
     });
-    if (!tokenResponse.ok) throw new Error('Failed to get authorization token from the bank.');
+
+    // --- THIS IS THE UPDATED PART ---
+    if (!tokenResponse.ok) {
+        const errorBody = await tokenResponse.text(); // Get the raw text of the error
+        throw new Error(`Failed to get authorization token. Bank's response: ${errorBody}`);
+    }
+    // --- END OF UPDATE ---
 
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;

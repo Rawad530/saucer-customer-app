@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Order, OrderItem, MenuItem } from "../types/order";
 import { addOnOptions } from "../data/menu";
+import { getNextOrderNumber } from "../utils/orderUtils";
 import { supabase } from "../lib/supabaseClient";
 import MenuSection from "../components/MenuSection";
 import OrderSummary from "../components/OrderSummary";
@@ -11,7 +12,7 @@ import { Session } from "@supabase/supabase-js";
 
 interface PendingItem {
   menuItem: MenuItem;
-  quantity: number; // Add quantity for editing
+  quantity: number;
   sauce?: string;
   sauceCup?: string;
   drink?: string;
@@ -38,21 +39,17 @@ const OrderPage = () => {
   const [useWallet, setUseWallet] = useState(false);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
     const fetchData = async () => {
       setLoadingMenu(true);
-      const authSession = await supabase.auth.getSession();
-      const user = authSession.data.session?.user;
-      setSession(authSession.data.session);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
 
       const menuPromise = supabase.from('menu_items').select('*').eq('is_available', true).order('id');
       
       let walletPromise;
-      if (user) {
-        walletPromise = supabase.from('customer_profiles').select('wallet_balance').eq('id', user.id).single();
+      if (session?.user) {
+        walletPromise = supabase.from('customer_profiles').select('wallet_balance').eq('id', session.user.id).single();
       }
 
       const [menuResult, walletResult] = await Promise.all([menuPromise, walletPromise]);
@@ -63,17 +60,14 @@ const OrderPage = () => {
         setMenuItems(menuResult.data);
       }
       
-      if (walletResult?.error) {
-        console.error("Error fetching wallet balance:", walletResult.error);
-      } else if (walletResult?.data) {
-        setWalletBalance(walletResult.data.wallet_balance);
+      if (walletResult?.data) {
+        setWalletBalance(walletResult.data.wallet_balance || 0);
       }
-      
+
       setLoadingMenu(false);
     };
 
     fetchData();
-    return () => subscription.unsubscribe();
   }, []);
 
   const addItemToOrder = (menuItem: MenuItem) => {
@@ -86,26 +80,28 @@ const OrderPage = () => {
 
   const addFinalItem = (item: OrderItem) => {
     if (editingItemIndex !== null) {
-      setSelectedItems(prev => prev.map((oldItem, index) => index === editingItemIndex ? item : oldItem));
+      setSelectedItems(prev => prev.map((oldItem, index) =>
+        index === editingItemIndex ? item : oldItem
+      ));
       setEditingItemIndex(null);
       return;
     }
 
     setSelectedItems(prev => {
-      const existingIndex = prev.findIndex(existing =>
-        existing.menuItem.id === item.menuItem.id &&
-        existing.sauce === item.sauce &&
-        existing.sauceCup === item.sauceCup &&
-        existing.drink === item.drink &&
-        JSON.stringify(existing.addons.sort()) === JSON.stringify(item.addons.sort()) &&
-        existing.spicy === item.spicy &&
-        existing.remarks === item.remarks &&
-        existing.discount === item.discount
-      );
-      if (existingIndex >= 0) {
-        return prev.map((existing, index) => index === existingIndex ? { ...existing, quantity: existing.quantity + 1 } : existing);
-      }
-      return [...prev, item];
+        const existingIndex = prev.findIndex(existing =>
+            existing.menuItem.id === item.menuItem.id &&
+            existing.sauce === item.sauce &&
+            existing.sauceCup === item.sauceCup &&
+            existing.drink === item.drink &&
+            JSON.stringify(existing.addons.sort()) === JSON.stringify(item.addons.sort()) &&
+            existing.spicy === item.spicy &&
+            existing.remarks === item.remarks &&
+            existing.discount === item.discount
+        );
+        if (existingIndex >= 0) {
+            return prev.map((existing, index) => index === existingIndex ? { ...existing, quantity: existing.quantity + 1 } : existing);
+        }
+        return [...prev, item];
     });
   };
 
@@ -128,17 +124,7 @@ const OrderPage = () => {
   const handleEditItem = (index: number) => {
     const itemToEdit = selectedItems[index];
     setEditingItemIndex(index);
-    setPendingItem({
-      menuItem: itemToEdit.menuItem,
-      quantity: itemToEdit.quantity,
-      sauce: itemToEdit.sauce,
-      sauceCup: itemToEdit.sauceCup,
-      drink: itemToEdit.drink,
-      addons: itemToEdit.addons,
-      spicy: itemToEdit.spicy,
-      remarks: itemToEdit.remarks,
-      discount: itemToEdit.discount,
-    });
+    setPendingItem({ ...itemToEdit });
   };
 
   const handleCancelPendingItem = () => {
@@ -153,33 +139,35 @@ const OrderPage = () => {
         setSelectedItems(prev => prev.map((item, i) => i === index ? { ...item, quantity: newQuantity } : item));
     }
   };
-
+  
   const subtotal = selectedItems.reduce((sum, item) => {
     let itemPrice = item.menuItem.price;
     item.addons.forEach(addonName => {
         const addon = addOnOptions.find(opt => opt.name === addonName);
         if (addon) itemPrice += addon.price;
     });
-    const discountAmount = itemPrice * ((item.discount || 0) / 100);
-    const finalPrice = itemPrice - discountAmount;
-    return sum + (finalPrice * item.quantity);
+    const itemDiscount = itemPrice * ((item.discount || 0) / 100);
+    return sum + ((itemPrice - itemDiscount) * item.quantity);
   }, 0);
   
   const promoDiscountAmount = subtotal * (appliedDiscount / 100);
   const priceAfterPromo = subtotal - promoDiscountAmount;
-  const walletAmountToApply = useWallet ? Math.min(priceAfterPromo, walletBalance) : 0;
-  const finalAmountToPay = priceAfterPromo - walletAmountToApply;
-
+  const walletCreditApplied = useWallet ? Math.min(walletBalance, priceAfterPromo) : 0;
+  const totalPrice = priceAfterPromo - walletCreditApplied;
+  
   const handleApplyPromoCode = async () => {
     if (!promoCode.trim()) return;
     setIsCheckingPromo(true);
     setPromoMessage("");
+
     try {
       const { data, error } = await supabase.functions.invoke('validate-promo-code', {
         body: { promoCode: promoCode.trim().toUpperCase() },
       });
+
       if (error) throw new Error(error.message);
       if (data.error) throw new Error(data.error);
+
       setAppliedDiscount(data.discount);
       setPromoMessage(`Success! ${data.discount}% discount applied.`);
     } catch (err) {
@@ -195,43 +183,44 @@ const OrderPage = () => {
     setIsPlacingOrder(true);
   
     const orderId = crypto.randomUUID();
+    const orderNumber = await getNextOrderNumber();
   
     try {
-      const { data: orderNumberData, error: orderNumberError } = await supabase.functions.invoke('get-next-order-number');
-      if (orderNumberError) throw new Error(`Could not get order number: ${orderNumberError.message}`);
-      const orderNumber = orderNumberData.nextOrderNumber;
+      const { error: insertError } = await supabase.from('transactions').insert([
+        { 
+          transaction_id: orderId,
+          user_id: session.user.id,
+          order_number: orderNumber,
+          items: selectedItems as any,
+          total_price: priceAfterPromo,
+          payment_mode: 'Card - Online',
+          status: 'pending_payment',
+          created_at: new Date().toISOString(),
+          promo_code_used: appliedDiscount > 0 ? promoCode.toUpperCase() : null,
+          discount_applied_percent: appliedDiscount > 0 ? appliedDiscount : null,
+          order_type: 'pick_up', 
+        },
+      ]);
   
-      const { error: insertError } = await supabase.from('transactions').insert([{ 
-        transaction_id: orderId, user_id: session.user.id, order_number: orderNumber, items: selectedItems as any,
-        total_price: priceAfterPromo,
-        payment_mode: 'Card - Online', status: 'pending_payment', created_at: new Date().toISOString(),
-        promo_code_used: appliedDiscount > 0 ? promoCode.toUpperCase() : null,
-        discount_applied_percent: appliedDiscount > 0 ? appliedDiscount : null,
-        wallet_payment_amount: walletAmountToApply
-      }]);
+      if (insertError) throw new Error(`Failed to save order: ${insertError.message}`);
   
-      if (insertError) throw new Error(`Failed to save initial order: ${insertError.message}`);
+      // --- THIS IS THE FIX: IT NOW CALLS THE CORRECT FUNCTION ---
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('finalize-order', {
+        body: { orderId, useWallet },
+      });
   
-      if (useWallet && walletAmountToApply > 0) {
-        const { error: walletError } = await supabase.functions.invoke('debit-wallet', {
-          body: { customerId: session.user.id, amount: walletAmountToApply, orderId: orderId }
-        });
-        if (walletError) throw new Error(`Wallet payment failed: ${walletError.message}`);
-      }
-      
-      if (finalAmountToPay > 0) {
-        const { data: functionData, error: functionError } = await supabase.functions.invoke('bog-payment', {
-          body: { orderId, amount: finalAmountToPay },
-        });
-        if (functionError) throw new Error(functionError.message);
-        if (functionData.error) throw new Error(functionData.error);
+      if (functionError) throw new Error(functionError.message);
+      if (functionData.error) throw new Error(functionData.error);
+  
+      if (functionData.paymentComplete) {
+        setOrderPlaced(true);
+      } else if (functionData.redirectUrl) {
         window.location.href = functionData.redirectUrl;
       } else {
-        await supabase.from('transactions').update({ status: 'pending_approval' }).eq('transaction_id', orderId);
-        setOrderPlaced(true);
+        throw new Error("Invalid response from payment function.");
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : "An unknown error occurred.");
+      alert(err instanceof Error ? err.message : "An unknown error occurred while trying to process the payment.");
       setIsPlacingOrder(false);
     }
   };
@@ -248,7 +237,7 @@ const OrderPage = () => {
     return (
         <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900 text-white text-center p-4">
             <h1 className="text-4xl font-bold text-amber-500 mb-4">Thank You!</h1>
-            <p className="text-lg mb-8">Your order has been placed successfully. It will be ready for pickup shortly at our Tbilisi location.</p>
+            <p className="text-lg mb-8">Your order has been placed successfully. It will be ready for pickup shortly.</p>
             <Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
                 Back to Your Account
             </Link>
@@ -276,25 +265,39 @@ const OrderPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
             {Object.entries(categorizedItems).map(([category, items]) => (
-              items.length > 0 && <MenuSection key={category} title={category.charAt(0).toUpperCase() + category.slice(1)} items={items} onAddItem={addItemToOrder}/>
+              <MenuSection
+                key={category}
+                title={category.charAt(0).toUpperCase() + category.slice(1)}
+                items={items}
+                onAddItem={addItemToOrder}
+              />
             ))}
           </div>
           <div>
             <div className="sticky top-4">
               <OrderSummary
-                selectedItems={selectedItems} pendingItem={pendingItem}
-                subtotal={subtotal} promoDiscountAmount={promoDiscountAmount}
-                totalPrice={finalAmountToPay}
-                onUpdateItemQuantity={updateItemQuantity} onUpdatePendingItem={setPendingItem}
-                onConfirmPendingItem={confirmPendingItem} onCancelPendingItem={handleCancelPendingItem}
+                selectedItems={selectedItems}
+                pendingItem={pendingItem}
+                subtotal={subtotal}
+                discountAmount={promoDiscountAmount}
+                totalPrice={totalPrice}
+                onUpdateItemQuantity={updateItemQuantity}
+                onUpdatePendingItem={setPendingItem}
+                onConfirmPendingItem={confirmPendingItem}
+                onCancelPendingItem={handleCancelPendingItem}
                 onProceedToPayment={handleProceedToPayment}
-                promoCode={promoCode} setPromoCode={setPromoCode} handleApplyPromoCode={handleApplyPromoCode}
-                promoMessage={promoMessage} isCheckingPromo={isCheckingPromo} appliedDiscount={appliedDiscount > 0}
-                isPlacingOrder={isPlacingOrder} onEditItem={handleEditItem}
+                promoCode={promoCode}
+                setPromoCode={setPromoCode}
+                handleApplyPromoCode={handleApplyPromoCode}
+                promoMessage={promoMessage}
+                isCheckingPromo={isCheckingPromo}
+                appliedDiscount={appliedDiscount > 0}
+                isPlacingOrder={isPlacingOrder}
+                onEditItem={handleEditItem}
                 walletBalance={walletBalance}
                 useWallet={useWallet}
-                setUseWallet={setUseWallet}
-                walletAmountApplied={walletAmountToApply}
+                onUseWalletChange={setUseWallet}
+                walletCreditApplied={walletCreditApplied}
               />
             </div>
           </div>

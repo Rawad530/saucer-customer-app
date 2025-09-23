@@ -1,7 +1,6 @@
 // src/types/order.ts
 
 export type OrderStatus = 'preparing' | 'completed' | 'pending_approval' | 'rejected' | 'pending_payment';
-// ADDED 'Card - Online' to the list of valid payment modes
 export type PaymentMode = 'Cash' | 'Card - Terminal' | 'Bank Transfer' | 'Card - Online';
 
 export interface MenuItem {
@@ -44,8 +43,7 @@ export interface Order {
   order_type?: 'dine_in' | 'pick_up';
 }
 
-// Add this to the bottom of src/types/order.ts
-
+// --- THIS INTERFACE IS ADDED ---
 export interface PendingItem {
   menuItem: MenuItem;
   quantity: number;
