@@ -9,9 +9,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { customerId } = await req.json();
-    if (!customerId) {
-      throw new Error("Customer ID is required.");
+    const { transactionId } = await req.json();
+    if (!transactionId) {
+      throw new Error("Transaction ID is required.");
     }
 
     const supabaseAdmin = createClient(
@@ -19,50 +19,48 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Step 1: Find the customer's most recent completed order
-    const { data: lastOrder, error: orderError } = await supabaseAdmin
+    // Step 1: Fetch the transaction to verify it's eligible
+    const { data: transaction, error: fetchError } = await supabaseAdmin
       .from('transactions')
-      .select('transaction_id, total_price, order_type, cashback_awarded')
-      .eq('user_id', customerId)
-      .eq('status', 'completed')
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .select('total_price, user_id, order_type, cashback_awarded, order_number')
+      .eq('transaction_id', transactionId)
       .single();
 
-    if (orderError || !lastOrder) {
-      throw new Error("No recent completed order found for this customer.");
-    }
+    if (fetchError) throw new Error(`Could not find transaction: ${fetchError.message}`);
 
-    // Step 2: Perform security checks
-    if (lastOrder.order_type !== 'dine_in') {
-      throw new Error("Cashback is only available for dine-in orders.");
+    // Step 2: Perform safety checks
+    if (!transaction.user_id) {
+      throw new Error("Cannot award cashback: Order is not linked to a customer.");
     }
-    if (lastOrder.cashback_awarded) {
+    if (transaction.order_type !== 'dine_in') {
+      throw new Error("Cannot award cashback: Order is not a dine-in order.");
+    }
+    if (transaction.cashback_awarded) {
       throw new Error("Cashback has already been awarded for this order.");
     }
 
-    // Step 3: Calculate cashback and credit the wallet
-    const cashbackAmount = lastOrder.total_price * 0.05;
-    if (cashbackAmount <= 0) {
-      throw new Error("No cashback to award for this order.");
-    }
+    // Step 3: Calculate cashback and credit the customer's wallet
+    const cashbackAmount = transaction.total_price * 0.05;
     
-    // Call the secure database function to credit the wallet
-    const { error: creditError } = await supabaseAdmin.rpc('credit_wallet', {
-      customer_id_to_credit: customerId,
-      amount_to_credit: cashbackAmount,
-      transaction_description: `5% cashback for dine-in order #${lastOrder.transaction_id.substring(0, 8)}`,
-    });
+    if (cashbackAmount > 0) {
+      const { error: creditError } = await supabaseAdmin.rpc('credit_wallet', {
+        customer_id_to_credit: transaction.user_id,
+        amount_to_credit: cashbackAmount,
+        transaction_description: `5% cashback for order #${transaction.order_number}`,
+      });
 
-    if (creditError) throw creditError;
+      if (creditError) throw new Error(`Failed to credit wallet: ${creditError.message}`);
+    }
 
-    // Step 4: Mark the order to prevent double-dipping
-    await supabaseAdmin
+    // Step 4: Mark the transaction so cashback can't be awarded again
+    const { error: updateError } = await supabaseAdmin
       .from('transactions')
       .update({ cashback_awarded: true })
-      .eq('transaction_id', lastOrder.transaction_id);
+      .eq('transaction_id', transactionId);
 
-    return new Response(JSON.stringify({ message: `Success! ₾${cashbackAmount.toFixed(2)} cashback awarded.` }), {
+    if (updateError) throw new Error(`Failed to mark cashback as awarded: ${updateError.message}`);
+
+    return new Response(JSON.stringify({ message: `Successfully awarded ${cashbackAmount.toFixed(2)} GEL cashback.` }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
@@ -74,9 +72,3 @@ Deno.serve(async (req) => {
     });
   }
 })
-```
-
-Finally, save the file and deploy this new function by running this command in your terminal:
-
-```bash
-npx supabase functions deploy award-cashback --no-verify-jwt
