@@ -1,77 +1,80 @@
 // src/pages/PaymentStatusPage.tsx
 
 import { useEffect, useState } from 'react';
+import { useLocation, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Link, useSearchParams } from 'react-router-dom';
 
 const PaymentStatusPage = () => {
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('Processing your payment...');
+  const location = useLocation();
+  const [status, setStatus] = useState<'processing' | 'success' | 'fail' | 'error'>('processing');
+  const [message, setMessage] = useState('Please wait while we confirm your payment...');
 
   useEffect(() => {
-    const processPayment = async () => {
-      // For now, we assume a redirect to this page is a success.
-      // In a full production app, we would verify the payment status with the bank here.
+    const params = new URLSearchParams(location.search);
+    const paymentStatus = params.get('status');
+    const paymentType = params.get('type'); // We added this in the Edge Function
 
-      const topUpDetailsString = localStorage.getItem('wallet_top_up');
-      if (!topUpDetailsString) {
-        setStatus('error');
-        setMessage('Could not find payment details. Please check your wallet history or contact support.');
-        return;
-      }
-
-      localStorage.removeItem('wallet_top_up'); // Clear it so it's not used again
-      const topUpDetails = JSON.parse(topUpDetailsString);
-
-      try {
-        const { error } = await supabase.functions.invoke('credit-wallet', {
-          body: { 
-            customerId: topUpDetails.customerId,
-            amount: topUpDetails.amount,
-            description: topUpDetails.description,
-          },
-        });
-
-        if (error) throw new Error(error.message);
-
+    if (paymentStatus === 'success') {
+      // For wallet top-ups, the callback is the source of truth.
+      // We give it a few seconds to arrive.
+      if (paymentType === 'wallet') {
+        setMessage('Payment successful! Please wait a moment while we update your wallet balance.');
+        // After a delay, we assume the callback worked and show success.
+        setTimeout(() => {
+          setStatus('success');
+          setMessage('Your wallet has been credited! You can now use your new balance.');
+        }, 4000); // 4-second delay
+      } else {
+        // For regular orders, we can confirm the status directly
+        // (We can build this logic later)
         setStatus('success');
-        setMessage(`Successfully added ₾${topUpDetails.amount.toFixed(2)} to your wallet!`);
-
-      } catch (err) {
-        setStatus('error');
-        setMessage(err instanceof Error ? err.message : "An unknown error occurred.");
+        setMessage('Your payment was successful and your order has been placed!');
       }
-    };
+    } else if (paymentStatus === 'fail') {
+      setStatus('fail');
+      setMessage('The payment was cancelled or failed. Please try again.');
+    } else {
+      setStatus('error');
+      setMessage('Invalid payment status URL. Please check your transaction history.');
+    }
+  }, [location]);
 
-    processPayment();
-  }, []);
+  const renderContent = () => {
+    switch (status) {
+      case 'processing':
+        return (
+          <>
+            <h1 className="text-3xl font-bold text-amber-400 mb-4">Processing Payment</h1>
+            <p className="text-gray-400">{message}</p>
+          </>
+        );
+      case 'success':
+        return (
+          <>
+            <h1 className="text-3xl font-bold text-green-500 mb-4">Payment Successful!</h1>
+            <p className="text-gray-300 mb-8">{message}</p>
+            <Link to="/wallet" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
+              Back to Wallet
+            </Link>
+          </>
+        );
+      case 'fail':
+      case 'error':
+        return (
+          <>
+            <h1 className="text-3xl font-bold text-red-500 mb-4">Payment Failed</h1>
+            <p className="text-gray-400 mb-8">{message}</p>
+            <Link to="/wallet" className="px-6 py-2 font-bold text-white bg-gray-700 rounded-md hover:bg-gray-800">
+              Return to Wallet
+            </Link>
+          </>
+        );
+    }
+  };
 
   return (
     <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900 text-white text-center p-4">
-      {status === 'loading' && (
-        <>
-          <h1 className="text-3xl font-bold mb-4">Processing...</h1>
-          <p>{message}</p>
-        </>
-      )}
-      {status === 'success' && (
-        <>
-          <h1 className="text-4xl font-bold text-green-400 mb-4">Payment Successful!</h1>
-          <p className="text-lg mb-8">{message}</p>
-          <Link to="/wallet" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
-            Back to Your Wallet
-          </Link>
-        </>
-      )}
-      {status === 'error' && (
-        <>
-          <h1 className="text-4xl font-bold text-red-400 mb-4">Payment Failed</h1>
-          <p className="text-lg mb-8">{message}</p>
-          <Link to="/wallet" className="px-6 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
-            Return to Wallet
-          </Link>
-        </>
-      )}
+      {renderContent()}
     </div>
   );
 };
