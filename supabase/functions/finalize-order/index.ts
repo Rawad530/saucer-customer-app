@@ -1,9 +1,8 @@
-// supabase/functions/finalize-order/index.ts
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
 Deno.serve(async (req) => {
+  // CRITICAL: Handles the CORS preflight request.
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -19,16 +18,17 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // 1. Get Order Details
     const { data: orderData, error: orderError } = await supabaseAdmin
       .from('transactions')
-      .select('total_price, order_number') // Also get order_number for the basket
+      .select('total_price, order_number')
       .eq('transaction_id', orderId)
       .single();
 
     if (orderError) throw new Error(`Order not found: ${orderError.message}`);
-
     let amountToPayByCard = orderData.total_price;
 
+    // 2. Process Wallet Payment
     if (useWallet) {
       const { data: remainingAmount, error: rpcError } = await supabaseAdmin.rpc('process_wallet_payment', {
         order_id_to_process: orderId
@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Step 1: Authentication (This part is already correct)
+    // 3. BOG Authentication
     const clientId = Deno.env.get('BOG_CLIENT_ID');
     const clientSecret = Deno.env.get('BOG_CLIENT_SECRET');
     const authHeader = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
@@ -63,11 +63,12 @@ Deno.serve(async (req) => {
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    // Step 2: Create Payment Order (Rewritten to match new documentation)
+    // 4. BOG Create Order (CORRECTED PAYLOAD)
     const orderPayload = {
-        callback_url: 'https://kgambgofdizxgcdjhxlk.supabase.co/functions/v1/bog-callback-handler', // Note: We will need to build this later
+        callback_url: `https://kgambgofdizxgcdjhxlk.supabase.co/functions/v1/bog-callback-handler`,
         external_order_id: orderId,
-        purchase_units: [{
+        // CORRECTED: purchase_units is an object, not an array
+        purchase_units: {
             currency: "GEL",
             total_amount: amountToPayByCard,
             basket: [{
@@ -75,7 +76,7 @@ Deno.serve(async (req) => {
                 unit_price: amountToPayByCard,
                 product_id: `ORDER-${orderData.order_number}`
             }]
-        }],
+        },
         redirect_urls: {
             fail: "https://saucerburger.ge/payment-status?status=fail",
             success: "https://saucerburger.ge/payment-status?status=success"
@@ -94,7 +95,6 @@ Deno.serve(async (req) => {
     }
 
     const bogOrderData = await bogOrderResponse.json();
-    // The new docs say the redirect link is in the '_links' object
     const redirectLink = bogOrderData._links?.redirect?.href;
 
     if (!redirectLink) throw new Error("Could not find payment redirect link from bank.");

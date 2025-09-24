@@ -1,7 +1,5 @@
-// supabase/functions/add-funds-to-wallet/index.ts
-
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
+// Note: createClient is not needed here if we don't interact with the DB before payment
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -14,7 +12,7 @@ Deno.serve(async (req) => {
       throw new Error("Amount and a unique transaction ID are required.");
     }
 
-    // Step 1: Authentication (This part is already correct)
+    // 1. BOG Authentication
     const clientId = Deno.env.get('BOG_CLIENT_ID');
     const clientSecret = Deno.env.get('BOG_CLIENT_SECRET');
     const authHeader = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
@@ -33,11 +31,12 @@ Deno.serve(async (req) => {
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    // Step 2: Create Payment Order (Rewritten to match new documentation)
+    // 2. BOG Create Order (CORRECTED PAYLOAD)
     const orderPayload = {
-        callback_url: 'https://kgambgofdizxgcdjhxlk.supabase.co/functions/v1/bog-callback-handler', // Note: We will need to build this later
+        callback_url: `https://kgambgofdizxgcdjhxlk.supabase.co/functions/v1/bog-callback-handler`,
         external_order_id: transactionId,
-        purchase_units: [{
+        // CORRECTED: purchase_units is an object, not an array
+        purchase_units: {
             currency: "GEL",
             total_amount: amount,
             basket: [{
@@ -45,7 +44,7 @@ Deno.serve(async (req) => {
                 unit_price: amount,
                 product_id: "WALLET-TOP-UP"
             }]
-        }],
+        },
         redirect_urls: {
             fail: "https://saucerburger.ge/payment-status?status=fail",
             success: "https://saucerburger.ge/payment-status?status=success"
@@ -60,7 +59,7 @@ Deno.serve(async (req) => {
 
     if (!bogOrderResponse.ok) {
         const errorBody = await bogOrderResponse.json();
-        throw new Error(`Bank Error Creating Order: ${JSON.stringify(errorBody)}`);
+        throw new Error(`Bank Error: ${JSON.stringify(errorBody)}`);
     }
 
     const bogOrderData = await bogOrderResponse.json();
