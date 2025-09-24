@@ -47,20 +47,21 @@ const WalletPage = () => {
       alert("Please enter a valid amount.");
       return;
     }
-    if (!user) return;
+    
+    // Ensure user is authenticated
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+        alert("You must be logged in.");
+        return;
+    }
 
     setIsAddingFunds(true);
     const transactionId = crypto.randomUUID(); // A unique ID for this specific transaction
 
-    // Store details in localStorage to retrieve after the bank redirects back
-    localStorage.setItem('wallet_top_up', JSON.stringify({
-      customerId: user.id,
-      amount: amount,
-      description: `Wallet top-up via card.`
-    }));
+    // NOTE: localStorage usage is REMOVED. The backend now tracks the pending top-up.
 
     try {
-      // --- THIS NOW CALLS THE NEW, DEDICATED FUNCTION ---
+      // This calls the updated function which registers the pending top-up
       const { data, error } = await supabase.functions.invoke('add-funds-to-wallet', {
         body: { transactionId, amount },
       });
@@ -68,11 +69,11 @@ const WalletPage = () => {
       if (error) throw new Error(error.message);
       if (data.error) throw new Error(data.error);
 
+      // Redirect to the bank
       window.location.href = data.redirectUrl;
 
     } catch (err) {
       alert(err instanceof Error ? err.message : "An unknown error occurred.");
-      localStorage.removeItem('wallet_top_up');
       setIsAddingFunds(false);
     }
   };

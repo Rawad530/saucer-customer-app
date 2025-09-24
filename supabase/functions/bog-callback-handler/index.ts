@@ -1,41 +1,73 @@
 // supabase/functions/bog-callback-handler/index.ts
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-
-console.log(`Callback handler initialized`);
+import { verifyBogSignature } from '../_shared/cryptoUtils.ts'
 
 Deno.serve(async (req) => {
+  // 1. Read the raw body and signature. Must use req.text() for verification.
+  const rawBody = await req.text();
+  const signature = req.headers.get('Callback-Signature');
+
+  if (!signature) {
+    console.error("Missing Callback-Signature header.");
+    // Enforce security: reject requests without a signature.
+    return new Response("Missing signature.", { status: 403 });
+  }
+
+  // 2. Verify the signature
+  const isValid = await verifyBogSignature(signature, rawBody);
+  if (!isValid) {
+    console.error("SECURITY ALERT: Invalid signature received.");
+    return new Response("Invalid signature.", { status: 403 }); // Forbidden
+  }
+
+  console.log("Signature verified successfully.");
+
+  // 3. Process the verified payload
   try {
-    const payload = await req.json();
-    console.log("Received callback from BOG:", payload);
+    const payload = JSON.parse(rawBody);
+    // Details are nested in the 'body' field of the callback payload
+    const paymentDetails = payload.body;
 
-    // Extract the order ID from the bank's callback data
-    const orderId = payload.external_order_id; 
-    if (!orderId) {
-      throw new Error("Callback did not contain an order ID.");
+    const orderId = paymentDetails?.external_order_id;
+    const status = paymentDetails?.order_status?.key;
+
+    if (!orderId || !status) {
+      console.error("Callback missing order ID or status.", rawBody);
+      throw new Error("Callback missing order ID or status.");
     }
 
-    // Securely connect to Supabase
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    // 4. Handle the status
+    // 'completed' is the success status for automatic capture.
+    if (status === 'completed') {
+        const supabaseAdmin = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
 
-    // Call our secure database function to update the order status
-    const { error } = await supabaseAdmin.rpc('confirm_order_payment', {
-      order_id_to_confirm: orderId
-    });
+        // Call the unified database function
+        const { data, error } = await supabaseAdmin.rpc('process_payment_callback', {
+            external_id: orderId
+        });
 
-    if (error) {
-      throw new Error(`Failed to update order status: ${error.message}`);
+        if (error) {
+            throw new Error(`Failed to process payment in DB: ${error.message}`);
+        }
+        console.log(`Order/Topup ${orderId} confirmed. Result: ${data}`);
+
+    } else if (status === 'rejected') {
+      console.log(`Order ${orderId} rejected by the bank.`);
+      // Optional: Update status to 'failed' in relevant tables
+    } else {
+      console.log(`Received status '${status}' for order ${orderId}. No action taken.`);
     }
 
-    // Respond to the bank's server with a success message
-    return new Response("Callback received successfully.", { status: 200 });
+    // 5. Respond to the bank's server with 200 OK (as required by documentation)
+    return new Response("Callback processed.", { status: 200 });
 
   } catch (error) {
-    console.error("Error in callback handler:", error.message);
-    // Respond to the bank's server with an error message
-    return new Response(JSON.stringify({ error: error.message }), { status: 400 });
+    console.error("Error processing callback:", error.message);
+    // Respond with 500 Internal Server Error so BOG might retry
+    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
   }
 })
