@@ -1,6 +1,7 @@
 // src/pages/OrderPage.tsx
 
 import { useState, useEffect } from "react";
+// Note: 'Order' import is typically unused here, but kept for consistency with your original file
 import { Order, OrderItem, MenuItem } from "../types/order";
 import { addOnOptions } from "../data/menu";
 import { getNextOrderNumber } from "../utils/orderUtils";
@@ -35,31 +36,42 @@ const OrderPage = () => {
   const [isCheckingPromo, setIsCheckingPromo] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [useWallet, setUseWallet] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
-    const fetchMenu = async () => {
+    const fetchData = async () => {
       setLoadingMenu(true);
-      const { data, error } = await supabase
-        .from('menu_items')
-        .select('*')
-        .eq('is_available', true) // Only fetch available items
-        .order('id');
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
 
-      if (error) {
-        console.error("Error fetching menu:", error);
-      } else if (data) {
-        setMenuItems(data);
+      const menuPromise = supabase.from('menu_items').select('*').eq('is_available', true).order('id');
+      
+      let walletPromise;
+      if (session?.user) {
+        walletPromise = supabase.from('customer_profiles').select('wallet_balance').eq('id', session.user.id).single();
       }
+
+      const [menuResult, walletResult] = await Promise.all([menuPromise, walletPromise]);
+
+      if (menuResult.error) {
+        console.error("Error fetching menu:", menuResult.error);
+      } else if (menuResult.data) {
+        setMenuItems(menuResult.data);
+      }
+      
+      if (walletResult?.data) {
+        setWalletBalance(walletResult.data.wallet_balance || 0);
+      }
+
       setLoadingMenu(false);
     };
 
-    fetchMenu();
+    fetchData();
   }, []);
 
+  // --- Item Handling Functions (No changes needed) ---
   const addItemToOrder = (menuItem: MenuItem) => {
     if (menuItem.requires_sauce || menuItem.is_combo || ['mains', 'value'].includes(menuItem.category)) {
       setPendingItem({ menuItem, addons: [], spicy: false, discount: 0, quantity: 1 });
@@ -67,10 +79,10 @@ const OrderPage = () => {
       addFinalItem({ menuItem, quantity: 1, addons: [], spicy: false, discount: 0 });
     }
   };
-  
+
   const addFinalItem = (item: OrderItem) => {
     if (editingItemIndex !== null) {
-      setSelectedItems(prev => prev.map((oldItem, index) => 
+      setSelectedItems(prev => prev.map((oldItem, index) =>
         index === editingItemIndex ? item : oldItem
       ));
       setEditingItemIndex(null);
@@ -78,7 +90,7 @@ const OrderPage = () => {
     }
 
     setSelectedItems(prev => {
-        const existingIndex = prev.findIndex(existing => 
+        const existingIndex = prev.findIndex(existing =>
             existing.menuItem.id === item.menuItem.id &&
             existing.sauce === item.sauce &&
             existing.sauceCup === item.sauceCup &&
@@ -114,17 +126,7 @@ const OrderPage = () => {
   const handleEditItem = (index: number) => {
     const itemToEdit = selectedItems[index];
     setEditingItemIndex(index);
-    setPendingItem({
-      menuItem: itemToEdit.menuItem,
-      quantity: itemToEdit.quantity,
-      sauce: itemToEdit.sauce,
-      sauceCup: itemToEdit.sauceCup,
-      drink: itemToEdit.drink,
-      addons: itemToEdit.addons,
-      spicy: itemToEdit.spicy,
-      remarks: itemToEdit.remarks,
-      discount: itemToEdit.discount,
-    });
+    setPendingItem({ ...itemToEdit });
   };
 
   const handleCancelPendingItem = () => {
@@ -139,21 +141,26 @@ const OrderPage = () => {
         setSelectedItems(prev => prev.map((item, i) => i === index ? { ...item, quantity: newQuantity } : item));
     }
   };
-
+  
+  // --- CALCULATIONS (Correct for the new architecture) ---
   const subtotal = selectedItems.reduce((sum, item) => {
     let itemPrice = item.menuItem.price;
     item.addons.forEach(addonName => {
         const addon = addOnOptions.find(opt => opt.name === addonName);
         if (addon) itemPrice += addon.price;
     });
-    const discountAmount = itemPrice * ((item.discount || 0) / 100);
-    const finalPrice = itemPrice - discountAmount;
-    return sum + (finalPrice * item.quantity);
+    const itemDiscount = itemPrice * ((item.discount || 0) / 100);
+    return sum + ((itemPrice - itemDiscount) * item.quantity);
   }, 0);
   
-  const discountAmount = subtotal * (appliedDiscount / 100);
-  const totalPrice = subtotal - discountAmount;
-  
+  const promoDiscountAmount = subtotal * (appliedDiscount / 100);
+  const priceAfterPromo = subtotal - promoDiscountAmount;
+  // The amount of wallet credit we intend to apply
+  const walletCreditApplied = useWallet ? Math.min(walletBalance, priceAfterPromo) : 0;
+  // The remaining amount (to be paid by card)
+  const totalPrice = priceAfterPromo - walletCreditApplied;
+  // --- END OF CALCULATIONS ---
+
   const handleApplyPromoCode = async () => {
     if (!promoCode.trim()) return;
     setIsCheckingPromo(true);
@@ -177,47 +184,73 @@ const OrderPage = () => {
     }
   };
 
+  // --- UPDATED handleProceedToPayment (New Architecture) ---
   const handleProceedToPayment = async () => {
     if (!session?.user || selectedItems.length === 0) return;
     setIsPlacingOrder(true);
   
     const orderId = crypto.randomUUID();
     const orderNumber = await getNextOrderNumber();
+
+    // Determine payment mode description for records
+    let paymentMode = 'Card - Online';
+    if (walletCreditApplied > 0) {
+        // Use a small threshold (0.01) for floating point comparison
+        paymentMode = (totalPrice > 0.01) ? 'Wallet/Card Combo' : 'Wallet Only';
+    }
   
     try {
-      // --- THIS IS THE CRITICAL LINE ---
-      // It now correctly calls the 'bog-payment' function
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('bog-payment', {
-        body: { orderId, amount: totalPrice },
-      });
-  
-      if (functionError) throw new Error(functionError.message);
-      if (functionData.error) throw new Error(functionData.error);
-  
+      // Insert the order. The database trigger will securely handle the wallet deduction.
       const { error: insertError } = await supabase.from('transactions').insert([
         { 
           transaction_id: orderId,
           user_id: session.user.id,
           order_number: orderNumber,
           items: selectedItems as any,
+
+          // CRITICAL: total_price is now the remaining balance for the card (totalPrice variable)
           total_price: totalPrice,
-          payment_mode: 'Card - Online',
+          // CRITICAL: This activates the database trigger
+          wallet_credit_applied: walletCreditApplied,
+
+          payment_mode: paymentMode,
           status: 'pending_payment',
           created_at: new Date().toISOString(),
           promo_code_used: appliedDiscount > 0 ? promoCode.toUpperCase() : null,
           discount_applied_percent: appliedDiscount > 0 ? appliedDiscount : null,
+          order_type: 'pick_up', 
         },
       ]);
   
-      if (insertError) throw new Error(`Failed to save order: ${insertError.message}`);
+      // If the insert fails (e.g., the trigger detects insufficient funds), this will throw.
+      if (insertError) throw new Error(`Failed to process order: ${insertError.message}`);
   
-      window.location.href = functionData.redirectUrl;
+      // Call the NEW Edge Function
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('initiate-payment', {
+        body: { orderId }, // We only need the orderId now
+      });
   
+      if (functionError) throw new Error(functionError.message);
+      if (functionData.error) throw new Error(functionData.error);
+  
+      if (functionData.paymentComplete) {
+        // Wallet covered the full amount
+        setOrderPlaced(true);
+        // Update local wallet balance immediately for better UX
+        setWalletBalance(prev => prev - walletCreditApplied);
+      } else if (functionData.redirectUrl) {
+        // Redirect to BOG for the remainder
+        window.location.href = functionData.redirectUrl;
+      } else {
+        throw new Error("Invalid response from payment function.");
+      }
     } catch (err) {
+      // This catches errors from the DB trigger (like insufficient funds) or the Edge Function
       alert(err instanceof Error ? err.message : "An unknown error occurred while trying to process the payment.");
       setIsPlacingOrder(false);
     }
   };
+  // --- END OF UPDATED handleProceedToPayment ---
 
   const categorizedItems = {
       value: menuItems.filter(item => item.category === 'value'),
@@ -231,7 +264,7 @@ const OrderPage = () => {
     return (
         <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900 text-white text-center p-4">
             <h1 className="text-4xl font-bold text-amber-500 mb-4">Thank You!</h1>
-            <p className="text-lg mb-8">Your order has been placed successfully. It will be ready for pickup shortly at our Tbilisi location.</p>
+            <p className="text-lg mb-8">Your order has been placed successfully. It will be ready for pickup shortly.</p>
             <Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
                 Back to Your Account
             </Link>
@@ -273,7 +306,7 @@ const OrderPage = () => {
                 selectedItems={selectedItems}
                 pendingItem={pendingItem}
                 subtotal={subtotal}
-                discountAmount={discountAmount}
+                discountAmount={promoDiscountAmount}
                 totalPrice={totalPrice}
                 onUpdateItemQuantity={updateItemQuantity}
                 onUpdatePendingItem={setPendingItem}
@@ -288,6 +321,10 @@ const OrderPage = () => {
                 appliedDiscount={appliedDiscount > 0}
                 isPlacingOrder={isPlacingOrder}
                 onEditItem={handleEditItem}
+                walletBalance={walletBalance}
+                useWallet={useWallet}
+                onUseWalletChange={setUseWallet}
+                walletCreditApplied={walletCreditApplied}
               />
             </div>
           </div>
