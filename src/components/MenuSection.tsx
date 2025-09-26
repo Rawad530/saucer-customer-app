@@ -1,7 +1,14 @@
+// src/components/MenuSection.tsx
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { MenuItem } from "@/types/order";
+// Import Dialog components
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 interface MenuSectionProps {
   title: string;
@@ -20,13 +27,26 @@ const MenuSection = ({ title, items, onAddItem }: MenuSectionProps) => {
           <Card key={item.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700/50 transition-colors">
             <CardContent className="p-4">
               <div className="flex items-center gap-4">
+                
+                {/* --- Image Zoom Implementation --- */}
                 {item.image_url && (
-                  <img
-                    src={item.image_url}
-                    alt={item.name}
-                    className="w-24 h-24 rounded-md object-cover shrink-0"
-                  />
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      {/* The thumbnail acts as the trigger */}
+                      <img
+                        src={item.image_url}
+                        alt={item.name}
+                        className="w-24 h-24 rounded-md object-cover shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                      />
+                    </DialogTrigger>
+                    {/* The Dialog Content (Zoomed Image) */}
+                    <DialogContent className="p-0 bg-transparent border-none shadow-none max-w-3xl">
+                      <img src={item.image_url} alt={item.name} className="w-full h-auto rounded-lg" />
+                    </DialogContent>
+                  </Dialog>
                 )}
+                {/* --- End of Image Zoom Implementation --- */}
+
                 <div className="flex-grow flex justify-between items-center">
                   <div>
                     <h5 className="font-semibold text-white">{item.name}</h5>

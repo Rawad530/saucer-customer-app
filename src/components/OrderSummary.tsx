@@ -1,7 +1,8 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { OrderItem as OrderItemType, MenuItem, PendingItem } from "@/types/order";
+// MenuItem import is unused here
+import { OrderItem as OrderItemType, PendingItem } from "@/types/order";
 import OrderItem from "./OrderItem";
 import ItemConfigurationCard from "./ItemConfigurationCard";
 import { addOnOptions } from "@/data/menu";
@@ -9,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 interface OrderSummaryProps {
+  // (Props definitions remain the same)
   selectedItems: OrderItemType[];
   pendingItem: PendingItem | null;
   subtotal: number;
@@ -58,10 +60,13 @@ const OrderSummary = ({
   walletCreditApplied,
 }: OrderSummaryProps) => {
 
+  const isWalletDisabled = walletBalance <= 0;
+
   return (
     <div className="space-y-4 bg-gray-800 p-6 rounded-lg">
       <h3 className="text-xl font-semibold text-amber-400">Order Summary</h3>
       
+      {/* (ItemConfigurationCard rendering remains the same) */}
       {pendingItem && (
         <ItemConfigurationCard
           pendingItem={pendingItem}
@@ -75,6 +80,7 @@ const OrderSummary = ({
         <p className="text-gray-400 text-center py-8">Your cart is empty</p>
       ) : (
         <>
+          {/* (Item List rendering remains the same) */}
           <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
             {selectedItems.map((item, index) => (
               <OrderItem
@@ -88,6 +94,7 @@ const OrderSummary = ({
             ))}
           </div>
 
+          {/* (Promo Code input remains the same) */}
           <div className="border-t border-b border-gray-700 py-4 space-y-2">
             <div className="flex gap-2">
               <Input
@@ -113,22 +120,26 @@ const OrderSummary = ({
             )}
           </div>
 
-          {walletBalance > 0 && (
-            <div className="border-b border-gray-700 pb-4">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="use-wallet" className="flex flex-col cursor-pointer">
-                  <span className="font-medium">Use Wallet Balance</span>
-                  <span className="text-sm text-gray-400">Available: ₾{walletBalance.toFixed(2)}</span>
-                </Label>
-                <Switch
-                  id="use-wallet"
-                  checked={useWallet}
-                  onCheckedChange={onUseWalletChange}
-                />
-              </div>
+          {/* --- UPDATED WALLET TOGGLE SECTION --- */}
+          {/* Removed the conditional rendering {walletBalance > 0 && (...)} */}
+          <div className="border-b border-gray-700 pb-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="use-wallet" className={`flex flex-col ${isWalletDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                <span className="font-medium">Use Wallet Balance</span>
+                <span className="text-sm text-gray-400">Available: ₾{walletBalance.toFixed(2)}</span>
+              </Label>
+              <Switch
+                id="use-wallet"
+                checked={useWallet}
+                onCheckedChange={onUseWalletChange}
+                // Disable the switch if balance is 0
+                disabled={isWalletDisabled} 
+              />
             </div>
-          )}
+          </div>
+          {/* --- END OF UPDATED SECTION --- */}
 
+          {/* (Totals calculation and Confirm button remain the same) */}
           <div className="space-y-2 pt-2">
             <div className="flex justify-between items-center text-md">
               <span className="text-gray-400">Subtotal:</span>

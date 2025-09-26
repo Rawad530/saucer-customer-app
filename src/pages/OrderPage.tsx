@@ -1,15 +1,15 @@
 // src/pages/OrderPage.tsx
 
 import { useState, useEffect } from "react";
-// Note: 'Order' import is typically unused here, but kept for consistency with your original file
-import { Order, OrderItem, MenuItem } from "../types/order";
-import { addOnOptions } from "../data/menu";
+// Imports updated: 'Order' and 'addOnOptions' removed as they are handled in the store.
+import { OrderItem, MenuItem } from "../types/order";
 import { getNextOrderNumber } from "../utils/orderUtils";
 import { supabase } from "../lib/supabaseClient";
 import MenuSection from "../components/MenuSection";
 import OrderSummary from "../components/OrderSummary";
 import { Link } from "react-router-dom";
 import { Session } from "@supabase/supabase-js";
+import { useCartStore } from "../store/cartStore"; // Import the new store
 
 interface PendingItem {
   menuItem: MenuItem;
@@ -24,20 +24,31 @@ interface PendingItem {
 }
 
 const OrderPage = () => {
+  // --- Local State (for UI and data fetching) ---
   const [session, setSession] = useState<Session | null>(null);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
-  const [selectedItems, setSelectedItems] = useState<OrderItem[]>([]);
-  const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
+  // selectedItems is removed from useState
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(0);
   const [promoMessage, setPromoMessage] = useState("");
   const [isCheckingPromo, setIsCheckingPromo] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [walletBalance, setWalletBalance] = useState(0);
   const [useWallet, setUseWallet] = useState(false);
+
+  // --- Modal State (for item customization) ---
+  const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+
+  // --- Zustand Cart Store State and Actions ---
+  const selectedItems = useCartStore((state) => state.items);
+  const addItem = useCartStore((state) => state.addItem);
+  const updateItemQuantity = useCartStore((state) => state.updateItemQuantity);
+  const updateItemDetails = useCartStore((state) => state.updateItemDetails);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const getSummary = useCartStore((state) => state.getSummary);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -71,45 +82,23 @@ const OrderPage = () => {
     fetchData();
   }, []);
 
-  // --- Item Handling Functions (No changes needed) ---
+  // --- Item Handling Functions (Updated for Zustand) ---
   const addItemToOrder = (menuItem: MenuItem) => {
     if (menuItem.requires_sauce || menuItem.is_combo || ['mains', 'value'].includes(menuItem.category)) {
+      // Open customization modal
       setPendingItem({ menuItem, addons: [], spicy: false, discount: 0, quantity: 1 });
     } else {
-      addFinalItem({ menuItem, quantity: 1, addons: [], spicy: false, discount: 0 });
+      // Add simple items directly to the store
+      addItem({ menuItem, quantity: 1, addons: [], spicy: false, discount: 0 });
     }
   };
 
-  const addFinalItem = (item: OrderItem) => {
-    if (editingItemIndex !== null) {
-      setSelectedItems(prev => prev.map((oldItem, index) =>
-        index === editingItemIndex ? item : oldItem
-      ));
-      setEditingItemIndex(null);
-      return;
-    }
-
-    setSelectedItems(prev => {
-        const existingIndex = prev.findIndex(existing =>
-            existing.menuItem.id === item.menuItem.id &&
-            existing.sauce === item.sauce &&
-            existing.sauceCup === item.sauceCup &&
-            existing.drink === item.drink &&
-            JSON.stringify(existing.addons.sort()) === JSON.stringify(item.addons.sort()) &&
-            existing.spicy === item.spicy &&
-            existing.remarks === item.remarks &&
-            existing.discount === item.discount
-        );
-        if (existingIndex >= 0) {
-            return prev.map((existing, index) => index === existingIndex ? { ...existing, quantity: existing.quantity + 1 } : existing);
-        }
-        return [...prev, item];
-    });
-  };
+  // addFinalItem function is removed.
 
   const confirmPendingItem = () => {
     if (!pendingItem) return;
-    addFinalItem({
+    
+    const finalItem: OrderItem = {
         menuItem: pendingItem.menuItem,
         quantity: pendingItem.quantity,
         sauce: pendingItem.sauce,
@@ -119,49 +108,44 @@ const OrderPage = () => {
         spicy: pendingItem.spicy,
         remarks: pendingItem.remarks,
         discount: pendingItem.discount
-    });
+    };
+
+    if (editingItemIndex !== null) {
+        // Update existing item in the store
+        updateItemDetails(editingItemIndex, finalItem);
+        setEditingItemIndex(null);
+    } else {
+        // Add new item to the store (store handles merging logic)
+        addItem(finalItem);
+    }
+    
     setPendingItem(null);
   };
 
   const handleEditItem = (index: number) => {
     const itemToEdit = selectedItems[index];
     setEditingItemIndex(index);
-    setPendingItem({ ...itemToEdit });
+    // Ensure addons array exists when loading into pending state
+    setPendingItem({ ...itemToEdit, addons: itemToEdit.addons || [] });
   };
 
   const handleCancelPendingItem = () => {
     setPendingItem(null);
     setEditingItemIndex(null);
   };
-
-  const updateItemQuantity = (index: number, newQuantity: number) => {
-    if (newQuantity <= 0) {
-        setSelectedItems(prev => prev.filter((_, i) => i !== index));
-    } else {
-        setSelectedItems(prev => prev.map((item, i) => i === index ? { ...item, quantity: newQuantity } : item));
-    }
-  };
   
-  // --- CALCULATIONS (Correct for the new architecture) ---
-  const subtotal = selectedItems.reduce((sum, item) => {
-    let itemPrice = item.menuItem.price;
-    item.addons.forEach(addonName => {
-        const addon = addOnOptions.find(opt => opt.name === addonName);
-        if (addon) itemPrice += addon.price;
-    });
-    const itemDiscount = itemPrice * ((item.discount || 0) / 100);
-    return sum + ((itemPrice - itemDiscount) * item.quantity);
-  }, 0);
+  // --- CALCULATIONS (Updated for Zustand) ---
+  // Subtotal is now derived from the store
+  const { subtotal } = getSummary();
   
   const promoDiscountAmount = subtotal * (appliedDiscount / 100);
   const priceAfterPromo = subtotal - promoDiscountAmount;
-  // The amount of wallet credit we intend to apply
   const walletCreditApplied = useWallet ? Math.min(walletBalance, priceAfterPromo) : 0;
-  // The remaining amount (to be paid by card)
   const totalPrice = priceAfterPromo - walletCreditApplied;
   // --- END OF CALCULATIONS ---
 
   const handleApplyPromoCode = async () => {
+    // (Existing handleApplyPromoCode logic remains the same)
     if (!promoCode.trim()) return;
     setIsCheckingPromo(true);
     setPromoMessage("");
@@ -184,7 +168,7 @@ const OrderPage = () => {
     }
   };
 
-  // --- UPDATED handleProceedToPayment (New Architecture) ---
+  // --- handleProceedToPayment (Updated for Zustand) ---
   const handleProceedToPayment = async () => {
     if (!session?.user || selectedItems.length === 0) return;
     setIsPlacingOrder(true);
@@ -192,27 +176,21 @@ const OrderPage = () => {
     const orderId = crypto.randomUUID();
     const orderNumber = await getNextOrderNumber();
 
-    // Determine payment mode description for records
     let paymentMode = 'Card - Online';
     if (walletCreditApplied > 0) {
-        // Use a small threshold (0.01) for floating point comparison
         paymentMode = (totalPrice > 0.01) ? 'Wallet/Card Combo' : 'Wallet Only';
     }
   
     try {
-      // Insert the order. The database trigger will securely handle the wallet deduction.
+      // Insert the order. (Trigger handles wallet deduction)
       const { error: insertError } = await supabase.from('transactions').insert([
         { 
           transaction_id: orderId,
           user_id: session.user.id,
           order_number: orderNumber,
           items: selectedItems as any,
-
-          // CRITICAL: total_price is now the remaining balance for the card (totalPrice variable)
           total_price: totalPrice,
-          // CRITICAL: This activates the database trigger
           wallet_credit_applied: walletCreditApplied,
-
           payment_mode: paymentMode,
           status: 'pending_payment',
           created_at: new Date().toISOString(),
@@ -222,12 +200,11 @@ const OrderPage = () => {
         },
       ]);
   
-      // If the insert fails (e.g., the trigger detects insufficient funds), this will throw.
       if (insertError) throw new Error(`Failed to process order: ${insertError.message}`);
   
-      // Call the NEW Edge Function
+      // Call the Edge Function
       const { data: functionData, error: functionError } = await supabase.functions.invoke('initiate-payment', {
-        body: { orderId }, // We only need the orderId now
+        body: { orderId },
       });
   
       if (functionError) throw new Error(functionError.message);
@@ -235,22 +212,22 @@ const OrderPage = () => {
   
       if (functionData.paymentComplete) {
         // Wallet covered the full amount
+        // CRITICAL: Clear the cart now that the order is finalized.
+        clearCart(); 
         setOrderPlaced(true);
-        // Update local wallet balance immediately for better UX
         setWalletBalance(prev => prev - walletCreditApplied);
       } else if (functionData.redirectUrl) {
-        // Redirect to BOG for the remainder
+        // Redirect to BOG. Do NOT clear the cart yet, as payment is pending.
+        // The cart will persist in localStorage thanks to Zustand.
         window.location.href = functionData.redirectUrl;
       } else {
         throw new Error("Invalid response from payment function.");
       }
     } catch (err) {
-      // This catches errors from the DB trigger (like insufficient funds) or the Edge Function
       alert(err instanceof Error ? err.message : "An unknown error occurred while trying to process the payment.");
       setIsPlacingOrder(false);
     }
   };
-  // --- END OF UPDATED handleProceedToPayment ---
 
   const categorizedItems = {
       value: menuItems.filter(item => item.category === 'value'),
@@ -308,7 +285,8 @@ const OrderPage = () => {
                 subtotal={subtotal}
                 discountAmount={promoDiscountAmount}
                 totalPrice={totalPrice}
-                onUpdateItemQuantity={updateItemQuantity}
+                // Pass the store action directly
+                onUpdateItemQuantity={updateItemQuantity} 
                 onUpdatePendingItem={setPendingItem}
                 onConfirmPendingItem={confirmPendingItem}
                 onCancelPendingItem={handleCancelPendingItem}
