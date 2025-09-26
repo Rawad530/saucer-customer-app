@@ -7,10 +7,17 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  // 1. Securely identify the user
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  }
+
+  // Initialize Supabase Clients (User context and Admin context)
   const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      { global: { headers: { Authorization: authHeader } } }
   )
 
   const supabaseAdmin = createClient(
@@ -24,11 +31,13 @@ Deno.serve(async (req) => {
       throw new Error("Amount and a unique transaction ID are required.");
     }
 
+    // Verify User Identity
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) {
         throw new Error("User not authenticated.");
     }
 
+    // 2. Register the pending top-up
     const { error: insertError } = await supabaseAdmin.from('pending_wallet_topups').insert({
         topup_id: transactionId,
         customer_id: user.id,
@@ -38,6 +47,7 @@ Deno.serve(async (req) => {
         throw new Error(`Failed to register pending top-up: ${insertError.message}`);
     }
 
+    // 3. BOG Authentication
     const clientId = Deno.env.get('BOG_CLIENT_ID');
     const clientSecret = Deno.env.get('BOG_CLIENT_SECRET');
     const basicAuthHeader = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
@@ -52,6 +62,7 @@ Deno.serve(async (req) => {
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
+    // 4. BOG Create Order
     const orderPayload = {
         callback_url: `https://kgambgofdizxgcdjhxlk.supabase.co/functions/v1/bog-callback-handler`,
         external_order_id: transactionId,
@@ -64,9 +75,10 @@ Deno.serve(async (req) => {
                 product_id: "WALLET-TOP-UP"
             }]
         },
+        // CRITICAL UPDATE: Added type=wallet context parameter
         redirect_urls: {
-            fail: "https://saucerburger.ge/payment-status?status=fail",
-            success: "https://saucerburger.ge/payment-status?status=success"
+            fail: "https://saucerburger.ge/payment-status?status=fail&type=wallet",
+            success: "https://saucerburger.ge/payment-status?status=success&type=wallet"
         }
     };
     

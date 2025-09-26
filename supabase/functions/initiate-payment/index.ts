@@ -9,7 +9,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // The input is now just the orderId.
     const { orderId } = await req.json();
     if (!orderId) {
       throw new Error("Order ID is required.");
@@ -23,14 +22,12 @@ Deno.serve(async (req) => {
     // 1. Get Order Details
     const { data: orderData, error: orderError } = await supabaseAdmin
       .from('transactions')
-      // In the new architecture, total_price represents the amount remaining for the card.
       .select('total_price, order_number, status')
       .eq('transaction_id', orderId)
       .single();
 
     if (orderError || !orderData) throw new Error(`Order not found.`);
 
-    // Ensure the order is still pending (the trigger ran, but the status is pending)
     if (orderData.status !== 'pending_payment') {
         throw new Error("Order is not in a payable state.");
     }
@@ -38,17 +35,14 @@ Deno.serve(async (req) => {
     const amountToPayByCard = orderData.total_price;
 
     // 2. Check if payment is needed
-    // Use a small threshold (0.01 GEL) for floating point comparison
     if (amountToPayByCard < 0.01) {
-      // The wallet covered everything (handled securely by the trigger).
-      // We just need to update the status to move it to the kitchen.
       await supabaseAdmin.from('transactions').update({ status: 'pending_approval' }).eq('transaction_id', orderId);
       return new Response(JSON.stringify({ paymentComplete: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // 3. BOG Authentication (As previously finalized)
+    // 3. BOG Authentication
     const clientId = Deno.env.get('BOG_CLIENT_ID');
     const clientSecret = Deno.env.get('BOG_CLIENT_SECRET');
     const authHeader = `Basic ${btoa(`${clientId}:${clientSecret}`)}`;
@@ -67,11 +61,10 @@ Deno.serve(async (req) => {
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
 
-    // 4. BOG Create Order (As previously finalized)
+    // 4. BOG Create Order
     const orderPayload = {
         callback_url: `https://kgambgofdizxgcdjhxlk.supabase.co/functions/v1/bog-callback-handler`,
         external_order_id: orderId,
-        // Must be an object, not an array
         purchase_units: {
             currency: "GEL",
             total_amount: amountToPayByCard,
@@ -81,9 +74,10 @@ Deno.serve(async (req) => {
                 product_id: `ORDER-${orderData.order_number}`
             }]
         },
+        // CRITICAL UPDATE: Added type=order context parameter
         redirect_urls: {
-            fail: "https://saucerburger.ge/payment-status?status=fail",
-            success: "https://saucerburger.ge/payment-status?status=success"
+            fail: "https://saucerburger.ge/payment-status?status=fail&type=order",
+            success: "https://saucerburger.ge/payment-status?status=success&type=order"
         }
     };
 
@@ -92,7 +86,7 @@ Deno.serve(async (req) => {
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${accessToken}`,
-            'Accept-Language': 'en' // Required header
+            'Accept-Language': 'en'
         },
         body: JSON.stringify(orderPayload),
     });
