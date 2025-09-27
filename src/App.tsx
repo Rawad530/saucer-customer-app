@@ -5,10 +5,10 @@ import { supabase } from './lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-// Import Layout
+// Import Layout (Used only for internal application pages)
 import Layout from './components/Layout';
 
-// Import Pages (Updated)
+// Import Pages
 import Account from './pages/Account';
 import LandingPage from './pages/LandingPage';
 import OrderPage from './pages/OrderPage';
@@ -17,7 +17,6 @@ import PaymentStatusPage from './pages/PaymentStatusPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CompleteProfilePage from './pages/CompleteProfilePage';
-// 'auth.tsx' is removed.
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -45,23 +44,28 @@ function App() {
 
   return (
     <Routes>
-      {/* Use the Layout component as the parent route for all pages */}
+      {/* ------------------------------------------------------------ */}
+      {/* 1. Standalone Routes (No Layout wrapper) - Uses LandingPage styles */}
+      {/* ------------------------------------------------------------ */}
+      
+      {/* Landing Page (FIX Issue 4: Redirect if logged in) */}
+      <Route path="/" element={!session ? <LandingPage /> : <Navigate to="/account" replace />} />
+
+      {/* Auth Routes (Standalone, redirect if logged in) */}
+      <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/account" replace />} />
+      <Route path="/register" element={!session ? <RegisterPage /> : <Navigate to="/account" replace />} />
+
+      {/* ------------------------------------------------------------ */}
+      {/* 2. Application Routes (Wrapped in the standard Layout) - Uses global Tailwind styles */}
+      {/* ------------------------------------------------------------ */}
       <Route element={<Layout />}>
-        {/* Public Routes */}
-        <Route path="/" element={<LandingPage />} />
         <Route path="/payment-status" element={<PaymentStatusPage />} />
 
-        {/* Authentication Routes (Redirect if already logged in) */}
-        <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/account" replace />} />
-        <Route path="/register" element={!session ? <RegisterPage /> : <Navigate to="/account" replace />} />
-        
-        {/* Profile Completion (Requires session) */}
-        <Route path="/complete-profile" element={session ? <CompleteProfilePage /> : <Navigate to="/login" replace />} />
-
-        {/* Hybrid Route (Task 4): Accessible to Guests and Users */}
+        {/* Hybrid Route */}
         <Route path="/order" element={<OrderPage />} />
 
-        {/* Protected Routes (Require session) */}
+        {/* Protected Routes */}
+        <Route path="/complete-profile" element={session ? <CompleteProfilePage /> : <Navigate to="/login" replace />} />
         <Route path="/account" element={session ? <Account session={session} /> : <Navigate to="/login" replace />} />
         <Route path="/wallet" element={session ? <WalletPage /> : <Navigate to="/login" replace />} />
         

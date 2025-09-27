@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 const RegisterPage = () => {
+  // (State and Logic remain the same...)
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,10 +23,7 @@ const RegisterPage = () => {
       email,
       password,
       options: {
-        data: {
-          user_type: 'customer',
-        },
-        // Task 2: Redirect URL after email confirmation
+        data: { user_type: 'customer' },
         emailRedirectTo: `${window.location.origin}/complete-profile`,
       },
     });
@@ -40,8 +38,10 @@ const RegisterPage = () => {
 
   if (success) {
     return (
-        <div className="flex justify-center items-center py-12">
-            <Card className="w-full max-w-md bg-gray-800 border-gray-700 text-white">
+        // Added min-h-screen bg-gray-900
+        <div className="flex justify-center items-center py-12 min-h-screen bg-gray-900">
+           {/* (Success content remains the same) */}
+           <Card className="w-full max-w-md bg-gray-800 border-gray-700 text-white">
                 <CardHeader>
                     <CardTitle className="text-2xl text-green-500">Check Your Email!</CardTitle>
                 </CardHeader>
@@ -55,41 +55,27 @@ const RegisterPage = () => {
   }
 
   return (
-    <div className="flex justify-center items-center py-12">
+    // Added min-h-screen bg-gray-900
+    <div className="flex justify-center items-center py-12 min-h-screen bg-gray-900">
       <Card className="w-full max-w-md bg-gray-800 border-gray-700 text-white">
         <CardHeader>
+          <Link to="/" className="text-sm text-gray-400 hover:text-amber-400 transition">&larr; Back Home</Link>
           <CardTitle className="text-2xl text-amber-400">Register</CardTitle>
           <CardDescription className='text-gray-300'>Create an account to earn rewards.</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* (Form content remains the same) */}
           <form onSubmit={handleRegister} className="space-y-4">
             {error && <p className="text-red-500 text-sm bg-red-900/50 p-3 rounded">{error}</p>}
             
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300">Email</label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="mt-1 bg-gray-700 border-gray-600 text-white"
-              />
+              <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1 bg-gray-700 border-gray-600 text-white" />
             </div>
             
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-300">Password (min 6 chars)</label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="********"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                className="mt-1 bg-gray-700 border-gray-600 text-white"
-              />
+              <Input id="password" type="password" placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="mt-1 bg-gray-700 border-gray-600 text-white" />
             </div>
             
             <Button type="submit" disabled={loading} className="w-full bg-amber-600 hover:bg-amber-700">

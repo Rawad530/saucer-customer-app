@@ -11,34 +11,44 @@ const CompleteProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [fullName, setFullName] = useState('');
-  // Assuming the database column is 'phone_number'
-  const [phoneNumber, setPhoneNumber] = useState(''); 
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [error, setError] = useState('');
+  const [isNewUser, setIsNewUser] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Wait for the session to stabilize after the redirect from the email link
-    const timer = setTimeout(async () => {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const initializeProfile = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (sessionError || !session) {
+        if (!session) {
             navigate('/login');
             return;
         }
 
         setUser(session.user);
         
-        // Check if the profile is already complete
-        const { data: profile } = await supabase.from('customer_profiles').select('full_name, phone_number').eq('id', session.user.id).single();
-        
-        if (profile && profile.full_name && profile.phone_number) {
-            navigate('/account'); // Profile is complete
-        } else {
-            setLoading(false); // Profile is incomplete, show the form
-        }
-    }, 500); // Small delay to ensure session is ready
+        // Fetch existing profile data
+        const { data: profile, error: profileError } = await supabase.from('customer_profiles').select('full_name, phone_number').eq('id', session.user.id).single();
 
+        // Handle case where row might not exist yet (PGRST116 error code)
+        if (profileError && profileError.code === 'PGRST116') {
+            setIsNewUser(true);
+        } else if (profile) {
+            // Pre-fill data if it exists (FIX for Issue 6)
+            if (profile.full_name) setFullName(profile.full_name);
+            if (profile.phone_number) setPhoneNumber(profile.phone_number);
+            
+            // Determine if they are "new" (missing required info)
+            if (!profile.full_name || !profile.phone_number) {
+                setIsNewUser(true);
+            }
+        }
+        setLoading(false);
+    };
+    
+    // Small delay ensures session is stable after potential email redirect
+    const timer = setTimeout(initializeProfile, 500);
     return () => clearTimeout(timer);
   }, [navigate]);
 
@@ -46,14 +56,23 @@ const CompleteProfilePage = () => {
     event.preventDefault();
     if (!user) return;
     
+    if (!fullName.trim() || !phoneNumber.trim()) {
+        setError("Full Name and Phone Number are required.");
+        return;
+    }
+
     setSaving(true);
     setError('');
 
-    // Update the customer_profiles table
+    // Use upsert to handle both creating a new row or updating an existing one
     const { error: updateError } = await supabase
       .from('customer_profiles')
-      .update({ full_name: fullName, phone_number: phoneNumber })
-      .eq('id', user.id);
+      .upsert({ 
+        id: user.id, 
+        full_name: fullName.trim(), 
+        phone_number: phoneNumber.trim(),
+        email: user.email // Ensure email is set if creating the row
+       });
 
     if (updateError) {
       setError(`Failed to save profile: ${updateError.message}`);
@@ -64,22 +83,27 @@ const CompleteProfilePage = () => {
   };
 
   if (loading) {
-    return <div className="text-white text-center py-12">Verifying account...</div>;
+    // The Layout component handles the background styling
+    return <div className="text-white text-center py-12">Loading profile...</div>;
   }
 
   return (
+    // The Layout component handles the background styling
     <div className="flex justify-center items-center py-12">
       <Card className="w-full max-w-md bg-gray-800 border-gray-700 text-white">
         <CardHeader>
-          <CardTitle className="text-2xl text-amber-400">Complete Your Profile</CardTitle>
-          <CardDescription className='text-gray-300'>Your email is confirmed. Please provide your details.</CardDescription>
+          {/* Dynamic Title */}
+          <CardTitle className="text-2xl text-amber-400">{isNewUser ? 'Complete Your Profile' : 'Edit Profile'}</CardTitle>
+          <CardDescription className='text-gray-300'>
+            {isNewUser ? 'Please provide your details to continue.' : 'Update your account information.'}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSaveProfile} className="space-y-4">
             {error && <p className="text-red-500 text-sm bg-red-900/50 p-3 rounded">{error}</p>}
             
             <div>
-                <label className="block text-sm font-medium text-gray-300">Email (Verified)</label>
+                <label className="block text-sm font-medium text-gray-300">Email</label>
                 <p className="mt-1 text-gray-500">{user?.email}</p>
             </div>
 
@@ -109,7 +133,7 @@ const CompleteProfilePage = () => {
               />
             </div>
             
-            <Button type="submit" disabled={saving || !fullName || !phoneNumber} className="w-full bg-green-600 hover:bg-green-700">
+            <Button type="submit" disabled={saving} className="w-full bg-green-600 hover:bg-green-700">
               {saving ? 'Saving...' : 'Save and Continue'}
             </Button>
           </form>

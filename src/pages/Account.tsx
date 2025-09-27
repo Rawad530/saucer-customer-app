@@ -1,6 +1,6 @@
 // src/pages/Account.tsx
 
-import { Link, useNavigate } from 'react-router-dom'; // Import useNavigate
+import { Link, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
@@ -9,39 +9,38 @@ import QRCode from "react-qr-code";
 import { Order, OrderItem } from '../types/order';
 
 interface ProfileData {
-  full_name: string;
+  // Made nullable to handle incomplete profiles gracefully
+  full_name: string | null;
   stamps: number;
   wallet_balance: number;
-  phone_number: string | null; // Added for safeguard check
+  phone_number: string | null;
 }
-// (Other interfaces remain the same)
+
 interface NextReward {
   title: string;
   stamps_required: number;
 }
+
 interface Announcement {
   title: string;
   content: string;
 }
 
-
 const Account = ({ session }: { session: Session }) => {
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [nextReward, setNextReward] = useState<NextReward | null>(null);
-  // ... (other state variables remain the same)
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [mostOrderedItem, setMostOrderedItem] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
-  const navigate = useNavigate(); // Initialize navigate
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
       const { user } = session;
 
-      // Added phone_number to the query
       const [profileRes, rewardsRes, ordersRes, announcementRes, statusRes] = await Promise.all([
         supabase.from('customer_profiles').select('full_name, stamps, wallet_balance, phone_number').eq('id', user.id).single(),
         supabase.from('rewards').select('title, stamps_required').order('stamps_required', { ascending: true }),
@@ -50,31 +49,32 @@ const Account = ({ session }: { session: Session }) => {
         supabase.functions.invoke('check-restaurant-status')
       ]);
 
-      // --- Safeguard Check (Task 2) ---
+      // --- REVISED Safeguard Check (FIX for Issue 6) ---
       if (profileRes.data) {
-        // Check if mandatory fields are missing
-        if (!profileRes.data.full_name || !profileRes.data.phone_number) {
-            navigate('/complete-profile');
-            return;
-        }
+        // Allow access. The UI will prompt if data is missing.
         setProfileData(profileRes.data);
       } else {
-        // Handle error or missing profile by forcing completion
-        navigate('/complete-profile');
-        return;
+        // Only redirect if the profile record is entirely missing (rare edge case)
+        console.error("Profile record missing or error fetching for logged in user.", profileRes.error);
+        // Check specifically for "PGRST116" (Row not found) which indicates a new user needs setup
+        if (profileRes.error?.code === 'PGRST116') {
+             navigate('/complete-profile');
+             return;
+        }
+        // Handle other potential errors gracefully without redirecting
+        setProfileData(null);
       }
-      // ------------------------------
+      // -------------------------------------------------
 
       if (rewardsRes.data && profileRes.data) {
         const next = rewardsRes.data.find(r => r.stamps_required > profileRes.data.stamps);
         setNextReward(next || null);
       }
 
-       // (Rest of the data processing remains the same)
       if (ordersRes.data && ordersRes.data.length > 0) {
+        // Ensure data types match the 'Order' interface
         const typedOrders = ordersRes.data.map(order => ({
             ...order,
-            // Ensure items is treated as an array even if DB returns something else
             items: Array.isArray(order.items) ? order.items : []
         })) as Order[];
         
@@ -85,41 +85,45 @@ const Account = ({ session }: { session: Session }) => {
       if (announcementRes.data) setAnnouncement(announcementRes.data);
       if (statusRes.data) setIsRestaurantOpen(statusRes.data.isOpen);
 
-
       setLoading(false);
     };
 
     fetchDashboardData();
-  }, [session, navigate]); // Added navigate dependency
+  }, [session, navigate]);
 
   const calculateMostOrdered = (orders: Order[]) => {
-    // (calculateMostOrdered logic remains the same)
     const itemCounts: { [key: string]: number } = {};
     orders.forEach(order => {
-      order.items.forEach((item: OrderItem) => {
-        const name = item.menuItem.name;
-        itemCounts[name] = (itemCounts[name] || 0) + item.quantity;
+      // Ensure order.items is iterable
+      const items = Array.isArray(order.items) ? order.items : [];
+      items.forEach((item: OrderItem) => {
+        // Defensive check to ensure item structure is valid
+        if (item && item.menuItem && item.menuItem.name) {
+            const name = item.menuItem.name;
+            itemCounts[name] = (itemCounts[name] || 0) + item.quantity;
+        }
       });
     });
+    
+    // Safely handle reduce on potentially empty object keys list
     const mostOrdered = Object.keys(itemCounts).reduce((a, b) => itemCounts[a] > itemCounts[b] ? a : b, null);
     setMostOrderedItem(mostOrdered);
   };
 
 
   if (loading) {
-    // Layout handles background
     return <div className="flex justify-center items-center h-64">Loading Dashboard...</div>;
   }
 
   const stampsCollected = profileData?.stamps || 0;
   const stampsNeeded = nextReward ? nextReward.stamps_required - stampsCollected : 0;
-  const spendNeeded = stampsNeeded; // Assuming 1 GEL = 1 Stamp based on previous context
+  const spendNeeded = stampsNeeded;
   const progress = nextReward ? (stampsCollected / nextReward.stamps_required) * 100 : 0;
 
+  // Issue 7: This logic correctly allows access to the page but shows the status.
   const OrderButton = () => {
-    // (OrderButton logic remains the same)
     if (isRestaurantOpen === null) {
-      return <Link to="/order" className="button-primary" aria-disabled>Checking status...</Link>;
+      return <span className="px-6 py-2 font-bold text-gray-400 bg-gray-700 rounded-md cursor-wait">Checking status...</span>;
     }
     if (isRestaurantOpen) {
       return <Link to="/order" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700 transition">Place a Pick-up Order</Link>;
@@ -129,11 +133,18 @@ const Account = ({ session }: { session: Session }) => {
 
 
   return (
-    // Layout handles overall container
+    // The Layout component (Header/Footer) wraps this content
     <div className="p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
         <header className="mb-8">
           <h1 className="text-3xl font-bold text-amber-400">Welcome back, {profileData?.full_name || 'Customer'}!</h1>
+          
+          {/* Non-blocking prompt if profile is incomplete (FIX Issue 6) */}
+          {profileData && (!profileData.full_name || !profileData.phone_number) && (
+            <div className="mt-4 p-4 bg-yellow-800/50 border border-yellow-600 rounded-lg">
+                <p className="text-white">Your profile is incomplete. <Link to="/complete-profile" className="text-amber-400 underline">Please update your details</Link>.</p>
+            </div>
+          )}
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -170,7 +181,7 @@ const Account = ({ session }: { session: Session }) => {
           </div>
           {/* --- END UPDATED Loyalty Card --- */}
 
-          {/* (Wallet Card remains the same) */}
+          {/* (Wallet Card) */}
           <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-3"><Wallet className='text-green-500' /> My Wallet</h2>
             <p className="text-3xl font-bold text-green-400 mb-4">₾{(profileData?.wallet_balance || 0).toFixed(2)}</p>
@@ -178,7 +189,6 @@ const Account = ({ session }: { session: Session }) => {
           </div>
         </div>
 
-        {/* (Order Section, Announcements, QR Code, Quick Stats, and Navigation sections remain the same) */}
         <div className="text-center mb-8">
             <OrderButton />
         </div>
@@ -192,6 +202,7 @@ const Account = ({ session }: { session: Session }) => {
         )}
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+             {/* (QR Code Card) */}
              <div className="bg-gray-800 p-6 rounded-lg shadow-lg text-center">
                 <h2 className="text-xl font-semibold mb-4 flex items-center justify-center gap-3"><QrCode /> My QR Code</h2>
                 <div className="flex justify-center mb-4">
@@ -207,6 +218,7 @@ const Account = ({ session }: { session: Session }) => {
                 <p className="text-sm text-gray-400">Scan this code in-store to earn 5% cashback on dine-in orders.</p>
             </div>
             
+            {/* (Last Order Card - Relies on snake_case interface) */}
             <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-3"><History /> Last Order</h2>
                 {lastOrder ? (
@@ -220,6 +232,7 @@ const Account = ({ session }: { session: Session }) => {
                 )}
             </div>
 
+            {/* (Most Ordered Card) */}
             <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-3"><Truck /> Most Ordered</h2>
                  {mostOrderedItem ? (
@@ -233,7 +246,12 @@ const Account = ({ session }: { session: Session }) => {
         <nav className="bg-gray-800 p-6 rounded-lg shadow-lg">
           <h2 className="text-xl font-semibold mb-4">Account Management</h2>
           <ul className="space-y-3">
-            <li><span className="flex items-center gap-3 text-gray-300"><User className="w-5 h-5"/> Profile (Managed via Complete Profile)</span></li>
+            {/* Added functional link to Edit Profile */}
+            <li>
+                <Link to="/complete-profile" className="flex items-center gap-3 text-gray-300 hover:text-white transition">
+                    <User className="w-5 h-5"/> Edit Profile Details
+                </Link>
+            </li>
           </ul>
         </nav>
       </div>
