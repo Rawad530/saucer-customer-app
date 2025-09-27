@@ -11,9 +11,9 @@ const Footer = () => {
             <h4 className="text-lg font-semibold text-amber-400 mb-4">Contact & Location</h4>
             <div className="space-y-2 text-gray-400 text-sm">
               {/* Update these details as necessary */}
-              <p className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Tamar Mepe Ave 32, Tbilisi, Georgia</p>
-              <p className="flex items-center gap-2"><Clock className="w-4 h-4" /> Open Daily: 12:00 PM - 11:00 PM</p>
-              <p className="flex items-center gap-2"><Phone className="w-4 h-4" /> +995 555 123 456</p>
+              <p className="flex items-center gap-2"><MapPin className="w-4 h-4" /> 45 Petre Kavtaradze St, Tbilisi, Georgia</p>
+              <p className="flex items-center gap-2"><Clock className="w-4 h-4" /> Open Daily: 12:00 PM - 2:00 AM</p>
+              <p className="flex items-center gap-2"><Phone className="w-4 h-4" /> +995 591 22 96 58</p>
             </div>
           </div>
           <div>
