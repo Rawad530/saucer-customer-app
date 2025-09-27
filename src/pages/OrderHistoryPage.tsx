@@ -25,19 +25,9 @@ const OrderHistoryPage = () => {
         if (error) {
           console.error('Error fetching orders:', error);
         } else if (data) {
-          const formattedOrders: Order[] = data.map(o => ({
-            id: o.transaction_id,
-            orderNumber: o.order_number,
-            items: o.items,
-            totalPrice: o.total_price,
-            paymentMode: o.payment_mode,
-            status: o.status,
-            timestamp: new Date(o.created_at),
-            created_by_email: '',
-            promo_code_used: o.promo_code_used,
-            discount_applied_percent: o.discount_applied_percent,
-          }));
-          setOrders(formattedOrders);
+          // --- FIX APPLIED ---
+          // Removed the manual mapping. We now cast the snake_case data directly.
+          setOrders(data as Order[]);
         }
       }
       setLoading(false);
@@ -51,7 +41,6 @@ const OrderHistoryPage = () => {
         
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Your Order History</h1>
-          {/* --- THIS IS THE ONLY LINE THAT HAS CHANGED --- */}
           <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
             &larr; Back to Account
           </Link>
@@ -64,21 +53,22 @@ const OrderHistoryPage = () => {
         ) : (
           <div className="space-y-4">
             {orders.map(order => {
+                // --- FIX APPLIED: Use snake_case for all properties ---
                 const subtotal = order.promo_code_used 
-                  ? order.totalPrice / (1 - (order.discount_applied_percent || 0) / 100) 
-                  : order.totalPrice;
-                const discountAmount = subtotal - order.totalPrice;
+                  ? order.total_price / (1 - (order.discount_applied_percent || 0) / 100) 
+                  : order.total_price;
+                const discountAmount = subtotal - order.total_price;
 
                 return (
-                    <Collapsible key={order.id} className="bg-gray-800 rounded-lg border border-gray-700">
+                    <Collapsible key={order.transaction_id} className="bg-gray-800 rounded-lg border border-gray-700">
                         <CollapsibleTrigger className="w-full p-4 flex justify-between items-center cursor-pointer">
                             <div className="text-left">
-                                <h2 className="font-bold text-lg">Order #{order.orderNumber}</h2>
-                                <p className="text-sm text-gray-400">{new Date(order.timestamp).toLocaleString()}</p>
+                                <h2 className="font-bold text-lg">Order #{order.order_number}</h2>
+                                <p className="text-sm text-gray-400">{new Date(order.created_at).toLocaleString()}</p>
                                 <p className="text-sm mt-2">Status: <span className="capitalize font-medium text-amber-400">{order.status.replace('_', ' ')}</span></p>
                             </div>
                             <div className="flex items-center gap-4">
-                                <p className="font-semibold text-xl">₾{order.totalPrice.toFixed(2)}</p>
+                                <p className="font-semibold text-xl">₾{order.total_price.toFixed(2)}</p>
                                 <ChevronDown className="h-5 w-5 transition-transform duration-300" />
                             </div>
                         </CollapsibleTrigger>
@@ -118,13 +108,13 @@ const OrderHistoryPage = () => {
                                     )}
                                     <div className="flex justify-between items-center font-bold text-lg">
                                         <span>Total</span>
-                                        <span>₾{order.totalPrice.toFixed(2)}</span>
+                                        <span>₾{order.total_price.toFixed(2)}</span>
                                     </div>
                                 </div>
                                  <div className="flex justify-between items-center text-sm text-gray-400 border-t border-gray-700 pt-3">
                                     <Badge variant="outline" className="border-gray-600">
                                         <CreditCard className="w-4 h-4 mr-2" />
-                                        Paid with: {order.paymentMode}
+                                        Paid with: {order.payment_mode}
                                     </Badge>
                                     {order.promo_code_used && (
                                         <Badge variant="outline" className="border-indigo-500 text-indigo-400">

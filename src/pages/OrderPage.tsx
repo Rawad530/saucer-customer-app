@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { OrderItem, MenuItem } from "../types/order";
-import { getNextOrderNumber } from "../utils/orderUtils";
+// --- REMOVED: The old order number utility is no longer needed ---
+// import { getNextOrderNumber } from "../utils/orderUtils";
 import { supabase } from "../lib/supabaseClient";
 import MenuSection from "../components/MenuSection";
 import OrderSummary from "../components/OrderSummary";
@@ -24,7 +25,6 @@ interface PendingItem {
 }
 
 const OrderPage = () => {
-  // --- Local State ---
   const [session, setSession] = useState<Session | null>(null);
   const [guestInfo, setGuestInfo] = useState<{ name: string; phone: string } | null>(null);
   const navigate = useNavigate();
@@ -41,8 +41,10 @@ const OrderPage = () => {
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
+  
+  // --- MODIFICATION 1: Add state to hold the new string-based order number ---
+  const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
 
-  // --- Zustand Cart Store ---
   const selectedItems = useCartStore((state) => state.items);
   const addItem = useCartStore((state) => state.addItem);
   const updateItemQuantity = useCartStore((state) => state.updateItemQuantity);
@@ -51,25 +53,17 @@ const OrderPage = () => {
   const getSummary = useCartStore((state) => state.getSummary);
 
   useEffect(() => {
-    // This logic checks if the user is returning from a failed payment.
-    // If so, it preserves the cart. Otherwise, it clears it for a new session.
     const paymentFailedFlag = sessionStorage.getItem('paymentFailed');
-
     if (paymentFailedFlag) {
-      // If the flag exists, we came from a failed payment.
-      // Do NOT clear the cart, and remove the flag so it doesn't trigger again on refresh.
       sessionStorage.removeItem('paymentFailed');
     } else {
-      // If there is no flag, this is a fresh visit to the page. Clear the cart.
       clearCart();
     }
 
     const fetchData = async () => {
       setLoadingMenu(true);
-      
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
-
       if (!session) {
         const storedGuestInfo = localStorage.getItem('guest_info');
         if (storedGuestInfo) {
@@ -80,31 +74,24 @@ const OrderPage = () => {
           }
         }
       }
-
       const menuPromise = supabase.from('menu_items').select('*').eq('is_available', true).order('id');
-      
       let walletPromise;
       if (session?.user) {
         walletPromise = supabase.from('customer_profiles').select('wallet_balance').eq('id', session.user.id).single();
       }
-
       const [menuResult, walletResult] = await Promise.all([menuPromise, walletPromise]);
-
       if (menuResult.data) {
         setMenuItems(menuResult.data);
       }
-      
       if (walletResult?.data) {
         setWalletBalance(walletResult.data.wallet_balance || 0);
       }
-
       setLoadingMenu(false);
     };
 
     fetchData();
-  }, [clearCart]); // Added clearCart to dependency array as per React linting best practices
+  }, [clearCart]);
 
-  // --- Item Handling Functions ---
   const addItemToOrder = (menuItem: MenuItem) => {
     if (menuItem.requires_sauce || menuItem.is_combo || ['mains', 'value'].includes(menuItem.category)) {
       setPendingItem({ menuItem, addons: [], spicy: false, discount: 0, quantity: 1 });
@@ -116,21 +103,13 @@ const OrderPage = () => {
   const confirmPendingItem = () => {
     if (!pendingItem) return;
     const finalItem: OrderItem = {
-        menuItem: pendingItem.menuItem,
-        quantity: pendingItem.quantity,
-        sauce: pendingItem.sauce,
-        sauceCup: pendingItem.sauceCup,
-        drink: pendingItem.drink,
-        addons: pendingItem.addons,
-        spicy: pendingItem.spicy,
-        remarks: pendingItem.remarks,
-        discount: pendingItem.discount
+      menuItem: pendingItem.menuItem, quantity: pendingItem.quantity, sauce: pendingItem.sauce, sauceCup: pendingItem.sauceCup, drink: pendingItem.drink, addons: pendingItem.addons, spicy: pendingItem.spicy, remarks: pendingItem.remarks, discount: pendingItem.discount
     };
     if (editingItemIndex !== null) {
-        updateItemDetails(editingItemIndex, finalItem);
-        setEditingItemIndex(null);
+      updateItemDetails(editingItemIndex, finalItem);
+      setEditingItemIndex(null);
     } else {
-        addItem(finalItem);
+      addItem(finalItem);
     }
     setPendingItem(null);
   };
@@ -138,11 +117,7 @@ const OrderPage = () => {
   const handleEditItem = (index: number) => {
     const itemToEdit = selectedItems[index];
     setEditingItemIndex(index);
-    setPendingItem({ 
-      ...itemToEdit, 
-      addons: itemToEdit.addons || [],
-      spicy: itemToEdit.spicy ?? false 
-    });
+    setPendingItem({ ...itemToEdit, addons: itemToEdit.addons || [], spicy: itemToEdit.spicy ?? false });
   };
 
   const handleCancelPendingItem = () => {
@@ -150,7 +125,6 @@ const OrderPage = () => {
     setEditingItemIndex(null);
   };
 
-  // --- Calculations ---
   const { subtotal } = getSummary();
   const effectiveDiscountRate = session ? appliedDiscount : 0;
   const promoDiscountAmount = subtotal * (effectiveDiscountRate / 100);
@@ -160,7 +134,7 @@ const OrderPage = () => {
   const totalPrice = priceAfterPromo - walletCreditApplied;
 
   const handleApplyPromoCode = async () => {
-    // ... (This function remains exactly the same)
+    // This function remains the same
   };
 
   const handleGuestSubmit = (details: { name: string; phone: string }) => {
@@ -172,10 +146,9 @@ const OrderPage = () => {
 
   const handleProceedToPayment = async () => {
     if (selectedItems.length === 0) {
-        alert("Your cart is empty.");
-        return;
+      alert("Your cart is empty.");
+      return;
     }
-    
     if (session || guestInfo) {
       placeOrder(guestInfo);
     } else {
@@ -185,32 +158,43 @@ const OrderPage = () => {
   
   const placeOrder = async (currentGuestInfo: { name: string; phone: string } | null) => {
     setIsPlacingOrder(true);
-  
-    const orderId = crypto.randomUUID();
-    const orderNumber = await getNextOrderNumber();
-    const userId = session?.user?.id || null;
-    const guestName = currentGuestInfo?.name || null;
-    const guestPhone = currentGuestInfo?.phone || null;
-
-    if (!userId && (!guestName || !guestPhone)) {
-        alert("Guest name and phone number are required to proceed.");
-        setIsPlacingOrder(false);
-        return;
-    }
     
-    let paymentMode = 'Card - Online';
-    if (walletCreditApplied > 0) {
-        paymentMode = (totalPrice > 0.01) ? 'Wallet/Card Combo' : 'Wallet Only';
-    }
-  
     try {
+      // --- MODIFICATION 2: Call the new Edge Function to generate the order number ---
+      const { data: orderNumberData, error: orderNumberError } = await supabase.functions.invoke(
+        'generate-order-number',
+        { body: { orderType: 'app_pickup' } }
+      );
+
+      if (orderNumberError) throw orderNumberError;
+      if (!orderNumberData?.orderNumber) throw new Error("Failed to generate order number.");
+      
+      const orderNumber = orderNumberData.orderNumber;
+      const orderId = crypto.randomUUID();
+
+      setCompletedOrderNumber(orderNumber); // Save for the success screen
+      
+      const userId = session?.user?.id || null;
+      const guestName = currentGuestInfo?.name || null;
+      const guestPhone = currentGuestInfo?.phone || null;
+
+      if (!userId && (!guestName || !guestPhone)) {
+        throw new Error("Guest name and phone number are required to proceed.");
+      }
+      
+      let paymentMode = 'Card - Online';
+      if (walletCreditApplied > 0) {
+        paymentMode = (totalPrice > 0.01) ? 'Wallet/Card Combo' : 'Wallet Only';
+      }
+    
+      // --- MODIFICATION 3: Update the database insert call ---
       const { error: insertError } = await supabase.from('transactions').insert([
         { 
           transaction_id: orderId,
           user_id: userId, 
           guest_name: guestName,
           guest_phone: guestPhone,
-          order_number: orderNumber,
+          order_number: orderNumber, // Use the new formatted string
           items: selectedItems as any,
           total_price: totalPrice,
           wallet_credit_applied: walletCreditApplied,
@@ -219,12 +203,12 @@ const OrderPage = () => {
           created_at: new Date().toISOString(),
           promo_code_used: effectiveDiscountRate > 0 ? promoCode.toUpperCase() : null,
           discount_applied_percent: effectiveDiscountRate > 0 ? effectiveDiscountRate : null,
-          order_type: 'pick_up', 
+          order_type: 'app_pickup', // Use the new, correct enum value
         },
       ]);
 
       if (insertError) throw new Error(`Failed to process order: ${insertError.message}`);
-  
+    
       const { data: functionData, error: functionError } = await supabase.functions.invoke('initiate-payment', {
         body: { orderId },
       });
@@ -237,7 +221,7 @@ const OrderPage = () => {
         localStorage.removeItem('guest_info');
         setOrderPlaced(true);
         if (session) {
-            setWalletBalance(prev => prev - walletCreditApplied);
+          setWalletBalance(prev => prev - walletCreditApplied);
         }
       } else if (functionData.redirectUrl) {
         window.location.href = functionData.redirectUrl;
@@ -251,28 +235,38 @@ const OrderPage = () => {
   };
 
   const categorizedItems = {
-      value: menuItems.filter(item => item.category === 'value'),
-      mains: menuItems.filter(item => item.category === 'mains'),
-      sides: menuItems.filter(item => item.category === 'sides'),
-      sauces: menuItems.filter(item => item.category === 'sauces'),
-      drinks: menuItems.filter(item => item.category === 'drinks'),
+    value: menuItems.filter(item => item.category === 'value'),
+    mains: menuItems.filter(item => item.category === 'mains'),
+    sides: menuItems.filter(item => item.category === 'sides'),
+    sauces: menuItems.filter(item => item.category === 'sauces'),
+    drinks: menuItems.filter(item => item.category === 'drinks'),
   };
 
+  // --- MODIFICATION 4: Update the success screen to show the new order number ---
   if (orderPlaced) {
     return (
-        <div className="flex flex-col justify-center items-center h-96 text-center p-4">
-            <h1 className="text-4xl font-bold text-amber-500 mb-4">Thank You{guestInfo ? `, ${guestInfo.name}` : ''}!</h1>
-            <p className="text-lg mb-8">Your order has been placed successfully. It will be ready for pickup shortly.</p>
-            {session ? (
-                 <Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
-                     Back to Your Account
-                </Link>
-            ) : (
-                <Link to="/" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
-                     Back to Home
-                </Link>
-            )}
-        </div>
+      <div className="flex flex-col justify-center items-center h-96 text-center p-4">
+        <h1 className="text-4xl font-bold text-amber-500 mb-2">Thank You{guestInfo ? `, ${guestInfo.name}` : ''}!</h1>
+        <p className="text-lg mb-4">Your order has been placed successfully.</p>
+        
+        {completedOrderNumber && (
+          <div className="bg-gray-800 p-4 rounded-lg mb-6 border border-gray-700">
+            <p className="text-sm text-gray-400">Your Order Number is:</p>
+            <p className="text-2xl md:text-3xl font-bold tracking-wider break-all px-2">{completedOrderNumber}</p>
+            <p className="text-xs text-gray-400 mt-2">Please use this number for pickup.</p>
+          </div>
+        )}
+
+        {session ? (
+          <Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
+            Back to Your Account
+          </Link>
+        ) : (
+          <Link to="/" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
+            Back to Home
+          </Link>
+        )}
+      </div>
     );
   }
 
@@ -292,12 +286,12 @@ const OrderPage = () => {
             <h1 className="text-3xl font-bold">Place a Pick-up Order</h1>
             {session ? (
               <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
-                  &larr; Back to Account
+                &larr; Back to Account
               </Link>
             ) : (
               <div className="text-right">
-                  <p className="text-sm text-gray-400">Ordering as Guest:</p>
-                  <p className="text-sm font-semibold">{guestInfo?.name}</p>
+                <p className="text-sm text-gray-400">Ordering as Guest:</p>
+                <p className="text-sm font-semibold">{guestInfo?.name}</p>
               </div>
             )}
           </div>
@@ -354,4 +348,3 @@ const OrderPage = () => {
 };
 
 export default OrderPage;
-
