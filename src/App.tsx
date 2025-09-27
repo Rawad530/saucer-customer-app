@@ -1,14 +1,13 @@
 // src/App.tsx
 
+// This is the final corrected version with the '/profile' route restored.
+
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-// Import Layout (Used only for internal application pages)
 import Layout from './components/Layout';
-
-// Import Pages
 import Account from './pages/Account';
 import LandingPage from './pages/LandingPage';
 import OrderPage from './pages/OrderPage';
@@ -17,10 +16,11 @@ import PaymentStatusPage from './pages/PaymentStatusPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CompleteProfilePage from './pages/CompleteProfilePage';
-
-// --- STEP 1: IMPORT THE MISSING PAGE COMPONENTS ---
 import OrderHistoryPage from './pages/OrderHistoryPage';
 import RewardsPage from './pages/RewardsPage';
+
+// --- STEP 1: IMPORT THE 'ProfilePage' COMPONENT ---
+import ProfilePage from './pages/ProfilePage';
 
 
 function App() {
@@ -63,10 +63,11 @@ function App() {
         <Route path="/complete-profile" element={session ? <CompleteProfilePage /> : <Navigate to="/login" replace />} />
         <Route path="/account" element={session ? <Account session={session} /> : <Navigate to="/login" replace />} />
         <Route path="/wallet" element={session ? <WalletPage /> : <Navigate to="/login" replace />} />
-
-        {/* --- STEP 2: ADD THE MISSING ROUTES HERE (before the catch-all) --- */}
         <Route path="/history" element={session ? <OrderHistoryPage /> : <Navigate to="/login" replace />} />
         <Route path="/rewards" element={session ? <RewardsPage /> : <Navigate to="/login" replace />} />
+
+        {/* --- STEP 2: ADD THE MISSING '/profile' ROUTE HERE --- */}
+        <Route path="/profile" element={session ? <ProfilePage /> : <Navigate to="/login" replace />} />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
