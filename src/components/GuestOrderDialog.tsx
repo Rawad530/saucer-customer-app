@@ -1,6 +1,8 @@
 // src/components/GuestOrderDialog.tsx
+
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// REMOVED: useNavigate is no longer needed here.
+// import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,25 +14,26 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 
+// --- CHANGE 1: ADD 'onSubmit' TO THE PROPS ---
+// This allows the parent page (OrderPage) to receive the data.
 interface GuestOrderDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  onSubmit: (details: { name: string; phone: string }) => void;
 }
 
-const GuestOrderDialog = ({ isOpen, onClose }: GuestOrderDialogProps) => {
+const GuestOrderDialog = ({ isOpen, onClose, onSubmit }: GuestOrderDialogProps) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const navigate = useNavigate();
+  // REMOVED: We don't need navigate here anymore.
 
   const handleContinue = () => {
     if (name.trim() && phone.trim()) {
-      // Store guest information in localStorage
-      const guestInfo = { name: name.trim(), phone: phone.trim() };
-      localStorage.setItem('guest_info', JSON.stringify(guestInfo));
-      
-      // Navigate to the Order Page
-      navigate('/order');
-      onClose();
+      // --- CHANGE 2: THE COMPONENT'S LOGIC IS NOW SIMPLER ---
+      // It no longer saves to localStorage or navigates.
+      // It just sends the data up to the parent component using the new onSubmit prop.
+      onSubmit({ name: name.trim(), phone: phone.trim() });
+      onClose(); // We still close the dialog after submission
     } else {
       alert('Please provide both your name and phone number.');
     }
@@ -60,8 +63,9 @@ const GuestOrderDialog = ({ isOpen, onClose }: GuestOrderDialogProps) => {
           />
         </div>
         <DialogFooter>
+          {/* --- CHANGE 3: UPDATED BUTTON TEXT FOR CLARITY --- */}
           <Button onClick={handleContinue} className="bg-amber-600 hover:bg-amber-700 w-full">
-            Continue to Menu
+            Continue
           </Button>
         </DialogFooter>
       </DialogContent>
