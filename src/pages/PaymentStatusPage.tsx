@@ -1,11 +1,12 @@
 // src/pages/PaymentStatusPage.tsx
 import { useEffect, useState } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 // Using lucide-react icons (ensure it's installed: npm install lucide-react)
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 
 const PaymentStatusPage = () => {
   const location = useLocation();
+  const navigate = useNavigate(); // This line has been restored.
   const [status, setStatus] = useState<'loading' | 'success' | 'fail'>('loading');
   const [type, setType] = useState<'order' | 'wallet'>('order');
 
@@ -32,6 +33,13 @@ const PaymentStatusPage = () => {
     // bog-callback-handler Edge Function. This page is purely informational.
     
   }, [location.search]);
+
+  // This handler sets a flag in sessionStorage before navigating back.
+  // This lets the order page know that the user is returning from a failed payment.
+  const handleReturnToOrder = () => {
+    sessionStorage.setItem('paymentFailed', 'true');
+    navigate('/order');
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-4">
@@ -74,14 +82,17 @@ const PaymentStatusPage = () => {
                 The transaction was not successful. Please ensure you are using a supported card (e.g., Georgian-issued card) or try again.
             </p>
             {type === 'order' ? (
-                 // Link back to the order page to try again (cart should still be active)
-                 <Link to="/order" className="mt-6 inline-block px-6 py-2 font-bold text-white bg-red-600 rounded-md hover:bg-red-700">
-                    Return to Order
-                </Link>
+               // Use the handler on the button instead of a Link component
+              <button 
+                  onClick={handleReturnToOrder} 
+                  className="mt-6 inline-block px-6 py-2 font-bold text-white bg-red-600 rounded-md hover:bg-red-700"
+              >
+                  Return to Order
+              </button>
             ) : (
-                <Link to="/wallet" className="mt-6 inline-block px-6 py-2 font-bold text-white bg-red-600 rounded-md hover:bg-red-700">
-                    Return to Wallet
-                </Link>
+              <Link to="/wallet" className="mt-6 inline-block px-6 py-2 font-bold text-white bg-red-600 rounded-md hover:bg-red-700">
+                  Return to Wallet
+              </Link>
             )}
           </>
         )}
@@ -91,3 +102,4 @@ const PaymentStatusPage = () => {
 };
 
 export default PaymentStatusPage;
+

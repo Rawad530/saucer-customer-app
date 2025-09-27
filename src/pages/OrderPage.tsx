@@ -9,7 +9,6 @@ import OrderSummary from "../components/OrderSummary";
 import { Link, useNavigate } from "react-router-dom";
 import { Session } from "@supabase/supabase-js";
 import { useCartStore } from "../store/cartStore";
-// --- 1. ADDED: Import the Guest Dialog component ---
 import GuestOrderDialog from '../components/GuestOrderDialog';
 
 interface PendingItem {
@@ -25,7 +24,7 @@ interface PendingItem {
 }
 
 const OrderPage = () => {
-  // --- Local State (Original) ---
+  // --- Local State ---
   const [session, setSession] = useState<Session | null>(null);
   const [guestInfo, setGuestInfo] = useState<{ name: string; phone: string } | null>(null);
   const navigate = useNavigate();
@@ -41,11 +40,9 @@ const OrderPage = () => {
   const [useWallet, setUseWallet] = useState(false);
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
-
-  // --- 2. ADDED: State to control the guest dialog ---
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
 
-  // --- Zustand Cart Store (Original) ---
+  // --- Zustand Cart Store ---
   const selectedItems = useCartStore((state) => state.items);
   const addItem = useCartStore((state) => state.addItem);
   const updateItemQuantity = useCartStore((state) => state.updateItemQuantity);
@@ -54,14 +51,25 @@ const OrderPage = () => {
   const getSummary = useCartStore((state) => state.getSummary);
 
   useEffect(() => {
+    // This logic checks if the user is returning from a failed payment.
+    // If so, it preserves the cart. Otherwise, it clears it for a new session.
+    const paymentFailedFlag = sessionStorage.getItem('paymentFailed');
+
+    if (paymentFailedFlag) {
+      // If the flag exists, we came from a failed payment.
+      // Do NOT clear the cart, and remove the flag so it doesn't trigger again on refresh.
+      sessionStorage.removeItem('paymentFailed');
+    } else {
+      // If there is no flag, this is a fresh visit to the page. Clear the cart.
+      clearCart();
+    }
+
     const fetchData = async () => {
       setLoadingMenu(true);
       
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
 
-      // --- 3. MODIFIED: Guest logic ---
-      // We no longer redirect if guest info isn't found. We just check if it exists in local storage.
       if (!session) {
         const storedGuestInfo = localStorage.getItem('guest_info');
         if (storedGuestInfo) {
@@ -71,7 +79,6 @@ const OrderPage = () => {
             console.error("Error parsing guest info", e);
           }
         }
-        // The premature redirect that was here has been removed.
       }
 
       const menuPromise = supabase.from('menu_items').select('*').eq('is_available', true).order('id');
@@ -95,9 +102,9 @@ const OrderPage = () => {
     };
 
     fetchData();
-  }, []);
+  }, [clearCart]); // Added clearCart to dependency array as per React linting best practices
 
-  // --- Item Handling Functions (Original) ---
+  // --- Item Handling Functions ---
   const addItemToOrder = (menuItem: MenuItem) => {
     if (menuItem.requires_sauce || menuItem.is_combo || ['mains', 'value'].includes(menuItem.category)) {
       setPendingItem({ menuItem, addons: [], spicy: false, discount: 0, quantity: 1 });
@@ -143,7 +150,7 @@ const OrderPage = () => {
     setEditingItemIndex(null);
   };
 
-  // --- Calculations (Original) ---
+  // --- Calculations ---
   const { subtotal } = getSummary();
   const effectiveDiscountRate = session ? appliedDiscount : 0;
   const promoDiscountAmount = subtotal * (effectiveDiscountRate / 100);
@@ -156,32 +163,26 @@ const OrderPage = () => {
     // ... (This function remains exactly the same)
   };
 
-  // --- 4. ADDED: Function to handle when the guest submits their details ---
   const handleGuestSubmit = (details: { name: string; phone: string }) => {
     setGuestInfo(details);
     localStorage.setItem('guest_info', JSON.stringify(details));
     setIsGuestModalOpen(false);
-    // After getting details, we immediately try to place the order
     placeOrder(details);
   };
 
-  // --- 5. MODIFIED: This function now decides whether to open the modal or place the order ---
   const handleProceedToPayment = async () => {
     if (selectedItems.length === 0) {
         alert("Your cart is empty.");
         return;
     }
     
-    // If user is logged in OR we already have guest info from a previous step, proceed to place order.
     if (session || guestInfo) {
       placeOrder(guestInfo);
     } else {
-      // If user is a guest and we have NO info, open the modal to ask for it first.
       setIsGuestModalOpen(true);
     }
   };
   
-  // --- 6. MODIFIED: Your original payment logic is now in this separate function ---
   const placeOrder = async (currentGuestInfo: { name: string; phone: string } | null) => {
     setIsPlacingOrder(true);
   
@@ -191,7 +192,6 @@ const OrderPage = () => {
     const guestName = currentGuestInfo?.name || null;
     const guestPhone = currentGuestInfo?.phone || null;
 
-    // A final check to ensure we have guest details before proceeding
     if (!userId && (!guestName || !guestPhone)) {
         alert("Guest name and phone number are required to proceed.");
         setIsPlacingOrder(false);
@@ -265,7 +265,7 @@ const OrderPage = () => {
             <p className="text-lg mb-8">Your order has been placed successfully. It will be ready for pickup shortly.</p>
             {session ? (
                  <Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
-                    Back to Your Account
+                     Back to Your Account
                 </Link>
             ) : (
                 <Link to="/" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
@@ -285,7 +285,6 @@ const OrderPage = () => {
   }
 
   return (
-    // --- 7. MODIFIED: Wrapped in a Fragment and added the Dialog at the end ---
     <>
       <div className="p-4">
         <div className="max-w-6xl mx-auto">
@@ -345,7 +344,6 @@ const OrderPage = () => {
         </div>
       </div>
       
-      {/* This Dialog is now part of the OrderPage, but remains hidden until needed */}
       <GuestOrderDialog 
         isOpen={isGuestModalOpen}
         onClose={() => setIsGuestModalOpen(false)}
@@ -356,3 +354,4 @@ const OrderPage = () => {
 };
 
 export default OrderPage;
+
