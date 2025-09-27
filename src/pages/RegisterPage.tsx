@@ -1,4 +1,5 @@
 // src/pages/RegisterPage.tsx
+
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Link } from 'react-router-dom';
@@ -7,55 +8,85 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 const RegisterPage = () => {
-  // (State and Logic remain the same...)
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // --- 1. ADD STATE FOR NEW FIELDS ---
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  // ------------------------------------
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  // --- 2. UPDATE THE SIGN-UP LOGIC ---
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     setError('');
 
-    const { data, error } = await supabase.auth.signUp({
+    // Step 1: Create the user in Supabase Authentication
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { user_type: 'customer' },
-        emailRedirectTo: `${window.location.origin}/complete-profile`,
+        // This now correctly redirects to the account page after email confirmation
+        emailRedirectTo: `${window.location.origin}/account`,
       },
     });
 
-    if (error) {
-      setError(error.message);
-    } else if (data.user) {
-        setSuccess(true);
+    if (authError) {
+      setError(authError.message);
+      setLoading(false);
+      return;
     }
+
+    if (!authData.user) {
+        setError('An unexpected error occurred. Please try again.');
+        setLoading(false);
+        return;
+    }
+
+    // Step 2: If auth user is created, save their details to the 'customer_profiles' table
+    const { error: profileError } = await supabase
+      .from('customer_profiles')
+      .insert({
+        id: authData.user.id, // Links this profile to the authenticated user
+        full_name: fullName,
+        phone_number: phoneNumber,
+        email: email,
+      });
+      
+    if (profileError) {
+        // This is a failsafe. You can decide how to handle this, e.g., ask user to contact support.
+        setError(`Account was created, but we couldn't save your profile details. Error: ${profileError.message}`);
+        setLoading(false);
+        return;
+    }
+
+    // If both steps are successful, show the success message
+    setSuccess(true);
     setLoading(false);
   };
+  // --- END OF LOGIC UPDATE ---
 
   if (success) {
     return (
-        // Added min-h-screen bg-gray-900
-        <div className="flex justify-center items-center py-12 min-h-screen bg-gray-900">
-           {/* (Success content remains the same) */}
-           <Card className="w-full max-w-md bg-gray-800 border-gray-700 text-white">
-                <CardHeader>
-                    <CardTitle className="text-2xl text-green-500">Check Your Email!</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p>A confirmation link has been sent to <strong>{email}</strong>.</p>
-                    <p className="mt-4">Please click the link in the email to activate your account and complete your profile.</p>
-                </CardContent>
-            </Card>
-        </div>
+      <div className="flex justify-center items-center py-12 min-h-screen bg-gray-900">
+        <Card className="w-full max-w-md bg-gray-800 border-gray-700 text-white">
+          <CardHeader>
+            <CardTitle className="text-2xl text-green-500">Check Your Email!</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>A confirmation link has been sent to <strong>{email}</strong>.</p>
+            {/* Updated success message */}
+            <p className="mt-4">Please click the link in the email to activate your account.</p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    // Added min-h-screen bg-gray-900
     <div className="flex justify-center items-center py-12 min-h-screen bg-gray-900">
       <Card className="w-full max-w-md bg-gray-800 border-gray-700 text-white">
         <CardHeader>
@@ -64,7 +95,6 @@ const RegisterPage = () => {
           <CardDescription className='text-gray-300'>Create an account to earn rewards.</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* (Form content remains the same) */}
           <form onSubmit={handleRegister} className="space-y-4">
             {error && <p className="text-red-500 text-sm bg-red-900/50 p-3 rounded">{error}</p>}
             
@@ -78,8 +108,20 @@ const RegisterPage = () => {
               <Input id="password" type="password" placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="mt-1 bg-gray-700 border-gray-600 text-white" />
             </div>
             
+            {/* --- 3. ADD THE NEW FORM FIELDS --- */}
+            <div>
+              <label htmlFor="fullName" className="block text-sm font-medium text-gray-300">Full Name</label>
+              <Input id="fullName" type="text" placeholder="Peter Griffin" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="mt-1 bg-gray-700 border-gray-600 text-white" />
+            </div>
+
+            <div>
+              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-300">Phone Number</label>
+              <Input id="phoneNumber" type="tel" placeholder="+995 123 456 789" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="mt-1 bg-gray-700 border-gray-600 text-white" />
+            </div>
+            {/* ------------------------------- */}
+            
             <Button type="submit" disabled={loading} className="w-full bg-amber-600 hover:bg-amber-700">
-              {loading ? 'Loading...' : 'Register'}
+              {loading ? 'Creating Account...' : 'Register'}
             </Button>
           </form>
           

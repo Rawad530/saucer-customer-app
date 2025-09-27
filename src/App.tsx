@@ -15,7 +15,6 @@ import WalletPage from './pages/WalletPage';
 import PaymentStatusPage from './pages/PaymentStatusPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import CompleteProfilePage from './pages/CompleteProfilePage';
 import OrderHistoryPage from './pages/OrderHistoryPage';
 import RewardsPage from './pages/RewardsPage';
 
@@ -60,7 +59,7 @@ function App() {
         <Route path="/order" element={<OrderPage />} />
 
         {/* Protected Routes */}
-        <Route path="/complete-profile" element={session ? <CompleteProfilePage /> : <Navigate to="/login" replace />} />
+        
         <Route path="/account" element={session ? <Account session={session} /> : <Navigate to="/login" replace />} />
         <Route path="/wallet" element={session ? <WalletPage /> : <Navigate to="/login" replace />} />
         <Route path="/history" element={session ? <OrderHistoryPage /> : <Navigate to="/login" replace />} />
