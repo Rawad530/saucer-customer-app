@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Award, Wallet, History, Truck, Bell, ArrowRight } from 'lucide-react';
-import GuestOrderDialog from '../components/GuestOrderDialog'; // Import the new component
+import { Award, Wallet, History, Truck, Bell, ArrowRight, UserPlus } from 'lucide-react'; // Added UserPlus
+import GuestOrderDialog from '../components/GuestOrderDialog';
 
 const LandingPage = () => {
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
-  const [isGuestOrderOpen, setIsGuestOrderOpen] = useState(false); // State for the new dialog
+  const [isGuestOrderOpen, setIsGuestOrderOpen] = useState(false);
 
   useEffect(() => {
+    // (useEffect logic remains the same)
     const checkStatus = async () => {
       try {
         const { data, error } = await supabase.functions.invoke('check-restaurant-status');
@@ -25,147 +26,100 @@ const LandingPage = () => {
   }, []);
 
   const OrderButton = () => {
+    // (OrderButton logic remains the same)
     if (isRestaurantOpen === null) {
-      return <button className="button" disabled>Checking Hours...</button>;
+      return <button className="px-8 py-3 text-lg font-bold text-gray-400 bg-gray-700 rounded-md" disabled>Checking...</button>;
     }
     if (isRestaurantOpen) {
-      // This button now opens the dialog
-      return <button onClick={() => setIsGuestOrderOpen(true)} className="button">View Menu & Order as a Guest</button>;
+      return (
+        <button
+          onClick={() => setIsGuestOrderOpen(true)}
+          className="px-8 py-3 text-lg font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700 transition duration-300 shadow-lg hover:shadow-xl"
+        >
+          View Menu & Order as Guest
+        </button>
+      );
     }
     return (
-      <div className="text-center">
-        <button className="button" disabled style={{ backgroundColor: '#9CA3AF', cursor: 'not-allowed' }}>
-          View Menu & Order as a Guest
-        </button>
-        <p className="text-sm font-semibold text-red-500 mt-2">
-          We're currently closed for online orders.
-        </p>
-      </div>
+      <button className="px-8 py-3 text-lg font-bold text-gray-400 bg-gray-700 rounded-md cursor-not-allowed" disabled>
+        Restaurant is Currently Closed
+      </button>
     );
   };
 
   return (
-    <>
-      <div className="landing-page">
-        <header className="landing-header">
-          <img src="/images/logo.png" alt="Saucer Burger Logo" className="logo-img" />
-          <nav className="landing-nav">
-            <a href="#story">OUR STORY</a>
-            <a href="#benefits">BENEFITS</a>
-            <a href="#sauces">THE SAUCES</a>
-          </nav>
-          <Link to="/login" className="button">Sign-in / Register</Link>
-        </header>
+    // The Layout now handles the main structure
+    <div className="py-12">
+      <main className="max-w-6xl mx-auto px-4">
+        <section className="text-center mb-12">
+          <h1 className="text-5xl font-extrabold mb-4 text-amber-400">Welcome to Saucer Burger</h1>
+          <p className="text-xl text-gray-400 mb-8">Experience the taste that's out of this world.</p>
+          <OrderButton />
+        </section>
 
-        <main>
-          <section className="hero">
-            <div className="hero-content">
-              <h1>More Sauce. Less Mess.</h1>
-              <p>Your favorite burgers, your way. Choose a timeless Classic Bun or upgrade to the revolutionary <strong>Saucer Bun</strong> — perfectly sealed for zero drips. The future of flavor is in your hands.</p>
-              <OrderButton />
-            </div>
-          </section>
+        {/* OR divider */}
+        <div className="flex items-center my-12">
+            <div className="flex-grow border-t border-gray-700"></div>
+            <span className="flex-shrink mx-4 text-gray-500">OR</span>
+            <div className="flex-grow border-t border-gray-700"></div>
+        </div>
 
-          <div className="divider-text-container">
-            <div className="divider-text">OR</div>
-          </div>
+        <section className="mb-12">
+          <h2 className="text-3xl font-bold mb-6 text-center">Unlock Exclusive Benefits</h2>
+          <p className="text-center text-gray-400 mb-8">Create an account to get the full Saucer Burger experience.</p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Task 1: Link updated to /register */}
+            <Link to="/register" className="group">
+              <div className="bg-gray-800 p-6 rounded-lg shadow-lg transition duration-300 group-hover:bg-gray-700 h-full flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                   <h3 className="text-xl font-semibold flex items-center gap-3"><UserPlus className="w-6 h-6 text-amber-500"/> Create Account</h3>
+                   <ArrowRight className="w-6 h-6 text-amber-500 transition-transform group-hover:translate-x-1"/>
+                </div>
+                <p className="text-gray-400">Join the Saucer Burger family and start earning rewards today.</p>
+              </div>
+            </Link>
 
-          <section id="benefits" className="container benefits-section">
-            <h2 className="section-title">Unlock Exclusive Benefits</h2>
-            <p className="section-subtitle">Create an account to get the full Saucer Burger experience.</p>
-            <div className="benefits-grid">
-              <Link to="/login" className="benefit-card-cta">
-                <h3>Create an Account</h3>
-                <ArrowRight className="cta-arrow" />
-              </Link>
-              <div className="benefit-card">
-                <Award className="benefit-icon" />
-                <h3>Loyalty & Rewards</h3>
-                <p>Earn royalty points (stamps) for your purchases and redeem them for free food and drinks.</p>
-              </div>
-              <div className="benefit-card">
-                <Wallet className="benefit-icon" />
-                <h3>Wallet & Cashback</h3>
-                <p>Get 5% cashback on dine-in orders and pay for future meals with your secure wallet balance.</p>
-              </div>
-              <div className="benefit-card">
-                <History className="benefit-icon" />
-                <h3>Order History</h3>
-                <p>Easily track your past orders and see your favorite, most-ordered items at a glance.</p>
-              </div>
-              <div className="benefit-card">
-                <Truck className="benefit-icon" />
-                <h3>Delivery Partners</h3>
-                <p>Quickly access our official partners (Wolt, Bolt Food, Glovo) for delivery options.</p>
-              </div>
-              <div className="benefit-card">
-                <Bell className="benefit-icon" />
-                <h3>Latest News</h3>
-                <p>Be the first to know about our newest menu items, special offers, and updates.</p>
-              </div>
+            {/* Benefit Cards (Informational - content remains the same) */}
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+              <Award className="w-8 h-8 text-amber-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Earn Stamps</h3>
+              <p className="text-gray-400">Collect stamps with every order and unlock free items.</p>
             </div>
-          </section>
+            
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+              <Wallet className="w-8 h-8 text-amber-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Digital Wallet & Cashback</h3>
+              <p className="text-gray-400">Load funds for easy payment and earn 5% cashback on dine-in orders.</p>
+            </div>
 
-          <section id="story" className="container story-section">
-            <div className="text-content">
-              <h2 className="section-title">The Future of Flavor is Here.</h2>
-              <p>Ever wondered if you could enjoy a deliciously messy, sauce-filled burger without the actual mess? We did. Saucer Burger and Wrap was born from a simple mission: to revolutionize the way you eat. We've redesigned the burger into a unique, futuristic saucer shape, perfectly sealed at the edges. Our motto is "more sauce, less mess," allowing you to enjoy generous, authentic flavors on the go—in your car, on a walk, wherever your day takes you—without a single drip.</p>
-              <p>But our innovation doesn't stop at convenience. We are committed to crafting every meal with fresh, high-quality ingredients and generous portions. By rethinking the burger, we also aim to create a more sustainable experience, reducing waste and paving the way for a tastier, cleaner future for generations to come. Welcome to Saucer Burger and Wrap, where convenience, flavor, and the future collide.</p>
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+              <History className="w-8 h-8 text-amber-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Order History</h3>
+              <p className="text-gray-400">View past orders and easily reorder your favorites.</p>
             </div>
-            <div className="image-content">
-              <img src="/images/sauce-man.png" alt="Saucer Burger Character" />
-            </div>
-          </section>
 
-          <section id="sauces" className="container sauce-section">
-            <h2 className="section-title">The Sauces Behind the Saucer.</h2>
-            <div className="sauce-grid">
-              <div className="sauce-card">
-                <img src="/images/special-sauce.png" alt="Saucer Special Sauce" />
-                <h3>Special Saucer Sauce</h3>
-              </div>
-              <div className="sauce-card">
-                <img src="/images/garlic-sauce.png" alt="Garlic Sauce" />
-                <h3>Garlic Sauce</h3>
-              </div>
-              <div className="sauce-card">
-                <img src="/images/bbq-sauce.png" alt="Barbecue Sauce" />
-                <h3>Barbecue Sauce</h3>
-              </div>
-              <div className="sauce-card">
-                <img src="/images/chilli-sauce.png" alt="Hot Chili Sauce" />
-                <h3>Hot Chili Sauce</h3>
-              </div>
+            <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+              <Truck className="w-8 h-8 text-amber-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Faster Checkout</h3>
+              <p className="text-gray-400">Save your details for a seamless ordering experience.</p>
             </div>
-          </section>
-        </main>
 
-        <footer className="landing-footer">
-          <div className="footer-grid">
-            <div>
-              <h4>Saucer Burger & Wrap</h4>
-              <p>45 Petre Kavtaradze St<br />Tbilisi, Georgia</p>
-              <p><strong>Hours:</strong> 12:00 PM - 2:00 AM</p>
-            </div>
-            <div>
-              <h4>Quick Links</h4>
-              <a href="#">Home</a>
-              <Link to="/login">Full Menu / Order</Link>
-            </div>
-            <div>
-              <h4>Contact Us</h4>
-              <p>Phone: +995 591 22 96 58</p>
-              <p>Email: saucerburger@gmail.com</p>
+             <div className="bg-gray-800 p-6 rounded-lg shadow-lg">
+              <Bell className="w-8 h-8 text-amber-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Exclusive Offers</h3>
+              <p className="text-gray-400">Receive special promotions and updates.</p>
             </div>
           </div>
-        </footer>
-      </div>
+        </section>
+      </main>
 
-      <GuestOrderDialog 
+      {/* Guest Order Dialog Initialization */}
+      <GuestOrderDialog
         isOpen={isGuestOrderOpen}
         onClose={() => setIsGuestOrderOpen(false)}
       />
-    </>
+    </div>
   );
 };
 

@@ -3,65 +3,71 @@
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
-import { Routes, Route } from 'react-router-dom';
-import Auth from './pages/auth';
+import { Routes, Route, Navigate } from 'react-router-dom';
+
+// Import Layout
+import Layout from './components/Layout';
+
+// Import Pages (Updated)
 import Account from './pages/Account';
-import ProfilePage from './pages/ProfilePage';
-import OrderPage from './pages/OrderPage';
-import OrderHistoryPage from './pages/OrderHistoryPage';
-import RewardsPage from './pages/RewardsPage';
 import LandingPage from './pages/LandingPage';
-import WalletPage from './pages/WalletPage'; // <-- Import the new page
+import OrderPage from './pages/OrderPage';
+import WalletPage from './pages/WalletPage';
 import PaymentStatusPage from './pages/PaymentStatusPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import CompleteProfilePage from './pages/CompleteProfilePage';
+// 'auth.tsx' is removed.
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
+      setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">Loading...</div>;
+  }
+
   return (
     <Routes>
-      {/* PUBLIC ROUTES */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={<Auth />} />
-      <Route path="/payment-status" element={<PaymentStatusPage />} />
+      {/* Use the Layout component as the parent route for all pages */}
+      <Route element={<Layout />}>
+        {/* Public Routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/payment-status" element={<PaymentStatusPage />} />
 
-      {/* PROTECTED ROUTES */}
-      <Route 
-        path="/account" 
-        element={!session ? <Auth /> : <Account key={session.user.id} session={session} />} 
-      />
-      <Route 
-        path="/profile" 
-        element={!session ? <Auth /> : <ProfilePage />} 
-      />
-      <Route 
-        path="/order" 
-        element={!session ? <Auth /> : <OrderPage />} 
-      />
-      <Route 
-        path="/history" 
-        element={!session ? <Auth /> : <OrderHistoryPage />} 
-      />
-      <Route 
-        path="/rewards" 
-        element={!session ? <Auth /> : <RewardsPage />} 
-      />
-      {/* ADDED THIS NEW ROUTE */}
-      <Route 
-        path="/wallet" 
-        element={!session ? <Auth /> : <WalletPage />} 
-      />
+        {/* Authentication Routes (Redirect if already logged in) */}
+        <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/account" replace />} />
+        <Route path="/register" element={!session ? <RegisterPage /> : <Navigate to="/account" replace />} />
+        
+        {/* Profile Completion (Requires session) */}
+        <Route path="/complete-profile" element={session ? <CompleteProfilePage /> : <Navigate to="/login" replace />} />
+
+        {/* Hybrid Route (Task 4): Accessible to Guests and Users */}
+        <Route path="/order" element={<OrderPage />} />
+
+        {/* Protected Routes (Require session) */}
+        <Route path="/account" element={session ? <Account session={session} /> : <Navigate to="/login" replace />} />
+        <Route path="/wallet" element={session ? <WalletPage /> : <Navigate to="/login" replace />} />
+        
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
     </Routes>
   );
 }

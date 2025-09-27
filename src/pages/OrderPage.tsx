@@ -1,15 +1,14 @@
 // src/pages/OrderPage.tsx
 
 import { useState, useEffect } from "react";
-// Imports updated: 'Order' and 'addOnOptions' removed as they are handled in the store.
 import { OrderItem, MenuItem } from "../types/order";
 import { getNextOrderNumber } from "../utils/orderUtils";
 import { supabase } from "../lib/supabaseClient";
 import MenuSection from "../components/MenuSection";
 import OrderSummary from "../components/OrderSummary";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Session } from "@supabase/supabase-js";
-import { useCartStore } from "../store/cartStore"; // Import the new store
+import { useCartStore } from "../store/cartStore";
 
 interface PendingItem {
   menuItem: MenuItem;
@@ -18,17 +17,19 @@ interface PendingItem {
   sauceCup?: string;
   drink?: string;
   addons: string[];
-  spicy: boolean;
+  spicy: boolean; // Mandatory boolean
   remarks?: string;
   discount?: number;
 }
 
 const OrderPage = () => {
-  // --- Local State (for UI and data fetching) ---
+  // --- Local State ---
   const [session, setSession] = useState<Session | null>(null);
+  const [guestInfo, setGuestInfo] = useState<{ name: string; phone: string } | null>(null);
+  const navigate = useNavigate();
+  
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loadingMenu, setLoadingMenu] = useState(true);
-  // selectedItems is removed from useState
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(0);
@@ -38,11 +39,11 @@ const OrderPage = () => {
   const [walletBalance, setWalletBalance] = useState(0);
   const [useWallet, setUseWallet] = useState(false);
 
-  // --- Modal State (for item customization) ---
+  // --- Modal State ---
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
-  // --- Zustand Cart Store State and Actions ---
+  // --- Zustand Cart Store ---
   const selectedItems = useCartStore((state) => state.items);
   const addItem = useCartStore((state) => state.addItem);
   const updateItemQuantity = useCartStore((state) => state.updateItemQuantity);
@@ -57,6 +58,21 @@ const OrderPage = () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
 
+      if (!session) {
+        const storedGuestInfo = localStorage.getItem('guest_info');
+        if (storedGuestInfo) {
+          try {
+            setGuestInfo(JSON.parse(storedGuestInfo));
+          } catch (e) {
+            console.error("Error parsing guest info", e);
+          }
+        } else {
+            console.log("No session and no guest info found. Redirecting.");
+            navigate('/');
+            return;
+        }
+      }
+
       const menuPromise = supabase.from('menu_items').select('*').eq('is_available', true).order('id');
       
       let walletPromise;
@@ -66,9 +82,7 @@ const OrderPage = () => {
 
       const [menuResult, walletResult] = await Promise.all([menuPromise, walletPromise]);
 
-      if (menuResult.error) {
-        console.error("Error fetching menu:", menuResult.error);
-      } else if (menuResult.data) {
+      if (menuResult.data) {
         setMenuItems(menuResult.data);
       }
       
@@ -80,24 +94,19 @@ const OrderPage = () => {
     };
 
     fetchData();
-  }, []);
+  }, [navigate]);
 
-  // --- Item Handling Functions (Updated for Zustand) ---
+  // --- Item Handling Functions ---
   const addItemToOrder = (menuItem: MenuItem) => {
     if (menuItem.requires_sauce || menuItem.is_combo || ['mains', 'value'].includes(menuItem.category)) {
-      // Open customization modal
       setPendingItem({ menuItem, addons: [], spicy: false, discount: 0, quantity: 1 });
     } else {
-      // Add simple items directly to the store
       addItem({ menuItem, quantity: 1, addons: [], spicy: false, discount: 0 });
     }
   };
 
-  // addFinalItem function is removed.
-
   const confirmPendingItem = () => {
     if (!pendingItem) return;
-    
     const finalItem: OrderItem = {
         menuItem: pendingItem.menuItem,
         quantity: pendingItem.quantity,
@@ -109,43 +118,53 @@ const OrderPage = () => {
         remarks: pendingItem.remarks,
         discount: pendingItem.discount
     };
-
     if (editingItemIndex !== null) {
-        // Update existing item in the store
         updateItemDetails(editingItemIndex, finalItem);
         setEditingItemIndex(null);
     } else {
-        // Add new item to the store (store handles merging logic)
         addItem(finalItem);
     }
-    
     setPendingItem(null);
   };
 
+  // --- FIX APPLIED HERE ---
   const handleEditItem = (index: number) => {
     const itemToEdit = selectedItems[index];
     setEditingItemIndex(index);
-    // Ensure addons array exists when loading into pending state
-    setPendingItem({ ...itemToEdit, addons: itemToEdit.addons || [] });
+    // Ensure 'spicy' is explicitly set (defaults to false if undefined using ??)
+    // and ensure addons array exists.
+    setPendingItem({ 
+      ...itemToEdit, 
+      addons: itemToEdit.addons || [],
+      spicy: itemToEdit.spicy ?? false 
+    });
   };
+  // ------------------------
 
   const handleCancelPendingItem = () => {
     setPendingItem(null);
     setEditingItemIndex(null);
   };
+
   
-  // --- CALCULATIONS (Updated for Zustand) ---
-  // Subtotal is now derived from the store
+  // --- CALCULATIONS ---
   const { subtotal } = getSummary();
   
-  const promoDiscountAmount = subtotal * (appliedDiscount / 100);
+  const effectiveDiscountRate = session ? appliedDiscount : 0;
+  const promoDiscountAmount = subtotal * (effectiveDiscountRate / 100);
   const priceAfterPromo = subtotal - promoDiscountAmount;
-  const walletCreditApplied = useWallet ? Math.min(walletBalance, priceAfterPromo) : 0;
+  
+  const effectiveUseWallet = session ? useWallet : false;
+  const walletCreditApplied = effectiveUseWallet ? Math.min(walletBalance, priceAfterPromo) : 0;
+  
   const totalPrice = priceAfterPromo - walletCreditApplied;
   // --- END OF CALCULATIONS ---
 
   const handleApplyPromoCode = async () => {
-    // (Existing handleApplyPromoCode logic remains the same)
+    if (!session) {
+        setPromoMessage("Promo codes are available for registered users only.");
+        return;
+    }
     if (!promoCode.trim()) return;
     setIsCheckingPromo(true);
     setPromoMessage("");
@@ -168,13 +187,21 @@ const OrderPage = () => {
     }
   };
 
-  // --- handleProceedToPayment (Updated for Zustand) ---
+  // --- handleProceedToPayment ---
   const handleProceedToPayment = async () => {
-    if (!session?.user || selectedItems.length === 0) return;
+    if ((!session?.user && !guestInfo) || selectedItems.length === 0) {
+        alert("Missing user information or cart is empty.");
+        return;
+    }
+    
     setIsPlacingOrder(true);
   
     const orderId = crypto.randomUUID();
     const orderNumber = await getNextOrderNumber();
+
+    const userId = session?.user?.id || null;
+    const guestName = guestInfo?.name || null;
+    const guestPhone = guestInfo?.phone || null;
 
     let paymentMode = 'Card - Online';
     if (walletCreditApplied > 0) {
@@ -182,11 +209,12 @@ const OrderPage = () => {
     }
   
     try {
-      // Insert the order. (Trigger handles wallet deduction)
       const { error: insertError } = await supabase.from('transactions').insert([
         { 
           transaction_id: orderId,
-          user_id: session.user.id,
+          user_id: userId, 
+          guest_name: guestName,
+          guest_phone: guestPhone,
           order_number: orderNumber,
           items: selectedItems as any,
           total_price: totalPrice,
@@ -194,15 +222,14 @@ const OrderPage = () => {
           payment_mode: paymentMode,
           status: 'pending_payment',
           created_at: new Date().toISOString(),
-          promo_code_used: appliedDiscount > 0 ? promoCode.toUpperCase() : null,
-          discount_applied_percent: appliedDiscount > 0 ? appliedDiscount : null,
+          promo_code_used: effectiveDiscountRate > 0 ? promoCode.toUpperCase() : null,
+          discount_applied_percent: effectiveDiscountRate > 0 ? effectiveDiscountRate : null,
           order_type: 'pick_up', 
         },
       ]);
   
       if (insertError) throw new Error(`Failed to process order: ${insertError.message}`);
   
-      // Call the Edge Function
       const { data: functionData, error: functionError } = await supabase.functions.invoke('initiate-payment', {
         body: { orderId },
       });
@@ -211,14 +238,13 @@ const OrderPage = () => {
       if (functionData.error) throw new Error(functionData.error);
   
       if (functionData.paymentComplete) {
-        // Wallet covered the full amount
-        // CRITICAL: Clear the cart now that the order is finalized.
         clearCart(); 
+        localStorage.removeItem('guest_info');
         setOrderPlaced(true);
-        setWalletBalance(prev => prev - walletCreditApplied);
+        if (session) {
+            setWalletBalance(prev => prev - walletCreditApplied);
+        }
       } else if (functionData.redirectUrl) {
-        // Redirect to BOG. Do NOT clear the cart yet, as payment is pending.
-        // The cart will persist in localStorage thanks to Zustand.
         window.location.href = functionData.redirectUrl;
       } else {
         throw new Error("Invalid response from payment function.");
@@ -239,32 +265,45 @@ const OrderPage = () => {
 
   if (orderPlaced) {
     return (
-        <div className="flex flex-col justify-center items-center min-h-screen bg-gray-900 text-white text-center p-4">
-            <h1 className="text-4xl font-bold text-amber-500 mb-4">Thank You!</h1>
+        <div className="flex flex-col justify-center items-center h-96 text-center p-4">
+            <h1 className="text-4xl font-bold text-amber-500 mb-4">Thank You{guestInfo ? `, ${guestInfo.name}` : ''}!</h1>
             <p className="text-lg mb-8">Your order has been placed successfully. It will be ready for pickup shortly.</p>
-            <Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
-                Back to Your Account
-            </Link>
+            {session ? (
+                 <Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
+                    Back to Your Account
+                </Link>
+            ) : (
+                <Link to="/" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
+                    Back to Home
+                </Link>
+            )}
         </div>
     );
   }
 
   if (loadingMenu) {
     return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">
+      <div className="flex justify-center items-center h-64">
         Loading Menu...
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
+    <div className="p-4">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Place a Pick-up Order</h1>
-          <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
-            &larr; Back to Account
-          </Link>
+          {session ? (
+            <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
+                &larr; Back to Account
+            </Link>
+          ) : (
+            <div className="text-right">
+                <p className="text-sm text-gray-400">Ordering as Guest:</p>
+                <p className="text-sm font-semibold">{guestInfo?.name}</p>
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="space-y-6">
@@ -278,15 +317,15 @@ const OrderPage = () => {
             ))}
           </div>
           <div>
-            <div className="sticky top-4">
+            {/* Adjust top value if Header height changes (e.g., top-16) */}
+            <div className="sticky top-16"> 
               <OrderSummary
                 selectedItems={selectedItems}
                 pendingItem={pendingItem}
                 subtotal={subtotal}
                 discountAmount={promoDiscountAmount}
                 totalPrice={totalPrice}
-                // Pass the store action directly
-                onUpdateItemQuantity={updateItemQuantity} 
+                onUpdateItemQuantity={updateItemQuantity}
                 onUpdatePendingItem={setPendingItem}
                 onConfirmPendingItem={confirmPendingItem}
                 onCancelPendingItem={handleCancelPendingItem}
@@ -296,11 +335,11 @@ const OrderPage = () => {
                 handleApplyPromoCode={handleApplyPromoCode}
                 promoMessage={promoMessage}
                 isCheckingPromo={isCheckingPromo}
-                appliedDiscount={appliedDiscount > 0}
+                appliedDiscount={effectiveDiscountRate > 0}
                 isPlacingOrder={isPlacingOrder}
                 onEditItem={handleEditItem}
                 walletBalance={walletBalance}
-                useWallet={useWallet}
+                useWallet={effectiveUseWallet}
                 onUseWalletChange={setUseWallet}
                 walletCreditApplied={walletCreditApplied}
               />
