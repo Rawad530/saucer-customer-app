@@ -18,6 +18,11 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CompleteProfilePage from './pages/CompleteProfilePage';
 
+// --- STEP 1: IMPORT THE MISSING PAGE COMPONENTS ---
+import OrderHistoryPage from './pages/OrderHistoryPage';
+import RewardsPage from './pages/RewardsPage';
+
+
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,31 +49,25 @@ function App() {
 
   return (
     <Routes>
-      {/* ------------------------------------------------------------ */}
-      {/* 1. Standalone Routes (No Layout wrapper) - Uses LandingPage styles */}
-      {/* ------------------------------------------------------------ */}
-      
-      {/* Landing Page (FIX Issue 4: Redirect if logged in) */}
+      {/* Standalone Routes */}
       <Route path="/" element={!session ? <LandingPage /> : <Navigate to="/account" replace />} />
-
-      {/* Auth Routes (Standalone, redirect if logged in) */}
       <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/account" replace />} />
       <Route path="/register" element={!session ? <RegisterPage /> : <Navigate to="/account" replace />} />
 
-      {/* ------------------------------------------------------------ */}
-      {/* 2. Application Routes (Wrapped in the standard Layout) - Uses global Tailwind styles */}
-      {/* ------------------------------------------------------------ */}
+      {/* Application Routes (Wrapped in the standard Layout) */}
       <Route element={<Layout />}>
         <Route path="/payment-status" element={<PaymentStatusPage />} />
-
-        {/* Hybrid Route */}
         <Route path="/order" element={<OrderPage />} />
 
         {/* Protected Routes */}
         <Route path="/complete-profile" element={session ? <CompleteProfilePage /> : <Navigate to="/login" replace />} />
         <Route path="/account" element={session ? <Account session={session} /> : <Navigate to="/login" replace />} />
         <Route path="/wallet" element={session ? <WalletPage /> : <Navigate to="/login" replace />} />
-        
+
+        {/* --- STEP 2: ADD THE MISSING ROUTES HERE (before the catch-all) --- */}
+        <Route path="/history" element={session ? <OrderHistoryPage /> : <Navigate to="/login" replace />} />
+        <Route path="/rewards" element={session ? <RewardsPage /> : <Navigate to="/login" replace />} />
+
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
