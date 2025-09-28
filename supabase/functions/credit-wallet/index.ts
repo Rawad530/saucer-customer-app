@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
 
     // Call the secure database function
     const { error } = await supabaseAdmin.rpc('credit_wallet', {
-      user_id_to_credit: customerId,
+      customer_id_to_credit: customerId,
       amount_to_credit: amount,
       transaction_description: description,
     });

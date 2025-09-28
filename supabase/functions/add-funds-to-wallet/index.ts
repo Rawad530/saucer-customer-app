@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     // 2. Register the pending top-up
     const { error: insertError } = await supabaseAdmin.from('pending_wallet_topups').insert({
         topup_id: transactionId,
-        user_id: user.id,
+        customer_id: user.id,
         amount: amount
     });
     if (insertError) {
