@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
     
     if (cashbackAmount > 0) {
       const { error: creditError } = await supabaseAdmin.rpc('credit_wallet', {
-        customer_id_to_credit: transaction.user_id,
+        user_id_to_credit: transaction.user_id,
         amount_to_credit: cashbackAmount,
         transaction_description: `5% cashback for order #${transaction.order_number}`,
       });

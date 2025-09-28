@@ -30,7 +30,7 @@ const WalletPage = () => {
         setUser(user);
         const [profileResponse, transactionsResponse] = await Promise.all([
           supabase.from('customer_profiles').select('wallet_balance').eq('id', user.id).single(),
-          supabase.from('wallet_transactions').select('*').eq('customer_id', user.id).order('created_at', { ascending: false })
+          supabase.from('wallet_transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
         ]);
         
         if (profileResponse.data) setBalance(profileResponse.data.wallet_balance);
