@@ -1,6 +1,6 @@
 // src/App.tsx
 
-// This is the final corrected version with the '/profile' route restored.
+// This is the final corrected version with all routes, including password reset.
 
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
@@ -17,9 +17,12 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import OrderHistoryPage from './pages/OrderHistoryPage';
 import RewardsPage from './pages/RewardsPage';
-
-// --- STEP 1: IMPORT THE 'ProfilePage' COMPONENT ---
 import ProfilePage from './pages/ProfilePage';
+
+// --- ADDED: Imports for the password reset pages ---
+import RequestPasswordResetPage from './pages/RequestPasswordResetPage';
+import UpdatePasswordPage from './pages/UpdatePasswordPage';
+// ---------------------------------------------------
 
 
 function App() {
@@ -52,6 +55,11 @@ function App() {
       <Route path="/" element={!session ? <LandingPage /> : <Navigate to="/account" replace />} />
       <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/account" replace />} />
       <Route path="/register" element={!session ? <RegisterPage /> : <Navigate to="/account" replace />} />
+      
+      {/* --- ADDED: The two new routes for password reset --- */}
+      <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
+      <Route path="/update-password" element={<UpdatePasswordPage />} />
+      {/* --------------------------------------------------- */}
 
       {/* Application Routes (Wrapped in the standard Layout) */}
       <Route element={<Layout />}>
@@ -64,8 +72,6 @@ function App() {
         <Route path="/wallet" element={session ? <WalletPage /> : <Navigate to="/login" replace />} />
         <Route path="/history" element={session ? <OrderHistoryPage /> : <Navigate to="/login" replace />} />
         <Route path="/rewards" element={session ? <RewardsPage /> : <Navigate to="/login" replace />} />
-
-        {/* --- STEP 2: ADD THE MISSING '/profile' ROUTE HERE --- */}
         <Route path="/profile" element={session ? <ProfilePage /> : <Navigate to="/login" replace />} />
 
         {/* Catch-all */}

@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const LoginPage = () => {
-  // (State and Logic remain the same...)
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +29,6 @@ const LoginPage = () => {
   };
 
   return (
-    // Added min-h-screen bg-gray-900
     <div className="flex justify-center items-center py-12 min-h-screen bg-gray-900">
       <Card className="w-full max-w-md bg-gray-800 border-gray-700 text-white">
         <CardHeader>
@@ -38,7 +36,6 @@ const LoginPage = () => {
           <CardTitle className="text-2xl text-amber-400">Sign In</CardTitle>
         </CardHeader>
         <CardContent>
-          {/* (Form content remains the same) */}
           <form onSubmit={handleLogin} className="space-y-4">
             {error && <p className="text-red-500 text-sm bg-red-900/50 p-3 rounded">{error}</p>}
             
@@ -48,7 +45,14 @@ const LoginPage = () => {
             </div>
             
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-300">Password</label>
+              <div className="flex justify-between items-center">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-300">Password</label>
+                {/* --- THIS IS THE NEW LINK THAT WAS ADDED --- */}
+                <Link to="/request-password-reset" className="text-sm text-amber-400 hover:underline">
+                  Forgot your password?
+                </Link>
+                {/* ------------------------------------------- */}
+              </div>
               <Input id="password" type="password" placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1 bg-gray-700 border-gray-600 text-white" />
             </div>
             
