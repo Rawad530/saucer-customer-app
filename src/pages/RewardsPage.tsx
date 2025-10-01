@@ -60,7 +60,7 @@ const RewardsPage = () => {
           </div>
 
           <div className="bg-gray-800 p-4 rounded-lg mb-6 text-center">
-            <p className="text-gray-400">Your Current Stamp Balance</p>
+            <p className="text-gray-400">Your Current Point Balance</p>
             <p className="text-4xl font-bold text-amber-400">{loading ? '...' : myPoints}</p>
           </div>
 
