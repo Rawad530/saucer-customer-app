@@ -10,12 +10,12 @@ interface Reward {
   id: number;
   title: string;
   description: string;
-  stamps_required: number;
+  points_required: number;
 }
 
 const RewardsPage = () => {
   const [rewards, setRewards] = useState<Reward[]>([]);
-  const [myStamps, setMyStamps] = useState(0);
+  const [myPoints, setMyPoints] = useState(0);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
@@ -30,17 +30,17 @@ const RewardsPage = () => {
           .from('rewards')
           .select('*')
           .eq('is_active', true)
-          .order('stamps_required', { ascending: true });
+          .order('points_required', { ascending: true });
 
         // Fetch the user's current stamp count
         const { data: profileData } = await supabase
           .from('customer_profiles')
-          .select('stamps')
+          .select('points')
           .eq('id', user.id)
           .single();
 
         if (rewardsData) setRewards(rewardsData);
-        if (profileData) setMyStamps(profileData.stamps);
+        if (profileData) setMyPoints(profileData.points);
       }
       setLoading(false);
     };
@@ -61,7 +61,7 @@ const RewardsPage = () => {
 
           <div className="bg-gray-800 p-4 rounded-lg mb-6 text-center">
             <p className="text-gray-400">Your Current Stamp Balance</p>
-            <p className="text-4xl font-bold text-amber-400">{loading ? '...' : myStamps}</p>
+            <p className="text-4xl font-bold text-amber-400">{loading ? '...' : myPoints}</p>
           </div>
 
           {loading ? (
@@ -69,13 +69,13 @@ const RewardsPage = () => {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {rewards.map(reward => {
-                const canAfford = myStamps >= reward.stamps_required;
+                const canAfford = myPoints >= reward.points_required;
                 return (
                   <div key={reward.id} className={`p-4 rounded-lg border ${canAfford ? 'border-amber-400 bg-gray-800' : 'border-gray-700 bg-gray-800/50'}`}>
                     <h2 className="text-xl font-bold">{reward.title}</h2>
                     <p className="text-gray-400 text-sm mt-1">{reward.description}</p>
                     <div className="flex justify-between items-center mt-4">
-                      <p className="text-lg font-semibold text-amber-400">{reward.stamps_required} Stamps</p>
+                      <p className="text-lg font-semibold text-amber-400">{reward.points_required} Points</p>
                       <button 
                         onClick={() => setSelectedReward(reward)}
                         disabled={!canAfford}

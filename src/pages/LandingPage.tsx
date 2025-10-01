@@ -82,7 +82,7 @@ const LandingPage = () => {
             <div className="benefit-card">
               <Award className="benefit-icon" />
               <h3>Loyalty & Rewards</h3>
-              <p>Earn royalty points (stamps) for your purchases and redeem them for free food and drinks.</p>
+              <p>Earn royalty points (points) for your purchases and redeem them for free food and drinks.</p>
             </div>
             <div className="benefit-card">
               <Wallet className="benefit-icon" />

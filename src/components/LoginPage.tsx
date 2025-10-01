@@ -74,7 +74,7 @@ const LandingPage = () => {
                   <Award className="h-5 w-5 text-amber-400 shrink-0 mt-1" />
                   <div>
                     <h4 className="font-semibold">Loyalty Rewards</h4>
-                    <p className="text-sm text-gray-400">Earn stamps and redeem them for free food.</p>
+                    <p className="text-sm text-gray-400">Earn points and redeem them for free food.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">

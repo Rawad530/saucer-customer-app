@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 interface Profile {
   full_name: string;
   phone: string;
-  stamps: number;
+  points: number;
 }
 
 const ProfilePage = () => {
@@ -27,7 +27,7 @@ const ProfilePage = () => {
         setUser(user);
         const { data, error } = await supabase
           .from('customer_profiles')
-          .select('full_name, phone, stamps')
+          .select('full_name, phone, points')
           .eq('id', user.id)
           .single();
 
@@ -113,8 +113,8 @@ const ProfilePage = () => {
             />
           </div>
           <div>
-            <label className="text-sm font-bold text-gray-400">Loyalty Stamps</label>
-            <p className="w-full px-4 py-2 text-gray-300 bg-gray-700/50 rounded-md mt-1">{profile.stamps}</p>
+            <label className="text-sm font-bold text-gray-400">Loyalty Points</label>
+            <p className="w-full px-4 py-2 text-gray-300 bg-gray-700/50 rounded-md mt-1">{profile.points}</p>
           </div>
 
           <button

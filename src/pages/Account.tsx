@@ -1,7 +1,5 @@
 // src/pages/Account.tsx
 
-// This is your preferred code with the final TypeScript error fixed.
-
 import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -10,14 +8,15 @@ import { User, Wallet, Star, History, Truck, Megaphone, QrCode } from 'lucide-re
 import QRCode from "react-qr-code";
 import { Order, OrderItem } from '../types/order';
 
+// Define types for the new data we will fetch
 interface ProfileData {
   full_name: string;
-  stamps: number;
+  points: number;
   wallet_balance: number;
 }
 interface NextReward {
   title: string;
-  stamps_required: number;
+  points_required: number;
 }
 interface Announcement {
   title: string;
@@ -39,8 +38,8 @@ const Account = ({ session }: { session: Session }) => {
       const { user } = session;
 
       const [profileRes, rewardsRes, ordersRes, announcementRes, statusRes] = await Promise.all([
-        supabase.from('customer_profiles').select('full_name, stamps, wallet_balance').eq('id', user.id).single(),
-        supabase.from('rewards').select('title, stamps_required').order('stamps_required', { ascending: true }),
+        supabase.from('customer_profiles').select('full_name, points, wallet_balance').eq('id', user.id).single(),
+        supabase.from('rewards').select('title, points_required').order('points_required', { ascending: true }),
         supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
         supabase.from('announcements').select('title, content').eq('is_active', true).order('created_at', { ascending: false }).limit(1).single(),
         supabase.functions.invoke('check-restaurant-status')
@@ -49,44 +48,39 @@ const Account = ({ session }: { session: Session }) => {
       if (profileRes.data) setProfileData(profileRes.data);
 
       if (profileRes.data && rewardsRes.data) {
-        const currentStamps = profileRes.data.stamps;
-        const next = rewardsRes.data.find(reward => reward.stamps_required > currentStamps);
-        // Set to null if no next reward is found, otherwise the stale state can persist
-        setNextReward(next || null);
+        const currentPoints = profileRes.data.points;
+        const next = rewardsRes.data.find(reward => reward.points_required > currentPoints);
+        if (next) setNextReward(next);
       }
 
-      // --- THIS IS THE ONLY SECTION THAT HAS BEEN CHANGED ---
-      // The manual mapping was causing the TypeScript error.
-      // Since your 'Order' type already matches the database (snake_case),
-      // we can just cast the data directly. This fixes the crash.
       if (ordersRes.data && ordersRes.data.length > 0) {
-        const typedOrders = ordersRes.data as Order[];
+        const formattedOrders: Order[] = ordersRes.data.map(o => ({
+            id: o.transaction_id, orderNumber: o.order_number, items: o.items,
+            totalPrice: o.total_price, paymentMode: o.payment_mode, status: o.status,
+            timestamp: new Date(o.created_at),
+        }));
         
-        setLastOrder(typedOrders[0]);
+        setLastOrder(formattedOrders[0]);
 
         const itemCounts = new Map<string, number>();
-        typedOrders.forEach(order => {
-          // Add a safety check for items that might be null
-          (order.items || []).forEach((item: OrderItem) => {
-              if (item && item.menuItem && item.menuItem.name) {
+        formattedOrders.forEach(order => {
+            order.items.forEach((item: OrderItem) => {
                 const name = item.menuItem.name;
                 itemCounts.set(name, (itemCounts.get(name) || 0) + item.quantity);
-              }
-          });
+            });
         });
         if (itemCounts.size > 0) {
-          const mostOrdered = [...itemCounts.entries()].reduce((a, b) => b[1] > a[1] ? b : a);
-          setMostOrderedItem(mostOrdered[0]);
+            const mostOrdered = [...itemCounts.entries()].reduce((a, b) => b[1] > a[1] ? b : a);
+            setMostOrderedItem(mostOrdered[0]);
         }
       }
-      // --- END OF FIX ---
       
       if (announcementRes.data) setAnnouncement(announcementRes.data);
       
       if (statusRes.error) {
         console.error("Error checking restaurant status:", statusRes.error);
         setIsRestaurantOpen(false);
-      } else if (statusRes.data) {
+      } else {
         setIsRestaurantOpen(statusRes.data.isOpen);
       }
 
@@ -104,26 +98,27 @@ const Account = ({ session }: { session: Session }) => {
     if (isRestaurantOpen === null) {
       return (
         <button className="inline-block w-full text-center px-12 py-4 text-lg font-bold bg-gray-500 text-white rounded-md cursor-not-allowed">
-          Checking Hours...
+            Checking Hours...
         </button>
       );
     }
     if (isRestaurantOpen) {
       return (
         <Link to="/order" className="inline-block w-full text-center px-12 py-4 text-lg font-bold bg-white text-amber-700 rounded-md hover:bg-gray-200">
-          Place a Pick-up Order
+            Place a Pick-up Order
         </Link>
       );
     }
     return (
-      <div className="text-center">
-        <button className="inline-block w-full text-center px-12 py-4 text-lg font-bold bg-gray-500 text-white rounded-md cursor-not-allowed">
-          Place a Pick-up Order
-        </button>
-        <p className="text-sm font-semibold text-red-500 mt-2">
-          We're currently closed for online orders.
-        </p>
-      </div>
+        <div className="text-center">
+            <button className="inline-block w-full text-center px-12 py-4 text-lg font-bold bg-gray-500 text-white rounded-md cursor-not-allowed">
+                Place a Pick-up Order
+            </button>
+            {/* --- THIS IS THE ONLY LINE THAT HAS BEEN CHANGED --- */}
+            <p className="text-sm font-semibold text-red-500 mt-2">
+                We're currently closed for online orders.
+            </p>
+        </div>
     );
   };
 
@@ -131,9 +126,9 @@ const Account = ({ session }: { session: Session }) => {
     return <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">Loading Dashboard...</div>;
   }
 
-  const rewardProgress = nextReward && profileData ? (profileData.stamps / nextReward.stamps_required) * 100 : 0;
-  const stampsNeeded = nextReward && profileData ? nextReward.stamps_required - profileData.stamps : 0;
-  const moneyNeeded = stampsNeeded * 10;
+  const rewardProgress = nextReward && profileData ? (profileData.points / nextReward.points_required) * 100 : 0;
+  const pointsNeeded = nextReward && profileData ? nextReward.points_required - profileData.points : 0;
+  const moneyNeeded = pointsNeeded * 10;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
@@ -149,10 +144,11 @@ const Account = ({ session }: { session: Session }) => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-amber-600 p-8 rounded-lg text-center">
-              <h2 className="text-3xl font-bold mb-4">Ready for another round?</h2>
-              <PlaceOrderButton />
+                <h2 className="text-3xl font-bold mb-4">Ready for another round?</h2>
+                <PlaceOrderButton />
             </div>
 
             <div className="bg-gray-800 p-6 rounded-lg">
@@ -161,13 +157,13 @@ const Account = ({ session }: { session: Session }) => {
                 <div>
                   <div className="flex justify-between items-end mb-1">
                     <p className="font-semibold">{nextReward.title}</p>
-                    <p className="text-sm font-bold text-gray-300">{profileData.stamps} / {nextReward.stamps_required} Stamps</p>
+                    <p className="text-sm font-bold text-gray-300">{profileData.points} / {nextReward.points_required} Points</p>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-4">
                     <div className="bg-amber-500 h-4 rounded-full" style={{ width: `${rewardProgress}%` }}></div>
                   </div>
                   <p className="text-xs text-gray-400 mt-2">
-                    You're {stampsNeeded} stamps away! Spend ₾{moneyNeeded.toFixed(2)} more to unlock.
+                    You're {pointsNeeded} points away! Spend ₾{moneyNeeded.toFixed(2)} more to unlock.
                   </p>
                 </div>
               ) : ( <p className="text-gray-400">You've unlocked all available rewards!</p> )}
@@ -178,9 +174,8 @@ const Account = ({ session }: { session: Session }) => {
                 <h3 className="flex items-center text-xl font-bold mb-4"><History className="w-6 h-6 mr-2 text-gray-300"/> Recent Activity</h3>
                 {lastOrder ? (
                     <div>
-                        {/* Fix: Use snake_case to match the Order type */}
                         <p className="text-sm text-gray-400">Last Order: #{lastOrder.order_number}</p>
-                        <p className="font-semibold truncate">{(lastOrder.items || []).map(i => i.menuItem.name).join(', ')}</p>
+                        <p className="font-semibold truncate">{lastOrder.items.map(i => i.menuItem.name).join(', ')}</p>
                         <hr className="border-gray-700 my-3" />
                         <p className="text-sm text-gray-400">Your Favorite Item:</p>
                         <p className="font-semibold">{mostOrderedItem || 'Not enough data'}</p>
@@ -200,15 +195,15 @@ const Account = ({ session }: { session: Session }) => {
 
           <div className="space-y-6">
             <div className="bg-gray-800 p-6 rounded-lg">
-                <h3 className="flex items-center text-xl font-bold mb-4"><User className="w-6 h-6 mr-2 text-gray-300"/> Profile & Wallet</h3>
-                <div className="text-center bg-gray-700/50 p-4 rounded-md mb-4">
-                    <p className="text-gray-400">Wallet Balance</p>
-                    <p className="text-3xl font-bold text-green-400">₾{profileData?.wallet_balance.toFixed(2) || '0.00'}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-2 text-center">
-                    <Link to="/wallet" className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 text-sm">Add Funds</Link>
-                    <Link to="/profile" className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700 text-sm">Edit Profile</Link>
-                </div>
+              <h3 className="flex items-center text-xl font-bold mb-4"><User className="w-6 h-6 mr-2 text-gray-300"/> Profile & Wallet</h3>
+              <div className="text-center bg-gray-700/50 p-4 rounded-md mb-4">
+                  <p className="text-gray-400">Wallet Balance</p>
+                  <p className="text-3xl font-bold text-green-400">₾{profileData?.wallet_balance.toFixed(2) || '0.00'}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                  <Link to="/wallet" className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 text-sm">Add Funds</Link>
+                  <Link to="/profile" className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700 text-sm">Edit Profile</Link>
+              </div>
             </div>
 
             <div className="bg-gray-800 p-6 rounded-lg text-center">
