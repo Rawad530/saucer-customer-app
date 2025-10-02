@@ -1,4 +1,4 @@
-// supabase/functions/create-invitation/index.ts
+// supabase/functions/send-invite-email/index.ts
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
@@ -14,6 +14,20 @@ Deno.serve(async (req) => {
       throw new Error("Invitee email is required.");
     }
 
+    // Use the Admin client for all secure operations
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    // Check if the invitee is already a registered user
+    const { data: existingUserData } = await supabaseAdmin.auth.admin.getUserByEmail(invitee_email);
+
+    if (existingUserData?.user) {
+      throw new Error("This person is already a registered user.");
+    }
+
+    // Get the inviter's user data from the request's authorization header
     const authHeader = req.headers.get('Authorization')!;
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -21,28 +35,22 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
-    if (userError || !user) throw new Error("Could not identify the inviter.");
+    const { data: { user: inviterUser }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !inviterUser) throw new Error("Could not identify the inviter.");
 
-    const inviterId = user.id;
-
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    // --- THIS IS THE ONLY LOGIC CHANGE: Changed from 5 to 3 ---
+    // Award 3 points to the inviter
     const { error: creditError } = await supabaseAdmin.rpc('credit_points', {
-      user_id_to_credit: inviterId,
+      user_id_to_credit: inviterUser.id,
       points_to_add: 3
     });
 
     if (creditError) throw new Error(`Failed to award points: ${creditError.message}`);
 
+    // Create the invitation record in the database
     const { data: invitation, error: inviteError } = await supabaseAdmin
       .from('invitations')
       .insert({
-        inviter_id: inviterId,
+        inviter_id: inviterUser.id,
         invitee_email: invitee_email,
       })
       .select('id')
@@ -50,6 +58,7 @@ Deno.serve(async (req) => {
 
     if (inviteError) throw new Error(`Could not create invitation: ${inviteError.message}`);
 
+    // Send the invitation email using Resend
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     const signUpLink = `https://saucerburger.ge/register?invite_code=${invitation.id}`;
 
