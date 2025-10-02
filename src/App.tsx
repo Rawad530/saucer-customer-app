@@ -18,6 +18,7 @@ import RegisterPage from './pages/RegisterPage';
 import OrderHistoryPage from './pages/OrderHistoryPage';
 import RewardsPage from './pages/RewardsPage';
 import ProfilePage from './pages/ProfilePage';
+import InvitePage from './pages/InvitePage';
 
 // --- ADDED: Imports for the password reset pages ---
 import RequestPasswordResetPage from './pages/RequestPasswordResetPage';
@@ -73,6 +74,7 @@ function App() {
         <Route path="/history" element={session ? <OrderHistoryPage /> : <Navigate to="/login" replace />} />
         <Route path="/rewards" element={session ? <RewardsPage /> : <Navigate to="/login" replace />} />
         <Route path="/profile" element={session ? <ProfilePage /> : <Navigate to="/login" replace />} />
+        <Route path="/invite" element={session ? <InvitePage /> : <Navigate to="/login" replace />} />
 
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/" replace />} />
