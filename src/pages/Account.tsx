@@ -53,27 +53,8 @@ const Account = ({ session }: { session: Session }) => {
         if (next) setNextReward(next);
       }
 
-      if (ordersRes.data && ordersRes.data.length > 0) {
-        const formattedOrders: Order[] = ordersRes.data.map(o => ({
-            id: o.transaction_id, orderNumber: o.order_number, items: o.items,
-            totalPrice: o.total_price, paymentMode: o.payment_mode, status: o.status,
-            timestamp: new Date(o.created_at),
-        }));
-        
-        setLastOrder(formattedOrders[0]);
-
-        const itemCounts = new Map<string, number>();
-        formattedOrders.forEach(order => {
-            order.items.forEach((item: OrderItem) => {
-                const name = item.menuItem.name;
-                itemCounts.set(name, (itemCounts.get(name) || 0) + item.quantity);
-            });
-        });
-        if (itemCounts.size > 0) {
-            const mostOrdered = [...itemCounts.entries()].reduce((a, b) => b[1] > a[1] ? b : a);
-            setMostOrderedItem(mostOrdered[0]);
-        }
-      }
+       if (ordersRes.data && ordersRes.data.length > 0) {
+        const typedOrders = ordersRes.data as Order[];}
       
       if (announcementRes.data) setAnnouncement(announcementRes.data);
       

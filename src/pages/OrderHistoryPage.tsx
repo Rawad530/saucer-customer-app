@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Order } from '../types/order';
+import { Order, PaymentMode } from '../types/order'; // Import PaymentMode
 import { Link } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, Tag, CreditCard } from 'lucide-react';
@@ -25,8 +25,6 @@ const OrderHistoryPage = () => {
         if (error) {
           console.error('Error fetching orders:', error);
         } else if (data) {
-          // --- FIX APPLIED ---
-          // Removed the manual mapping. We now cast the snake_case data directly.
           setOrders(data as Order[]);
         }
       }
@@ -34,6 +32,25 @@ const OrderHistoryPage = () => {
     };
     fetchOrders();
   }, []);
+
+  // --- NEW: Helper function to determine badge color and style ---
+  const getPaymentBadgeClass = (paymentMode: PaymentMode) => {
+    switch (paymentMode) {
+      case 'Cash':
+        return "bg-slate-600 text-slate-100 border-slate-500 hover:bg-slate-600";
+      case 'Card - Terminal':
+        return "bg-purple-900/60 text-purple-300 border-purple-700 hover:bg-purple-900/60";
+      case 'Card - Online':
+        return "bg-blue-900/60 text-blue-300 border-blue-700 hover:bg-blue-900/60";
+      case 'Wallet Only':
+        return "bg-green-900/60 text-green-300 border-green-700 hover:bg-green-900/60";
+      case 'Wallet/Card Combo':
+        return "bg-teal-900/60 text-teal-300 border-teal-700 hover:bg-teal-900/60";
+      default:
+        return "border-gray-600"; // Default fallback
+    }
+  };
+  // --- END OF NEW FUNCTION ---
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
@@ -53,80 +70,80 @@ const OrderHistoryPage = () => {
         ) : (
           <div className="space-y-4">
             {orders.map(order => {
-                // --- FIX APPLIED: Use snake_case for all properties ---
-                const subtotal = order.promo_code_used 
-                  ? order.total_price / (1 - (order.discount_applied_percent || 0) / 100) 
-                  : order.total_price;
-                const discountAmount = subtotal - order.total_price;
+              const subtotal = order.promo_code_used 
+                ? order.total_price / (1 - (order.discount_applied_percent || 0) / 100) 
+                : order.total_price;
+              const discountAmount = subtotal - order.total_price;
 
-                return (
-                    <Collapsible key={order.transaction_id} className="bg-gray-800 rounded-lg border border-gray-700">
-                        <CollapsibleTrigger className="w-full p-4 flex justify-between items-center cursor-pointer">
-                            <div className="text-left">
-                                <h2 className="font-bold text-lg">Order #{order.order_number}</h2>
-                                <p className="text-sm text-gray-400">{new Date(order.created_at).toLocaleString()}</p>
-                                <p className="text-sm mt-2">Status: <span className="capitalize font-medium text-amber-400">{order.status.replace('_', ' ')}</span></p>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <p className="font-semibold text-xl">₾{order.total_price.toFixed(2)}</p>
-                                <ChevronDown className="h-5 w-5 transition-transform duration-300" />
-                            </div>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="p-4 border-t border-gray-700">
-                            <div className="space-y-4">
-                                <div>
-                                    <h3 className="font-semibold mb-2 text-gray-300">Items Ordered:</h3>
-                                    <div className="space-y-3">
-                                        {order.items.map((item, index) => (
-                                            <div key={index} className="bg-gray-700/50 p-3 rounded-md text-sm">
-                                                <div className="flex justify-between font-medium">
-                                                    <span>{item.quantity} x {item.menuItem.name}</span>
-                                                    <span>₾{(item.menuItem.price * item.quantity).toFixed(2)}</span>
-                                                </div>
-                                                <div className="text-xs text-gray-400 pl-4">
-                                                    {item.sauce && item.sauce !== 'None' && <div>- Sauce: {item.sauce}</div>}
-                                                    {item.drink && <div>- Drink: {item.drink}</div>}
-                                                    {item.addons && item.addons.length > 0 && <div>- Add-ons: {item.addons.join(', ')}</div>}
-                                                    {item.spicy && <div>- Spicy</div>}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="border-t border-gray-700 pt-3 space-y-2">
-                                    {order.promo_code_used && (
-                                        <div className="flex justify-between items-center text-green-400">
-                                            <span>Subtotal</span>
-                                            <span>₾{subtotal.toFixed(2)}</span>
-                                        </div>
-                                    )}
-                                     {order.promo_code_used && (
-                                        <div className="flex justify-between items-center text-green-400">
-                                            <span>Discount ({order.promo_code_used})</span>
-                                            <span>- ₾{discountAmount.toFixed(2)}</span>
-                                        </div>
-                                    )}
-                                    <div className="flex justify-between items-center font-bold text-lg">
-                                        <span>Total</span>
-                                        <span>₾{order.total_price.toFixed(2)}</span>
-                                    </div>
-                                </div>
-                                 <div className="flex justify-between items-center text-sm text-gray-400 border-t border-gray-700 pt-3">
-                                    <Badge variant="outline" className="border-gray-600">
-                                        <CreditCard className="w-4 h-4 mr-2" />
-                                        Paid with: {order.payment_mode}
-                                    </Badge>
-                                    {order.promo_code_used && (
-                                        <Badge variant="outline" className="border-indigo-500 text-indigo-400">
-                                            <Tag className="w-4 h-4 mr-2" />
-                                            Promo Used
-                                        </Badge>
-                                    )}
-                                </div>
-                            </div>
-                        </CollapsibleContent>
-                    </Collapsible>
-                )
+              return (
+                  <Collapsible key={order.transaction_id} className="bg-gray-800 rounded-lg border border-gray-700">
+                      <CollapsibleTrigger className="w-full p-4 flex justify-between items-center cursor-pointer">
+                          <div className="text-left">
+                              <h2 className="font-bold text-lg break-all">Order #{order.order_number}</h2>
+                              <p className="text-sm text-gray-400">{new Date(order.created_at).toLocaleString()}</p>
+                              <p className="text-sm mt-2">Status: <span className="capitalize font-medium text-amber-400">{order.status.replace('_', ' ')}</span></p>
+                          </div>
+                          <div className="flex items-center gap-4">
+                              <p className="font-semibold text-xl">₾{order.total_price.toFixed(2)}</p>
+                              <ChevronDown className="h-5 w-5 transition-transform duration-300" />
+                          </div>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="p-4 border-t border-gray-700">
+                          <div className="space-y-4">
+                              <div>
+                                  <h3 className="font-semibold mb-2 text-gray-300">Items Ordered:</h3>
+                                  <div className="space-y-3">
+                                      {order.items.map((item, index) => (
+                                          <div key={index} className="bg-gray-700/50 p-3 rounded-md text-sm">
+                                              <div className="flex justify-between font-medium">
+                                                  <span>{item.quantity} x {item.menuItem.name}</span>
+                                                  <span>₾{(item.menuItem.price * item.quantity).toFixed(2)}</span>
+                                              </div>
+                                              <div className="text-xs text-gray-400 pl-4">
+                                                  {item.sauce && item.sauce !== 'None' && <div>- Sauce: {item.sauce}</div>}
+                                                  {item.drink && <div>- Drink: {item.drink}</div>}
+                                                  {item.addons && item.addons.length > 0 && <div>- Add-ons: {item.addons.join(', ')}</div>}
+                                                  {item.spicy && <div>- Spicy</div>}
+                                              </div>
+                                          </div>
+                                      ))}
+                                  </div>
+                              </div>
+                              <div className="border-t border-gray-700 pt-3 space-y-2">
+                                  {order.promo_code_used && (
+                                      <div className="flex justify-between items-center text-green-400">
+                                          <span>Subtotal</span>
+                                          <span>₾{subtotal.toFixed(2)}</span>
+                                      </div>
+                                  )}
+                                  {order.promo_code_used && (
+                                      <div className="flex justify-between items-center text-green-400">
+                                          <span>Discount ({order.promo_code_used})</span>
+                                          <span>- ₾{discountAmount.toFixed(2)}</span>
+                                      </div>
+                                  )}
+                                  <div className="flex justify-between items-center font-bold text-lg">
+                                      <span>Total</span>
+                                      <span>₾{order.total_price.toFixed(2)}</span>
+                                  </div>
+                              </div>
+                              <div className="flex justify-between items-center text-sm text-gray-400 border-t border-gray-700 pt-3">
+                                  {/* --- MODIFIED: The badge now uses the color function --- */}
+                                  <Badge variant="outline" className={getPaymentBadgeClass(order.payment_mode)}>
+                                      <CreditCard className="w-4 h-4 mr-2" />
+                                      Paid with: {order.payment_mode}
+                                  </Badge>
+                                  {order.promo_code_used && (
+                                      <Badge variant="outline" className="border-indigo-500 text-indigo-400">
+                                          <Tag className="w-4 h-4 mr-2" />
+                                          Promo Used
+                                      </Badge>
+                                  )}
+                              </div>
+                          </div>
+                      </CollapsibleContent>
+                  </Collapsible>
+              )
             })}
           </div>
         )}

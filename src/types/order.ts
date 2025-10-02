@@ -1,5 +1,16 @@
 // src/types/order.ts
 
+// A comprehensive list of all possible payment methods from both the POS and Customer App
+export type PaymentMode = 
+  // From POS
+  'Cash' | 
+  'Card - Terminal' | 
+  'Bank Transfer' |
+  // From Customer App
+  'Card - Online' |
+  'Wallet Only' |
+  'Wallet/Card Combo';
+
 // Represents an item in the menu database
 export interface MenuItem {
   id: number;
@@ -20,7 +31,6 @@ export interface OrderItem {
   sauce?: string;
   sauceCup?: string;
   drink?: string;
-  // Ensure addons is treated consistently (as an array, potentially empty)
   addons: string[]; 
   spicy?: boolean;
   remarks?: string;
@@ -40,23 +50,22 @@ export interface PendingItem {
   discount?: number;
 }
 
-// --- CORRECTED ORDER INTERFACE ---
 // Represents a complete transaction record fetched from the database (snake_case).
 export interface Order {
   transaction_id: string;
-  user_id: string | null; // Updated to allow null for guests
-  
+  user_id: string | null;
+
   // Guest fields
   guest_name: string | null;
   guest_phone: string | null;
 
-  // CRITICAL: Use snake_case to match database columns
-  order_number: number; // Fixes Error 2
+  // Order details
+  order_number: string; // Changed to string to support new format
   items: OrderItem[];
-  total_price: number; // Fixes Error 3
-  payment_mode: string;
+  total_price: number;
+  payment_mode: PaymentMode; // Using the comprehensive type now
   status: string;
-  created_at: string; // Fixes Error 4
+  created_at: string;
   
   // Additional fields
   promo_code_used: string | null;
@@ -64,4 +73,3 @@ export interface Order {
   wallet_credit_applied: number;
   order_type: string;
 }
-// ---------------------------------
