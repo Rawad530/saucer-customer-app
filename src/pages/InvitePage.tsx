@@ -29,7 +29,7 @@ const InvitePage = () => {
       if (data.error) throw new Error(data.error);
       
       setSuccessMessage(data.message || 'Invitation sent successfully!');
-      setEmail(''); // Clear the input on success
+      setEmail('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
     } finally {
@@ -44,8 +44,9 @@ const InvitePage = () => {
           <CardTitle className="text-2xl text-amber-400 flex items-center gap-2">
             <Gift className="w-6 h-6" /> Invite a Friend
           </CardTitle>
+          {/* --- THIS TEXT HAS BEEN UPDATED --- */}
           <CardDescription className="text-gray-300 pt-2">
-            Invite a friend and earn **5 points** immediately. You'll get **1 more point** when they sign up!
+            Invite a friend and earn **3 points** immediately. You'll get **3 more points** when they sign up!
           </CardDescription>
         </CardHeader>
         <CardContent>

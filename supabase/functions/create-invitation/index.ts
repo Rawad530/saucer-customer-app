@@ -14,7 +14,6 @@ Deno.serve(async (req) => {
       throw new Error("Invitee email is required.");
     }
 
-    // 1. Create a Supabase client with the user's authorization
     const authHeader = req.headers.get('Authorization')!;
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -22,39 +21,35 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    // 2. Get the inviter's user data
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !user) throw new Error("Could not identify the inviter.");
 
     const inviterId = user.id;
 
-    // 3. Use the Admin client for secure operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // 4. Immediately award 5 points to the inviter
+    // --- THIS IS THE ONLY LOGIC CHANGE: Changed from 5 to 3 ---
     const { error: creditError } = await supabaseAdmin.rpc('credit_points', {
       user_id_to_credit: inviterId,
-      points_to_add: 5
+      points_to_add: 3
     });
 
     if (creditError) throw new Error(`Failed to award points: ${creditError.message}`);
 
-    // 5. Create the invitation record in the database
     const { data: invitation, error: inviteError } = await supabaseAdmin
       .from('invitations')
       .insert({
         inviter_id: inviterId,
         invitee_email: invitee_email,
       })
-      .select('id') // Get the ID of the new invitation
+      .select('id')
       .single();
 
     if (inviteError) throw new Error(`Could not create invitation: ${inviteError.message}`);
 
-    // 6. Send the invitation email using Resend
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     const signUpLink = `https://saucerburger.ge/register?invite_code=${invitation.id}`;
 
@@ -65,7 +60,7 @@ Deno.serve(async (req) => {
         'Authorization': `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: 'Saucer Burger <onboarding@resend.dev>', // Or your verified domain
+        from: 'Saucer Burger <onboarding@resend.dev>',
         to: [invitee_email],
         subject: 'You have been invited to Saucer Burger!',
         html: `
@@ -80,7 +75,6 @@ Deno.serve(async (req) => {
     });
 
     if (!res.ok) {
-        // If email fails, we should ideally roll back the points, but for now we'll just log it
         console.error("Failed to send email:", await res.text());
         throw new Error("Invitation created, but failed to send the email.");
     }
