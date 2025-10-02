@@ -1,8 +1,9 @@
 // src/pages/RegisterPage.tsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Link } from 'react-router-dom';
+// --- 1. ADDED: Import useSearchParams to read the URL ---
+import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -11,25 +12,32 @@ const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // --- 1. ADD STATE FOR NEW FIELDS ---
   const [fullName, setFullName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  // ------------------------------------
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  // --- 2. UPDATE THE SIGN-UP LOGIC ---
+  // --- 2. ADDED: Logic to get the invite_code from the URL ---
+  const [searchParams] = useSearchParams();
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const code = searchParams.get('invite_code');
+    if (code) {
+      setInviteCode(code);
+    }
+  }, [searchParams]);
+  // --------------------------------------------------------
+
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLoading(true);
     setError('');
 
-    // Step 1: Create the user in Supabase Authentication
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        // This now correctly redirects to the account page after email confirmation
         emailRedirectTo: `${window.location.origin}/account`,
       },
     });
@@ -41,33 +49,43 @@ const RegisterPage = () => {
     }
 
     if (!authData.user) {
-        setError('An unexpected error occurred. Please try again.');
-        setLoading(false);
-        return;
+      setError('An unexpected error occurred. Please try again.');
+      setLoading(false);
+      return;
     }
 
-    // Step 2: If auth user is created, save their details to the 'customer_profiles' table
     const { error: profileError } = await supabase
       .from('customer_profiles')
       .insert({
-        id: authData.user.id, // Links this profile to the authenticated user
+        id: authData.user.id,
         full_name: fullName,
         phone_number: phoneNumber,
         email: email,
       });
       
     if (profileError) {
-        // This is a failsafe. You can decide how to handle this, e.g., ask user to contact support.
-        setError(`Account was created, but we couldn't save your profile details. Error: ${profileError.message}`);
-        setLoading(false);
-        return;
+      setError(`Account created, but we couldn't save profile details. Error: ${profileError.message}`);
+      setLoading(false);
+      return;
     }
 
-    // If both steps are successful, show the success message
+    // --- 3. ADDED: If an invite code exists, call the new database function ---
+    if (inviteCode) {
+      const { error: rpcError } = await supabase.rpc('complete_invitation', {
+        invite_code: inviteCode,
+        new_user_id: authData.user.id,
+      });
+
+      if (rpcError) {
+        // This won't stop the user, but it's good to log if the referral part fails
+        console.error("Failed to complete invitation process:", rpcError.message);
+      }
+    }
+    // --------------------------------------------------------------------
+
     setSuccess(true);
     setLoading(false);
   };
-  // --- END OF LOGIC UPDATE ---
 
   if (success) {
     return (
@@ -78,7 +96,6 @@ const RegisterPage = () => {
           </CardHeader>
           <CardContent>
             <p>A confirmation link has been sent to <strong>{email}</strong>.</p>
-            {/* Updated success message */}
             <p className="mt-4">Please click the link in the email to activate your account.</p>
           </CardContent>
         </Card>
@@ -108,7 +125,6 @@ const RegisterPage = () => {
               <Input id="password" type="password" placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="mt-1 bg-gray-700 border-gray-600 text-white" />
             </div>
             
-            {/* --- 3. ADD THE NEW FORM FIELDS --- */}
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-300">Full Name</label>
               <Input id="fullName" type="text" placeholder="Peter Griffin" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="mt-1 bg-gray-700 border-gray-600 text-white" />
@@ -118,7 +134,6 @@ const RegisterPage = () => {
               <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-300">Phone Number</label>
               <Input id="phoneNumber" type="tel" placeholder="+995 123 456 789" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="mt-1 bg-gray-700 border-gray-600 text-white" />
             </div>
-            {/* ------------------------------- */}
             
             <Button type="submit" disabled={loading} className="w-full bg-amber-600 hover:bg-amber-700">
               {loading ? 'Creating Account...' : 'Register'}
