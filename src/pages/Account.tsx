@@ -18,6 +18,7 @@ interface NextReward {
   points_required: number;
 }
 interface Announcement {
+  id: number; // Add id for the .map key
   title: string;
   content: string;
 }
@@ -28,7 +29,8 @@ const Account = ({ session }: { session: Session }) => {
   const [nextReward, setNextReward] = useState<NextReward | null>(null);
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [mostOrderedItem, setMostOrderedItem] = useState<string | null>(null);
-  const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  // --- CHANGE #1: Update state to hold an array of announcements ---
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -40,7 +42,8 @@ const Account = ({ session }: { session: Session }) => {
         supabase.from('customer_profiles').select('full_name, points, wallet_balance').eq('id', user.id).single(),
         supabase.from('rewards').select('title, points_required').order('points_required', { ascending: true }),
         supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        supabase.from('announcements').select('title, content').eq('is_active', true).order('created_at', { ascending: false }).limit(1).single(),
+        // --- CHANGE #2: Update query to fetch ALL active announcements, not just one ---
+        supabase.from('announcements').select('id, title, content').eq('is_active', true).order('created_at', { ascending: false }),
         supabase.functions.invoke('check-restaurant-status')
       ]);
 
@@ -54,7 +57,6 @@ const Account = ({ session }: { session: Session }) => {
 
       if (ordersRes.data && ordersRes.data.length > 0) {
         const typedOrders = ordersRes.data as Order[];
-        
         setLastOrder(typedOrders[0]);
 
         const itemCounts = new Map<string, number>();
@@ -72,7 +74,7 @@ const Account = ({ session }: { session: Session }) => {
         }
       }
       
-      if (announcementRes.data) setAnnouncement(announcementRes.data);
+      if (announcementRes.data) setAnnouncements(announcementRes.data);
       
       if (statusRes.error) {
         console.error("Error checking restaurant status:", statusRes.error);
@@ -111,7 +113,6 @@ const Account = ({ session }: { session: Session }) => {
         <button className="inline-block w-full text-center px-12 py-4 text-lg font-bold bg-gray-500 text-white rounded-md cursor-not-allowed">
           Place a Pick-up Order
         </button>
-        {/* --- THIS LINE HAS BEEN MODIFIED FOR BETTER VISIBILITY --- */}
         <p className="text-sm font-semibold text-red-400 mt-2 bg-black/75 px-2 py-1 rounded-md inline-block">
           We're currently closed for online orders.
         </p>
@@ -181,12 +182,19 @@ const Account = ({ session }: { session: Session }) => {
               <Link to="/history" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View Full History &rarr;</Link>
             </div>
 
-            {announcement && (
-                <div className="bg-gray-800 p-6 rounded-lg">
-                    <h3 className="flex items-center text-xl font-bold mb-2"><Megaphone className="w-6 h-6 mr-2 text-blue-400"/> What's New?</h3>
-                    <h4 className="font-semibold text-lg">{announcement.title}</h4>
-                    <p className="text-gray-400">{announcement.content}</p>
+            {/* --- CHANGE #3: Update JSX to loop through the announcements array --- */}
+            {announcements.length > 0 && (
+              <div className="bg-gray-800 p-6 rounded-lg">
+                <h3 className="flex items-center text-xl font-bold mb-4"><Megaphone className="w-6 h-6 mr-2 text-blue-400"/> What's New?</h3>
+                <div className="space-y-4">
+                  {announcements.map((announcement) => (
+                    <div key={announcement.id} className="border-t border-gray-700 pt-4 first:border-t-0 first:pt-0">
+                      <h4 className="font-semibold text-lg">{announcement.title}</h4>
+                      <p className="text-gray-400">{announcement.content}</p>
+                    </div>
+                  ))}
                 </div>
+              </div>
             )}
           </div>
 
