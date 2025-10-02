@@ -21,7 +21,8 @@ const InvitePage = () => {
     setSuccessMessage('');
 
     try {
-      const { data, error: funcError } = await supabase.functions.invoke('create-invitation', {
+      // --- THIS LINE HAS BEEN CORRECTED ---
+      const { data, error: funcError } = await supabase.functions.invoke('send-invite-email', {
         body: { invitee_email: email },
       });
 
@@ -44,7 +45,6 @@ const InvitePage = () => {
           <CardTitle className="text-2xl text-amber-400 flex items-center gap-2">
             <Gift className="w-6 h-6" /> Invite a Friend
           </CardTitle>
-          {/* --- THIS TEXT HAS BEEN UPDATED --- */}
           <CardDescription className="text-gray-300 pt-2">
             Invite a friend and earn **3 points** immediately. You'll get **3 more points** when they sign up!
           </CardDescription>
