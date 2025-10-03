@@ -19,19 +19,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // --- THIS IS THE CORRECTED SECTION ---
-    const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({
-      email: invitee_email,
-    });
-
-    if (listUsersError) {
-      throw new Error(`Error checking for existing user: ${listUsersError.message}`);
-    }
-
-    if (users && users.length > 0) {
-      throw new Error("This person is already a registered user.");
-    }
-    // --- END OF CORRECTION ---
+    const { data: { users }, error: listUsersError } = await supabaseAdmin.auth.admin.listUsers({ email: invitee_email });
+    if (listUsersError) throw new Error(`Error checking for existing user: ${listUsersError.message}`);
+    if (users && users.length > 0) throw new Error("This person is already a registered user.");
 
     const authHeader = req.headers.get('Authorization')!;
     const supabaseClient = createClient(
@@ -43,20 +33,17 @@ Deno.serve(async (req) => {
     const { data: { user: inviterUser }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !inviterUser) throw new Error("Could not identify the inviter.");
     
-    const { error: creditError } = await supabaseAdmin.rpc('credit_points', {
-      user_id_to_credit: inviterUser.id,
-      points_to_add: 3
-    });
+    const { error: creditError } = await supabaseAdmin.rpc('credit_points', { user_id_to_credit: inviterUser.id, points_to_add: 3 });
     if (creditError) throw new Error(`Failed to award points: ${creditError.message}`);
 
-    const { data: invitation, error: inviteError } = await supabaseAdmin
-      .from('invitations')
-      .insert({ inviter_id: inviterUser.id, invitee_email: invitee_email })
-      .select('id')
-      .single();
+    const { data: invitation, error: inviteError } = await supabaseAdmin.from('invitations').insert({ inviter_id: inviterUser.id, invitee_email: invitee_email }).select('id').single();
     if (inviteError) throw new Error(`Could not create invitation: ${inviteError.message}`);
     
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    // --- TEMPORARY DEBUG: Your API key is hardcoded here for this test ---
+    const resendApiKey = "re_5AhUzWiZ_FhDNvRR4nv6o51SksrqZ6J13"; 
+    // const resendApiKey = Deno.env.get('RESEND_API_KEY'); 
+    // --------------------------------------------------------------------
+
     const signUpLink = `https://saucerburger.ge/register?invite_code=${invitation.id}`;
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -74,7 +61,7 @@ Deno.serve(async (req) => {
 
     if (!res.ok) {
         const errorBody = await res.text();
-        throw new Error(`Invitation created, but failed to send email. Status: ${res.status}`);
+        throw new Error(`Invitation created, but failed to send email. Status: ${res.status}. Body: ${errorBody}`);
     }
 
     return new Response(JSON.stringify({ message: "Invitation sent successfully!" }), {
