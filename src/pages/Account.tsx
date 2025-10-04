@@ -235,7 +235,7 @@ const Account = ({ session }: { session: Session }) => {
               <div className="bg-white p-4 rounded-md inline-block">
                   <QRCode value={session.user.id} size={200} viewBox={`0 0 256 256`}/>
               </div>
-              <p className="text-xs text-gray-400 mt-2">Scan this code at the counter for cashback & rewards.</p>
+              <p className="text-xs text-gray-400 mt-2">Scan this code at the counter for cashback.</p>
             </div>
             
             <div className="bg-gray-800 p-6 rounded-lg">
