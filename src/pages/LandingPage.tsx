@@ -144,7 +144,13 @@ const LandingPage = () => {
       <footer className="landing-footer">
         <div className="footer-grid">
           <div>
-            <h4>Saucer Burger & Wrap</h4>
+            <h4>Saucer Burger </h4>
+            <a 
+    href="https://maps.google.com/?cid=11266092328424134394&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ" 
+    target="_blank" 
+    rel="noopener noreferrer" 
+    className="text-gray-400 hover:text-white hover:underline"
+  ></a>
             <p>45 Petre Kavtaradze St<br />Tbilisi, Georgia</p>
             <p><strong>Hours:</strong> 12:00 PM - 2:00 AM</p>
           </div>
