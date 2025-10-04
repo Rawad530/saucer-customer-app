@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-// --- 1. ADDED: Import useSearchParams to read the URL ---
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+// --- 1. IMPORT NEW COMPONENTS ---
+import GoogleIcon from '@/components/GoogleIcon';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
@@ -16,8 +19,9 @@ const RegisterPage = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  // --- 2. ADD STATE FOR TERMS CHECKBOX ---
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // --- 2. ADDED: Logic to get the invite_code from the URL ---
   const [searchParams] = useSearchParams();
   const [inviteCode, setInviteCode] = useState<string | null>(null);
 
@@ -27,10 +31,29 @@ const RegisterPage = () => {
       setInviteCode(code);
     }
   }, [searchParams]);
-  // --------------------------------------------------------
+
+  // --- 3. ADD THE GOOGLE SIGN-IN FUNCTION ---
+  async function signInWithGoogle() {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/account` // Redirect to account page after signup
+      }
+    });
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    }
+  }
 
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    // --- 4. ADD VALIDATION FOR TERMS ---
+    if (!termsAccepted) {
+      setError("You must accept the terms of use to register.");
+      return;
+    }
     setLoading(true);
     setError('');
 
@@ -69,7 +92,6 @@ const RegisterPage = () => {
       return;
     }
 
-    // --- 3. ADDED: If an invite code exists, call the new database function ---
     if (inviteCode) {
       const { error: rpcError } = await supabase.rpc('complete_invitation', {
         invite_code: inviteCode,
@@ -77,11 +99,9 @@ const RegisterPage = () => {
       });
 
       if (rpcError) {
-        // This won't stop the user, but it's good to log if the referral part fails
         console.error("Failed to complete invitation process:", rpcError.message);
       }
     }
-    // --------------------------------------------------------------------
 
     setSuccess(true);
     setLoading(false);
@@ -102,6 +122,9 @@ const RegisterPage = () => {
       </div>
     );
   }
+  
+  // --- 5. UPDATE BUTTON DISABLED LOGIC ---
+  const isRegisterDisabled = loading || !email || !password || !fullName || !phoneNumber || !termsAccepted;
 
   return (
     <div className="flex justify-center items-center py-12 min-h-screen bg-gray-900">
@@ -112,6 +135,23 @@ const RegisterPage = () => {
           <CardDescription className='text-gray-300'>Create an account to earn rewards.</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* --- 6. ADD GOOGLE BUTTON AND DIVIDER --- */}
+          <Button variant="outline" className="w-full bg-gray-700 border-gray-600 hover:bg-gray-600" onClick={signInWithGoogle} disabled={loading}>
+            <GoogleIcon className="mr-2 h-4 w-4" /> Sign up with Google
+          </Button>
+
+          <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-600"></span>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-gray-800 px-2 text-gray-400">
+                      Or sign up with email
+                  </span>
+              </div>
+          </div>
+          {/* --- END OF NEW UI --- */}
+
           <form onSubmit={handleRegister} className="space-y-4">
             {error && <p className="text-red-500 text-sm bg-red-900/50 p-3 rounded">{error}</p>}
             
@@ -135,7 +175,27 @@ const RegisterPage = () => {
               <Input id="phoneNumber" type="tel" placeholder="+995 123 456 789" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="mt-1 bg-gray-700 border-gray-600 text-white" />
             </div>
             
-            <Button type="submit" disabled={loading} className="w-full bg-amber-600 hover:bg-amber-700">
+            {/* --- 7. ADD THE TERMS OF USE CHECKBOX --- */}
+            <div className="flex items-start space-x-2 pt-2">
+              <Checkbox 
+                  id="terms" 
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(!!checked)}
+                  className="mt-1"
+              />
+              <Label htmlFor="terms" className="text-sm text-gray-300 leading-normal">
+                I understand and agree to the{' '}
+                <Link 
+                  to="/terms-of-use" 
+                  className="font-bold text-amber-400 hover:underline"
+                >
+                  terms of use
+                </Link>
+                , including the wallet refund policy.
+              </Label>
+            </div>
+            
+            <Button type="submit" disabled={isRegisterDisabled} className="w-full bg-amber-600 hover:bg-amber-700">
               {loading ? 'Creating Account...' : 'Register'}
             </Button>
           </form>
