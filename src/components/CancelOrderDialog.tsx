@@ -28,7 +28,7 @@ const CancelOrderDialog = ({ isOpen, onClose, onConfirm, order }: CancelOrderDia
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-600">
             <AlertTriangle className="h-5 w-5" />
-            Cancel Order #{order.orderNumber}
+            Cancel Order #{order.order_number}
           </DialogTitle>
           <DialogDescription className="text-gray-600">
             Are you sure you want to cancel this order? This action cannot be undone.
@@ -48,7 +48,7 @@ const CancelOrderDialog = ({ isOpen, onClose, onConfirm, order }: CancelOrderDia
             <div className="border-t pt-1 mt-2 font-medium">
               <div className="flex justify-between">
                 <span>Total:</span>
-                <span>₾{order.totalPrice.toFixed(2)}</span>
+                <span>₾{order.total_price.toFixed(2)}</span>
               </div>
             </div>
           </div>
