@@ -150,8 +150,10 @@ const LandingPage = () => {
     target="_blank" 
     rel="noopener noreferrer" 
     className="text-gray-400 hover:text-white hover:underline"
-  ></a>
-            <p>45 Petre Kavtaradze St<br />Tbilisi, Georgia</p>
+  >
+            <p>45 Petre Kavtaradze St</p>
+            <p>Tbilisi, Georgia</p>
+            </a>
             <p><strong>Hours:</strong> 12:00 PM - 2:00 AM</p>
           </div>
           <div>
