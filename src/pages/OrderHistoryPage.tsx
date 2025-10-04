@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Order, PaymentMode } from '../types/order'; // Import PaymentMode
+import { Order, PaymentMode } from '../types/order';
 import { Link } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Tag, CreditCard } from 'lucide-react';
+import { ChevronDown, Tag, CreditCard, AlertCircle } from 'lucide-react'; // --- CHANGE: Imported AlertCircle icon ---
 import { Badge } from '@/components/ui/badge';
 
 const OrderHistoryPage = () => {
@@ -16,9 +16,10 @@ const OrderHistoryPage = () => {
     const fetchOrders = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // --- CHANGE: Explicitly select the new 'rejection_reason' column ---
         const { data, error } = await supabase
           .from('transactions')
-          .select('*')
+          .select('*, rejection_reason')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
@@ -33,7 +34,6 @@ const OrderHistoryPage = () => {
     fetchOrders();
   }, []);
 
-  // --- NEW: Helper function to determine badge color and style ---
   const getPaymentBadgeClass = (paymentMode: PaymentMode) => {
     switch (paymentMode) {
       case 'Cash':
@@ -47,10 +47,9 @@ const OrderHistoryPage = () => {
       case 'Wallet/Card Combo':
         return "bg-teal-900/60 text-teal-300 border-teal-700 hover:bg-teal-900/60";
       default:
-        return "border-gray-600"; // Default fallback
+        return "border-gray-600";
     }
   };
-  // --- END OF NEW FUNCTION ---
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
@@ -128,7 +127,6 @@ const OrderHistoryPage = () => {
                                   </div>
                               </div>
                               <div className="flex justify-between items-center text-sm text-gray-400 border-t border-gray-700 pt-3">
-                                  {/* --- MODIFIED: The badge now uses the color function --- */}
                                   <Badge variant="outline" className={getPaymentBadgeClass(order.payment_mode)}>
                                       <CreditCard className="w-4 h-4 mr-2" />
                                       Paid with: {order.payment_mode}
@@ -140,6 +138,18 @@ const OrderHistoryPage = () => {
                                       </Badge>
                                   )}
                               </div>
+                              {/* --- CHANGE: Added this block to display the rejection reason --- */}
+                              {order.status === 'rejected' && (
+                                <div className="mt-4 pt-4 border-t border-dashed border-red-400/30 bg-red-900/20 p-3 rounded-md">
+                                  <h5 className="font-semibold text-red-400 flex items-center gap-2">
+                                    <AlertCircle className="w-5 h-5" />
+                                    Note on This Order
+                                  </h5>
+                                  <p className="text-sm text-red-300/80 mt-1">
+                                    {order.rejection_reason || 'This order was cancelled by the restaurant and has been fully refunded to your wallet.'}
+                                  </p>
+                                </div>
+                              )}
                           </div>
                       </CollapsibleContent>
                   </Collapsible>

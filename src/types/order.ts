@@ -72,4 +72,5 @@ export interface Order {
   discount_applied_percent: number | null;
   wallet_credit_applied: number;
   order_type: string;
+  rejection_reason?: string; // <-- ADDED THIS LINE
 }
