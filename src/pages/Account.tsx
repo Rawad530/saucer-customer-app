@@ -18,7 +18,7 @@ interface NextReward {
   points_required: number;
 }
 interface Announcement {
-  id: number; // Add id for the .map key
+  id: number;
   title: string;
   content: string;
 }
@@ -29,7 +29,6 @@ const Account = ({ session }: { session: Session }) => {
   const [nextReward, setNextReward] = useState<NextReward | null>(null);
   const [lastOrder, setLastOrder] = useState<Order | null>(null);
   const [mostOrderedItem, setMostOrderedItem] = useState<string | null>(null);
-  // --- CHANGE #1: Update state to hold an array of announcements ---
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
 
@@ -42,7 +41,6 @@ const Account = ({ session }: { session: Session }) => {
         supabase.from('customer_profiles').select('full_name, points, wallet_balance').eq('id', user.id).single(),
         supabase.from('rewards').select('title, points_required').order('points_required', { ascending: true }),
         supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-        // --- CHANGE #2: Update query to fetch ALL active announcements, not just one ---
         supabase.from('announcements').select('id, title, content').eq('is_active', true).order('created_at', { ascending: false }),
         supabase.functions.invoke('check-restaurant-status')
       ]);
@@ -52,7 +50,11 @@ const Account = ({ session }: { session: Session }) => {
       if (profileRes.data && rewardsRes.data) {
         const currentPoints = profileRes.data.points;
         const next = rewardsRes.data.find(reward => reward.points_required > currentPoints);
-        if (next) setNextReward(next);
+        if (next) {
+          setNextReward(next);
+        } else {
+          setNextReward(null); // Explicitly set to null if no next reward is found
+        }
       }
 
       if (ordersRes.data && ordersRes.data.length > 0) {
@@ -126,7 +128,7 @@ const Account = ({ session }: { session: Session }) => {
 
   const rewardProgress = nextReward && profileData ? (profileData.points / nextReward.points_required) * 100 : 0;
   const pointsNeeded = nextReward && profileData ? nextReward.points_required - profileData.points : 0;
-  const moneyNeeded = pointsNeeded * 10;
+  const moneyNeeded = pointsNeeded; // Assuming 1 GEL = 1 Point for simplicity, adjust if needed
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
@@ -149,13 +151,22 @@ const Account = ({ session }: { session: Session }) => {
                 <PlaceOrderButton />
             </div>
 
+            {/* --- CHANGES START HERE --- */}
             <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="flex items-center text-xl font-bold mb-4"><Star className="w-6 h-6 mr-2 text-amber-400"/> Your Next Reward</h3>
+              <h3 className="flex items-center text-xl font-bold mb-4"><Star className="w-6 h-6 mr-2 text-amber-400"/> Your Rewards Status</h3>
+              
+              {profileData && (
+                <div className="text-center mb-4 border-b border-gray-700 pb-4">
+                  <p className="text-sm font-medium text-gray-400">YOUR CURRENT POINT BALANCE</p>
+                  <p className="text-5xl font-bold text-amber-400 tracking-tight">{profileData.points}</p>
+                </div>
+              )}
+
               {nextReward && profileData ? (
                 <div>
                   <div className="flex justify-between items-end mb-1">
-                    <p className="font-semibold">{nextReward.title}</p>
-                    <p className="text-sm font-bold text-gray-300">{profileData.points} / {nextReward.points_required} Points</p>
+                    <p className="font-semibold">Next Up: {nextReward.title}</p>
+                    <p className="text-sm font-bold text-gray-300">{profileData.points} / {nextReward.points_required}</p>
                   </div>
                   <div className="w-full bg-gray-700 rounded-full h-4">
                     <div className="bg-amber-500 h-4 rounded-full" style={{ width: `${rewardProgress}%` }}></div>
@@ -164,9 +175,15 @@ const Account = ({ session }: { session: Session }) => {
                     You're {pointsNeeded} points away! Spend ₾{moneyNeeded.toFixed(2)} more to unlock.
                   </p>
                 </div>
-              ) : ( <p className="text-gray-400">You've unlocked all available rewards!</p> )}
+              ) : ( 
+                <div className="text-center">
+                    <p className="font-semibold text-green-400">You've unlocked all available rewards!</p>
+                    <p className="text-sm text-gray-400 mt-1">Keep collecting points for future goodies.</p>
+                </div>
+              )}
               <Link to="/rewards" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View All Rewards &rarr;</Link>
             </div>
+            {/* --- CHANGES END HERE --- */}
             
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><History className="w-6 h-6 mr-2 text-gray-300"/> Recent Activity</h3>
@@ -182,7 +199,6 @@ const Account = ({ session }: { session: Session }) => {
               <Link to="/history" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View Full History &rarr;</Link>
             </div>
 
-            {/* --- CHANGE #3: Update JSX to loop through the announcements array --- */}
             {announcements.length > 0 && (
               <div className="bg-gray-800 p-6 rounded-lg">
                 <h3 className="flex items-center text-xl font-bold mb-4"><Megaphone className="w-6 h-6 mr-2 text-blue-400"/> What's New?</h3>
@@ -227,16 +243,16 @@ const Account = ({ session }: { session: Session }) => {
               <p className="text-gray-400 mb-4 text-sm">Order for delivery through our official partners:</p>
               <div className="grid grid-cols-3 gap-2 items-center">
                   <a href="https://wolt.com/ka/geo/tbilisi/restaurant/saucer-burger" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
-                      <img src="/images/logo-wolt.png" alt="Wolt" className="h-10 object-contain"/>
-                      <span className="text-xs text-gray-400">Wolt</span>
+                        <img src="/images/logo-wolt.png" alt="Wolt" className="h-10 object-contain"/>
+                        <span className="text-xs text-gray-400">Wolt</span>
                   </a>
                   <a href="https://food.bolt.eu/en-US/15-tbilisi/p/150123-saucer-burger" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
-                      <img src="/images/bolt-logo.png" alt="Bolt Food" className="h-10 object-contain"/>
-                      <span className="text-xs text-gray-400">Bolt Food</span>
+                        <img src="/images/bolt-logo.png" alt="Bolt Food" className="h-10 object-contain"/>
+                        <span className="text-xs text-gray-400">Bolt Food</span>
                   </a>
                   <a href="https://glovoapp.com/ge/en/tbilisi/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
-                      <img src="/images/glovo-logo.png" alt="Glovo" className="h-10 object-contain"/>
-                      <span className="text-xs text-gray-400">Glovo</span>
+                        <img src="/images/glovo-logo.png" alt="Glovo" className="h-10 object-contain"/>
+                        <span className="text-xs text-gray-400">Glovo</span>
                   </a>
               </div>
             </div>
