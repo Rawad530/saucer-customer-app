@@ -1,7 +1,5 @@
 // src/App.tsx
 
-// This is the final corrected version with all routes, including password reset.
-
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
@@ -19,11 +17,12 @@ import OrderHistoryPage from './pages/OrderHistoryPage';
 import RewardsPage from './pages/RewardsPage';
 import ProfilePage from './pages/ProfilePage';
 import InvitePage from './pages/InvitePage';
-
-// --- ADDED: Imports for the password reset pages ---
 import RequestPasswordResetPage from './pages/RequestPasswordResetPage';
 import UpdatePasswordPage from './pages/UpdatePasswordPage';
-// ---------------------------------------------------
+
+// --- ADDED: Import for the new TermsOfUsePage component ---
+import TermsOfUsePage from './pages/TermsOfUsePage';
+// ---------------------------------------------------------
 
 
 function App() {
@@ -56,10 +55,11 @@ function App() {
       <Route path="/" element={!session ? <LandingPage /> : <Navigate to="/account" replace />} />
       <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/account" replace />} />
       <Route path="/register" element={!session ? <RegisterPage /> : <Navigate to="/account" replace />} />
-      
-      {/* --- ADDED: The two new routes for password reset --- */}
       <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
       <Route path="/update-password" element={<UpdatePasswordPage />} />
+      
+      {/* --- ADDED: The new public route for the terms page --- */}
+      <Route path="/terms-of-use" element={<TermsOfUsePage />} />
       {/* --------------------------------------------------- */}
 
       {/* Application Routes (Wrapped in the standard Layout) */}
