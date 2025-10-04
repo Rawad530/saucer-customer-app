@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { OrderItem, MenuItem } from "../types/order";
-// --- REMOVED: The old order number utility is no longer needed ---
-// import { getNextOrderNumber } from "../utils/orderUtils";
 import { supabase } from "../lib/supabaseClient";
 import MenuSection from "../components/MenuSection";
 import OrderSummary from "../components/OrderSummary";
@@ -41,8 +39,6 @@ const OrderPage = () => {
   const [pendingItem, setPendingItem] = useState<PendingItem | null>(null);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
-  
-  // --- MODIFICATION 1: Add state to hold the new string-based order number ---
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
 
   const selectedItems = useCartStore((state) => state.items);
@@ -160,7 +156,6 @@ const OrderPage = () => {
     setIsPlacingOrder(true);
     
     try {
-      // --- MODIFICATION 2: Call the new Edge Function to generate the order number ---
       const { data: orderNumberData, error: orderNumberError } = await supabase.functions.invoke(
         'generate-order-number',
         { body: { orderType: 'app_pickup' } }
@@ -172,7 +167,7 @@ const OrderPage = () => {
       const orderNumber = orderNumberData.orderNumber;
       const orderId = crypto.randomUUID();
 
-      setCompletedOrderNumber(orderNumber); // Save for the success screen
+      setCompletedOrderNumber(orderNumber);
       
       const userId = session?.user?.id || null;
       const guestName = currentGuestInfo?.name || null;
@@ -187,14 +182,13 @@ const OrderPage = () => {
         paymentMode = (totalPrice > 0.01) ? 'Wallet/Card Combo' : 'Wallet Only';
       }
     
-      // --- MODIFICATION 3: Update the database insert call ---
       const { error: insertError } = await supabase.from('transactions').insert([
         { 
           transaction_id: orderId,
           user_id: userId, 
           guest_name: guestName,
           guest_phone: guestPhone,
-          order_number: orderNumber, // Use the new formatted string
+          order_number: orderNumber,
           items: selectedItems as any,
           total_price: totalPrice,
           wallet_credit_applied: walletCreditApplied,
@@ -203,7 +197,7 @@ const OrderPage = () => {
           created_at: new Date().toISOString(),
           promo_code_used: effectiveDiscountRate > 0 ? promoCode.toUpperCase() : null,
           discount_applied_percent: effectiveDiscountRate > 0 ? effectiveDiscountRate : null,
-          order_type: 'app_pickup', // Use the new, correct enum value
+          order_type: 'app_pickup',
         },
       ]);
 
@@ -242,7 +236,6 @@ const OrderPage = () => {
     drinks: menuItems.filter(item => item.category === 'drinks'),
   };
 
-  // --- MODIFICATION 4: Update the success screen to show the new order number ---
   if (orderPlaced) {
     return (
       <div className="flex flex-col justify-center items-center h-96 text-center p-4">
@@ -257,15 +250,37 @@ const OrderPage = () => {
           </div>
         )}
 
-        {session ? (
-          <Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
-            Back to Your Account
-          </Link>
-        ) : (
-          <Link to="/" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">
-            Back to Home
-          </Link>
-        )}
+        {/* --- CHANGES START HERE --- */}
+        <div className="flex justify-center items-center gap-4">
+          {session && (
+            // New Track Order Button (only for logged-in users)
+            <Link
+              to="/history"
+              className="px-6 py-2 font-bold text-amber-500 border border-amber-500 rounded-md hover:bg-amber-500 hover:text-white transition-colors"
+            >
+              Track Your Order
+            </Link>
+          )}
+
+          {/* Existing Button Logic */}
+          {session ? (
+            <Link
+              to="/account"
+              className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700"
+            >
+              Back to Your Account
+            </Link>
+          ) : (
+            <Link
+              to="/"
+              className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700"
+            >
+              Back to Home
+            </Link>
+          )}
+        </div>
+        {/* --- CHANGES END HERE --- */}
+
       </div>
     );
   }
