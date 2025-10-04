@@ -1,4 +1,4 @@
-// src/pages/InvitePage.tsx
+// src/pages/InvitePage.tsx (Final Version)
 
 import { useState, FormEvent } from 'react';
 import { supabase } from '../lib/supabaseClient';
@@ -11,6 +11,7 @@ import { Send, Gift } from 'lucide-react';
 const InvitePage = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
+  // 'error' state variable exists here, requiring renaming below
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -21,16 +22,20 @@ const InvitePage = () => {
     setSuccessMessage('');
 
     try {
-      // --- THIS LINE HAS BEEN CORRECTED ---
-      const { data, error: funcError } = await supabase.functions.invoke('send-invite-email', {
-        body: { invitee_email: email },
+      // --- THE FINAL, CORRECT IMPLEMENTATION ---
+      // 1. Calling the new function name 'process-invitation'
+      // 2. Using email.trim() for safety
+      // 3. Renaming 'error' to 'funcError' to avoid conflict
+      const { data, error: funcError } = await supabase.functions.invoke('process-invitation', {
+        body: { invitee_email: email.trim() },
       });
+      // -----------------------------------------
 
       if (funcError) throw funcError;
       if (data.error) throw new Error(data.error);
       
       setSuccessMessage(data.message || 'Invitation sent successfully!');
-      setEmail('');
+      setEmail(''); // Clear the input on success
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
     } finally {
