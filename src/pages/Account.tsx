@@ -147,7 +147,7 @@ const Account = ({ session }: { session: Session }) => {
           
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-amber-600 p-8 rounded-lg text-center">
-                <h2 className="text-3xl font-bold mb-4">So Sir, Ready for another round?</h2>
+                <h2 className="text-3xl font-bold mb-4">So sir, ready for another round?</h2>
                 <PlaceOrderButton />
             </div>
 
