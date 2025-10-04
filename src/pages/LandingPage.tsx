@@ -73,7 +73,7 @@ const LandingPage = () => {
 
         <section id="benefits" className="container benefits-section">
           <h2 className="section-title">Unlock Exclusive Benefits</h2>
-          <p className="section-subtitle">Create an account to get the full Saucer Burger experience.</p>
+          <p className="section-subtitle">Create an account to get the full Saucer experience.</p>
           <div className="benefits-grid">
             <Link to="/register" className="benefit-card-cta">
               <h3>Create an Account</h3>
