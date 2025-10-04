@@ -4,11 +4,9 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Award, Wallet, History, Truck, Bell, ArrowRight } from 'lucide-react';
-// REMOVED: No longer need the GuestOrderDialog here as it's moved to the OrderPage
 
 const LandingPage = () => {
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
-  // REMOVED: The state for the dialog is no longer needed on this page
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -24,13 +22,11 @@ const LandingPage = () => {
     checkStatus();
   }, []);
 
-  // MODIFIED: This component is now much simpler
   const OrderButton = () => {
     if (isRestaurantOpen === null) {
       return <button className="button" disabled>Checking Hours...</button>;
     }
     if (isRestaurantOpen) {
-      // This is now a <Link> that goes directly to the order page
       return <Link to="/order" className="button">View Menu & Order as a Guest</Link>;
     }
     return (
@@ -46,7 +42,6 @@ const LandingPage = () => {
   };
 
   return (
-    // REMOVED: The outer <> fragment and the GuestOrderDialog component call
     <div className="landing-page">
       <header className="landing-header">
         <img src="/images/logo.png" alt="Saucer Burger Logo" className="logo-img" />
@@ -142,31 +137,35 @@ const LandingPage = () => {
       </main>
 
       <footer className="landing-footer">
-        <div className="footer-grid">
-          <div>
-            <h4>Saucer Burger </h4>
-            <a 
-    href="https://maps.google.com/?cid=11266092328424134394&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ" 
-    target="_blank" 
-    rel="noopener noreferrer" 
-    className="text-gray-400 hover:text-white hover:underline"
-  >
-            <p>45 Petre Kavtaradze St</p>
-            <p>Tbilisi, Georgia</p>
-            </a>
-            <p><strong>Hours:</strong> 12:00 PM - 2:00 AM</p>
-          </div>
-          <div>
-            <h4>Quick Links</h4>
-            <a href="#">Home</a>
-            <Link to="/order">Full Menu / Order</Link>
-          </div>
-          <div>
-            <h4>Contact Us</h4>
-            <p>Phone: +995 591 22 96 58</p>
-            <p>Email: saucerburger@gmail.com</p>
+        {/* --- FIX: Add the 'container' className to this wrapper div --- */}
+        <div className="container">
+          <div className="footer-grid">
+            <div>
+              <h4>Saucer Burger</h4>
+              <a 
+                href="https://maps.google.com/?cid=11266092328424134394&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-gray-400 hover:text-white hover:underline"
+              >
+                <p>45 Petre Kavtaradze St</p>
+                <p>Tbilisi, Georgia</p>
+              </a>
+              <p><strong>Hours:</strong> 12:00 PM - 2:00 AM</p>
+            </div>
+            <div>
+              <h4>Quick Links</h4>
+              <a href="#">Home</a>
+              <Link to="/order">Full Menu / Order</Link>
+            </div>
+            <div>
+              <h4>Contact Us</h4>
+              <p>Phone: +995 591 22 96 58</p>
+              <p>Email: saucerburger@gmail.com</p>
+            </div>
           </div>
         </div>
+        {/* --- END OF FIX --- */}
       </footer>
     </div>
   );
