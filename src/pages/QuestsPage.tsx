@@ -95,8 +95,7 @@ const QuestsPage = () => {
         });
 
       if (insertError) throw insertError;
-
-      // --- CHANGE: Updated the success toast message ---
+      
       toast({
         title: 'Thank You!',
         description: 'Your submission is pending approval. Our team will review it and approve your points soon. Please be patient!',
@@ -162,10 +161,16 @@ const QuestsPage = () => {
                   )}
                   {status === 'rejected' && (
                     <div className="text-right">
-                        <div className="flex items-center justify-end gap-2 text-red-400 mb-2">
-                            <XCircle className="w-5 h-5"/> Submission Rejected
-                        </div>
-                        <Button onClick={() => setSelectedQuest(quest)} variant="outline">Try Again</Button>
+                      <div className="flex items-center justify-end gap-2 text-red-400 mb-2">
+                        <XCircle className="w-5 h-5"/> Submission Rejected
+                      </div>
+                      <Button
+                        onClick={() => setSelectedQuest(quest)}
+                        variant="outline"
+                        className="text-amber-400 border-amber-400 hover:bg-amber-400 hover:text-gray-900"
+                      >
+                        Try Again
+                      </Button>
                     </div>
                   )}
                 </div>
