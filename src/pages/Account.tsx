@@ -147,11 +147,10 @@ const Account = ({ session }: { session: Session }) => {
           
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-amber-600 p-8 rounded-lg text-center">
-                <h2 className="text-3xl font-bold mb-4">So sir, ready for another round?</h2>
+                <h2 className="text-3xl font-bold mb-4">Ready for another round?</h2>
                 <PlaceOrderButton />
             </div>
 
-            {/* --- CHANGES START HERE --- */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><Star className="w-6 h-6 mr-2 text-amber-400"/> Your Rewards Status</h3>
               
@@ -183,7 +182,6 @@ const Account = ({ session }: { session: Session }) => {
               )}
               <Link to="/rewards" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View All Rewards &rarr;</Link>
             </div>
-            {/* --- CHANGES END HERE --- */}
             
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><History className="w-6 h-6 mr-2 text-gray-300"/> Recent Activity</h3>
@@ -198,6 +196,19 @@ const Account = ({ session }: { session: Session }) => {
               ) : ( <p className="text-gray-400">You haven't placed any orders yet.</p> )}
               <Link to="/history" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View Full History &rarr;</Link>
             </div>
+
+            {/* --- NEW CARD ADDED FROM CODE 2 --- */}
+            <div className="bg-gray-800 p-6 rounded-lg">
+              <h3 className="flex items-center text-xl font-bold mb-4">
+                <Gift className="w-6 h-6 mr-2 text-purple-400"/> 
+                Side Quests
+              </h3>
+              <p className="text-gray-400">Complete special tasks like leaving a review to earn bonus loyalty points.</p>
+              <Link to="/quests" className="text-sm text-amber-400 hover:underline mt-4 inline-block">
+                View All Quests &rarr;
+              </Link>
+            </div>
+            {/* --- END OF NEW CARD --- */}
 
             {announcements.length > 0 && (
               <div className="bg-gray-800 p-6 rounded-lg">
