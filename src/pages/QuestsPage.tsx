@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Star, CheckCircle, Clock, UploadCloud } from 'lucide-react';
+import { Star, CheckCircle, Clock, UploadCloud, XCircle } from 'lucide-react';
 
-// Define the structure for a Quest
 interface Quest {
   id: string;
   title: string;
@@ -19,13 +18,11 @@ interface Quest {
   instructions: string[];
 }
 
-// Define the structure for a user's submission
 interface Submission {
   quest_type: string;
   status: 'pending' | 'approved' | 'rejected';
 }
 
-// For now, we will hardcode the available quests. Later, this could come from a database table.
 const availableQuests: Quest[] = [
   {
     id: 'google_review',
@@ -40,7 +37,6 @@ const availableQuests: Quest[] = [
       'Upload the screenshot below as proof.'
     ]
   },
-  // You can add more quests here in the future
 ];
 
 const QuestsPage = () => {
@@ -51,7 +47,6 @@ const QuestsPage = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Fetch the user's existing submissions to track their status
     const fetchSubmissions = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -78,7 +73,6 @@ const QuestsPage = () => {
     }
 
     try {
-      // 1. Upload the screenshot to Supabase Storage
       const filePath = `public/${user.id}/${selectedQuest.id}-${Date.now()}`;
       const { error: uploadError } = await supabase.storage
         .from('quest-proof')
@@ -86,12 +80,10 @@ const QuestsPage = () => {
 
       if (uploadError) throw uploadError;
 
-      // 2. Get the public URL of the uploaded file
       const { data: { publicUrl } } = supabase.storage
         .from('quest-proof')
         .getPublicUrl(filePath);
 
-      // 3. Insert the submission record into the database
       const { error: insertError } = await supabase
         .from('quest_submissions')
         .insert({
@@ -104,12 +96,12 @@ const QuestsPage = () => {
 
       if (insertError) throw insertError;
 
+      // --- CHANGE: Updated the success toast message ---
       toast({
-        title: 'Submission Received!',
-        description: 'Your quest submission is now pending review. Points will be awarded upon approval.',
+        title: 'Thank You!',
+        description: 'Your submission is pending approval. Our team will review it and approve your points soon. Please be patient!',
       });
       
-      // Refresh submissions and close modal
       setSubmissions([...submissions, { quest_type: selectedQuest.id, status: 'pending' }]);
       setSelectedQuest(null);
       setProofFile(null);
@@ -122,15 +114,23 @@ const QuestsPage = () => {
   };
 
   const getQuestStatus = (questId: string) => {
-    const submission = submissions.find(s => s.quest_type === questId);
-    return submission ? submission.status : 'available';
+    const pending = submissions.find(s => s.quest_type === questId && s.status === 'pending');
+    if (pending) return 'pending';
+
+    const approved = submissions.find(s => s.quest_type === questId && s.status === 'approved');
+    if (approved) return 'approved';
+
+    const rejected = submissions.find(s => s.quest_type === questId && s.status === 'rejected');
+    if (rejected) return 'rejected';
+
+    return 'available';
   };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 sm:p-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <Link to="/account" className="text-sm text-gray-400 hover:text-amber-400 transition">&larr; Back to Account</Link>
+          <Link to="/account" className="text-sm text-gray-400 hover:text-amber-400 transition">← Back to Account</Link>
           <h1 className="text-4xl font-bold text-amber-400 mt-2">Side Quests</h1>
           <p className="text-gray-400">Complete tasks to earn extra loyalty points!</p>
         </div>
@@ -152,13 +152,21 @@ const QuestsPage = () => {
                 </div>
                 <div>
                   {status === 'available' && (
-                    <Button onClick={() => setSelectedQuest(quest)} disabled={isDisabled}>Start Quest</Button>
+                    <Button onClick={() => setSelectedQuest(quest)}>Start Quest</Button>
                   )}
                   {status === 'pending' && (
                     <div className="flex items-center gap-2 text-yellow-400"><Clock className="w-5 h-5"/> In Review</div>
                   )}
                   {status === 'approved' && (
                     <div className="flex items-center gap-2 text-green-400"><CheckCircle className="w-5 h-5"/> Completed</div>
+                  )}
+                  {status === 'rejected' && (
+                    <div className="text-right">
+                        <div className="flex items-center justify-end gap-2 text-red-400 mb-2">
+                            <XCircle className="w-5 h-5"/> Submission Rejected
+                        </div>
+                        <Button onClick={() => setSelectedQuest(quest)} variant="outline">Try Again</Button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -167,7 +175,6 @@ const QuestsPage = () => {
         </div>
       </div>
 
-      {/* Submission Modal */}
       <Dialog open={!!selectedQuest} onOpenChange={() => setSelectedQuest(null)}>
         <DialogContent className="bg-gray-800 border-gray-700 text-white">
           <DialogHeader>
@@ -180,7 +187,7 @@ const QuestsPage = () => {
               {selectedQuest?.instructions.map((step, i) => <li key={i}>{step}</li>)}
             </ol>
             <a href={selectedQuest?.link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">
-              Click here to open the link &rarr;
+              Click here to open the link →
             </a>
             <div className="space-y-2">
               <label htmlFor="proof" className="font-semibold">Upload Proof (Screenshot)</label>
