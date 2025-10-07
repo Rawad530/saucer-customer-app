@@ -6,7 +6,6 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-// --- 1. IMPORT NEW COMPONENTS ---
 import GoogleIcon from '@/components/GoogleIcon';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -19,7 +18,6 @@ const RegisterPage = () => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  // --- 2. ADD STATE FOR TERMS CHECKBOX ---
   const [termsAccepted, setTermsAccepted] = useState(false);
 
   const [searchParams] = useSearchParams();
@@ -32,13 +30,12 @@ const RegisterPage = () => {
     }
   }, [searchParams]);
 
-  // --- 3. ADD THE GOOGLE SIGN-IN FUNCTION ---
   async function signInWithGoogle() {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/account` // Redirect to account page after signup
+        redirectTo: `${window.location.origin}/account`
       }
     });
     if (error) {
@@ -49,7 +46,6 @@ const RegisterPage = () => {
 
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // --- 4. ADD VALIDATION FOR TERMS ---
     if (!termsAccepted) {
       setError("You must accept the terms of use to register.");
       return;
@@ -77,13 +73,14 @@ const RegisterPage = () => {
       return;
     }
 
+    // --- This is the corrected insert statement ---
     const { error: profileError } = await supabase
       .from('customer_profiles')
       .insert({
         id: authData.user.id,
         full_name: fullName,
-        phone_number: phoneNumber,
-        email: email,
+        phone: phoneNumber, // Correct column name is 'phone'
+        email: email,       // Now includes the email
       });
       
     if (profileError) {
@@ -123,7 +120,6 @@ const RegisterPage = () => {
     );
   }
   
-  // --- 5. UPDATE BUTTON DISABLED LOGIC ---
   const isRegisterDisabled = loading || !email || !password || !fullName || !phoneNumber || !termsAccepted;
 
   return (
@@ -135,7 +131,6 @@ const RegisterPage = () => {
           <CardDescription className='text-gray-300'>Create an account to earn rewards.</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* --- 6. ADD GOOGLE BUTTON AND DIVIDER --- */}
           <Button variant="outline" className="w-full bg-gray-700 border-gray-600 hover:bg-gray-600" onClick={signInWithGoogle} disabled={loading}>
             <GoogleIcon className="mr-2 h-4 w-4" /> Sign up with Google
           </Button>
@@ -150,7 +145,6 @@ const RegisterPage = () => {
                   </span>
               </div>
           </div>
-          {/* --- END OF NEW UI --- */}
 
           <form onSubmit={handleRegister} className="space-y-4">
             {error && <p className="text-red-500 text-sm bg-red-900/50 p-3 rounded">{error}</p>}
@@ -175,7 +169,6 @@ const RegisterPage = () => {
               <Input id="phoneNumber" type="tel" placeholder="+995 123 456 789" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="mt-1 bg-gray-700 border-gray-600 text-white" />
             </div>
             
-            {/* --- 7. ADD THE TERMS OF USE CHECKBOX --- */}
             <div className="flex items-start space-x-2 pt-2">
               <Checkbox 
                   id="terms" 
