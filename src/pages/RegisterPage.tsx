@@ -73,14 +73,13 @@ const RegisterPage = () => {
       return;
     }
 
-    // --- This is the corrected insert statement ---
     const { error: profileError } = await supabase
       .from('customer_profiles')
       .insert({
         id: authData.user.id,
         full_name: fullName,
         phone: phoneNumber, // Correct column name is 'phone'
-        email: email,       // Now includes the email
+        email: email,       // Includes the email
       });
       
     if (profileError) {
