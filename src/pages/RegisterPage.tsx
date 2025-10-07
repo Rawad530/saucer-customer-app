@@ -20,14 +20,39 @@ const RegisterPage = () => {
   const [success, setSuccess] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
+  // --- Additions from Code 2 ---
+  const [isEmailLocked, setIsEmailLocked] = useState(false);
+  const [checkingInvite, setCheckingInvite] = useState(true); // Loading state for invite check
+
   const [searchParams] = useSearchParams();
   const [inviteCode, setInviteCode] = useState<string | null>(null);
 
+  // --- Updated useEffect from Code 2 ---
   useEffect(() => {
-    const code = searchParams.get('invite_code');
-    if (code) {
-      setInviteCode(code);
-    }
+    const fetchInviteDetails = async () => {
+      const code = searchParams.get('invite_code');
+      if (code) {
+        setInviteCode(code);
+        try {
+          const { data, error } = await supabase.rpc('get_invite_details', {
+            p_invite_code: code,
+          });
+          
+          if (error) throw error;
+
+          if (data) {
+            setEmail(data); // Pre-fill the email
+            setIsEmailLocked(true); // Lock the email field
+          }
+        } catch (error) {
+          console.error("Error fetching invite details:", error);
+          // Optional: Show an error if the invite code is invalid
+        }
+      }
+      setCheckingInvite(false); // Done checking
+    };
+    
+    fetchInviteDetails();
   }, [searchParams]);
 
   async function signInWithGoogle() {
@@ -44,6 +69,7 @@ const RegisterPage = () => {
     }
   }
 
+  // --- Updated handleRegister from Code 2 ---
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!termsAccepted) {
@@ -58,6 +84,11 @@ const RegisterPage = () => {
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/account`,
+        data: {
+          full_name: fullName,
+          phone: phoneNumber,
+          invite_code: inviteCode
+        }
       },
     });
 
@@ -65,38 +96,6 @@ const RegisterPage = () => {
       setError(authError.message);
       setLoading(false);
       return;
-    }
-
-    if (!authData.user) {
-      setError('An unexpected error occurred. Please try again.');
-      setLoading(false);
-      return;
-    }
-
-    const { error: profileError } = await supabase
-      .from('customer_profiles')
-      .insert({
-        id: authData.user.id,
-        full_name: fullName,
-        phone: phoneNumber, // Correct column name is 'phone'
-        email: email,       // Includes the email
-      });
-      
-    if (profileError) {
-      setError(`Account created, but we couldn't save profile details. Error: ${profileError.message}`);
-      setLoading(false);
-      return;
-    }
-
-    if (inviteCode) {
-      const { error: rpcError } = await supabase.rpc('complete_invitation', {
-        invite_code: inviteCode,
-        new_user_id: authData.user.id,
-      });
-
-      if (rpcError) {
-        console.error("Failed to complete invitation process:", rpcError.message);
-      }
     }
 
     setSuccess(true);
@@ -119,7 +118,8 @@ const RegisterPage = () => {
     );
   }
   
-  const isRegisterDisabled = loading || !email || !password || !fullName || !phoneNumber || !termsAccepted;
+  // --- Updated isRegisterDisabled from Code 2 ---
+  const isRegisterDisabled = loading || checkingInvite || !email || !password || !fullName || !phoneNumber || !termsAccepted;
 
   return (
     <div className="flex justify-center items-center py-12 min-h-screen bg-gray-900">
@@ -148,9 +148,26 @@ const RegisterPage = () => {
           <form onSubmit={handleRegister} className="space-y-4">
             {error && <p className="text-red-500 text-sm bg-red-900/50 p-3 rounded">{error}</p>}
             
+            {/* --- Addition from Code 2 --- */}
+            {isEmailLocked && (
+                <div className="bg-blue-900/50 text-blue-300 p-3 rounded-md text-center text-sm">
+                    You've been invited! Please complete your registration below.
+                </div>
+            )}
+
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300">Email</label>
-              <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="mt-1 bg-gray-700 border-gray-600 text-white" />
+              {/* --- Updated Input from Code 2 --- */}
+              <Input 
+                id="email" 
+                type="email" 
+                placeholder="you@example.com" 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                required 
+                disabled={isEmailLocked || checkingInvite}
+                className="mt-1 bg-gray-700 border-gray-600 text-white disabled:opacity-70 disabled:cursor-not-allowed" 
+              />
             </div>
             
             <div>
