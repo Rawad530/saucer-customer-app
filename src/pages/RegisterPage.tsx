@@ -20,14 +20,12 @@ const RegisterPage = () => {
   const [success, setSuccess] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  // --- Additions from Code 2 ---
   const [isEmailLocked, setIsEmailLocked] = useState(false);
   const [checkingInvite, setCheckingInvite] = useState(true); // Loading state for invite check
 
   const [searchParams] = useSearchParams();
   const [inviteCode, setInviteCode] = useState<string | null>(null);
 
-  // --- Updated useEffect from Code 2 ---
   useEffect(() => {
     const fetchInviteDetails = async () => {
       const code = searchParams.get('invite_code');
@@ -37,7 +35,7 @@ const RegisterPage = () => {
           const { data, error } = await supabase.rpc('get_invite_details', {
             p_invite_code: code,
           });
-          
+
           if (error) throw error;
 
           if (data) {
@@ -51,7 +49,7 @@ const RegisterPage = () => {
       }
       setCheckingInvite(false); // Done checking
     };
-    
+
     fetchInviteDetails();
   }, [searchParams]);
 
@@ -69,7 +67,6 @@ const RegisterPage = () => {
     }
   }
 
-  // --- Updated handleRegister from Code 2 ---
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!termsAccepted) {
@@ -117,8 +114,7 @@ const RegisterPage = () => {
       </div>
     );
   }
-  
-  // --- Updated isRegisterDisabled from Code 2 ---
+
   const isRegisterDisabled = loading || checkingInvite || !email || !password || !fullName || !phoneNumber || !termsAccepted;
 
   return (
@@ -147,8 +143,7 @@ const RegisterPage = () => {
 
           <form onSubmit={handleRegister} className="space-y-4">
             {error && <p className="text-red-500 text-sm bg-red-900/50 p-3 rounded">{error}</p>}
-            
-            {/* --- Addition from Code 2 --- */}
+
             {isEmailLocked && (
                 <div className="bg-blue-900/50 text-blue-300 p-3 rounded-md text-center text-sm">
                     You've been invited! Please complete your registration below.
@@ -157,24 +152,23 @@ const RegisterPage = () => {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300">Email</label>
-              {/* --- Updated Input from Code 2 --- */}
-              <Input 
-                id="email" 
-                type="email" 
-                placeholder="you@example.com" 
-                value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
-                required 
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
                 disabled={isEmailLocked || checkingInvite}
-                className="mt-1 bg-gray-700 border-gray-600 text-white disabled:opacity-70 disabled:cursor-not-allowed" 
+                className="mt-1 bg-gray-700 border-gray-600 text-white disabled:opacity-70 disabled:cursor-not-allowed"
               />
             </div>
-            
+
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-300">Password (min 6 chars)</label>
               <Input id="password" type="password" placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="mt-1 bg-gray-700 border-gray-600 text-white" />
             </div>
-            
+
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-300">Full Name</label>
               <Input id="fullName" type="text" placeholder="Peter Griffin" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="mt-1 bg-gray-700 border-gray-600 text-white" />
@@ -184,31 +178,33 @@ const RegisterPage = () => {
               <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-300">Phone Number</label>
               <Input id="phoneNumber" type="tel" placeholder="+995 123 456 789" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required className="mt-1 bg-gray-700 border-gray-600 text-white" />
             </div>
-            
+
             <div className="flex items-start space-x-2 pt-2">
-              <Checkbox 
-                  id="terms" 
+              <Checkbox
+                  id="terms"
                   checked={termsAccepted}
                   onCheckedChange={(checked) => setTermsAccepted(!!checked)}
                   className="mt-1"
               />
               <Label htmlFor="terms" className="text-sm text-gray-300 leading-normal">
                 I understand and agree to the{' '}
-                <Link 
-                  to="/terms-of-use" 
+                <a
+                  href="/terms-of-use"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="font-bold text-amber-400 hover:underline"
                 >
                   terms of use
-                </Link>
+                </a>
                 , including the wallet refund policy.
               </Label>
             </div>
-            
+
             <Button type="submit" disabled={isRegisterDisabled} className="w-full bg-amber-600 hover:bg-amber-700">
               {loading ? 'Creating Account...' : 'Register'}
             </Button>
           </form>
-          
+
           <div className="mt-4 text-center text-sm text-gray-400">
             Already have an account?{' '}
             <Link to="/login" className="text-amber-400 hover:underline">
