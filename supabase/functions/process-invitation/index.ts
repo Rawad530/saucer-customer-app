@@ -1,7 +1,7 @@
 // supabase/functions/process-invitation/index.ts
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { corsHeaders } from '../_shared/cors.ts' // Assuming you have this shared file
+import { corsHeaders } from '../_shared/cors.ts'
 import { Resend } from 'https://esm.sh/resend'
 
 Deno.serve(async (req) => {
@@ -11,21 +11,20 @@ Deno.serve(async (req) => {
 
   try {
     const { invitee_email } = await req.json();
-    if (!invitee_email) {
-      throw new Error("Invitee email is required.");
-    }
-
-    const resendApiKey = Deno.env.get('RESEND_API_KEY'); // Use the key we set up
-    if (!resendApiKey) throw new Error("Resend API Key not found in environment variables.");
+    if (!invitee_email) throw new Error("Friend's email is required.");
+    
+    // --- FIX: Use your correct secret name 'INVITE_SYSTEM_KEY' ---
+    const resendApiKey = Deno.env.get('INVITE_SYSTEM_KEY');
+    if (!resendApiKey) throw new Error("INVITE_SYSTEM_KEY not found in Supabase Secrets.");
 
     const resend = new Resend(resendApiKey);
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      { auth: { autoRefreshToken: false, persistSession: false } }
     );
 
-    // Get the inviter from the auth header
     const authHeader = req.headers.get('Authorization')!;
     const { data: { user: inviterUser }, error: userError } = await createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -34,18 +33,11 @@ Deno.serve(async (req) => {
     ).auth.getUser();
     if (userError || !inviterUser) throw new Error("Could not identify the inviter.");
     
-    // Check 1: User cannot invite themselves
-    if (inviterUser.email === invitee_email) {
-      throw new Error("You cannot invite yourself!");
-    }
+    if (inviterUser.email === invitee_email) throw new Error("You cannot invite yourself!");
 
-    // Check 2: Is this email already a registered user?
-    const { data: { user: existingUser } } = await supabaseAdmin.auth.admin.getUserByEmail(invitee_email)
-    if (existingUser) {
-        throw new Error("This person is already a registered user.");
-    }
+    const { data: { user: existingUser } } = await supabaseAdmin.auth.admin.getUserByEmail(invitee_email);
+    if (existingUser) throw new Error("This person is already a registered user.");
 
-    // Check 3: Has this email already been invited and is pending?
     const { data: existingInvite } = await supabaseAdmin
       .from('invitations')
       .select('id')
@@ -54,11 +46,9 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (existingInvite) throw new Error("This person already has a pending invitation.");
 
-    // All checks passed. Create the invitation.
     const inviteCode = crypto.randomUUID();
     const pointsForSending = 3;
 
-    // --- FIX: This now includes all the necessary fields ---
     const { error: insertError } = await supabaseAdmin
       .from('invitations')
       .insert({
@@ -71,20 +61,18 @@ Deno.serve(async (req) => {
       });
     if (insertError) throw new Error(`Could not create invitation: ${insertError.message}`);
     
-    // Award the initial points to the inviter
     const { error: creditError } = await supabaseAdmin.rpc('award_points', {
       p_user_id: inviterUser.id,
       p_points_to_add: pointsForSending
     });
     if (creditError) throw new Error(`Failed to award points: ${creditError.message}`);
 
-    // Send the custom email
-    const signUpLink = `https://saucerburger.ge/register?invite_code=${inviteCode}`;
+    const registrationLink = `https://saucerburger.ge/register?invite_code=${inviteCode}`;
     const { error: emailError } = await resend.emails.send({
         from: 'Saucer Burger <noreply@saucerburger.ge>',
         to: [invitee_email],
         subject: 'You\'ve been invited to Saucer Burger! 🍔',
-        html: `<div style="font-family: sans-serif; padding: 20px; color: #333;"><h2>You're Invited!</h2><p>Your friend thinks you'd love Saucer Burger, and they've sent you an invitation to join the experience.</p><p>As a member, you can earn loyalty points for rewards, get cashback on your orders, and enjoy a faster checkout.</p><a href="${signUpLink}" style="display: inline-block; padding: 12px 24px; background-color: #F59E0B; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">Accept Invitation & Create Account</a><p style="margin-top: 20px;">Thanks,<br/>The Saucer Burger Team</p></div>`,
+        html: `<div style="font-family: sans-serif; padding: 20px; color: #333;"><h2>You're Invited!</h2><p>Your friend thinks you'd love Saucer Burger, and they've sent you an invitation to join the experience.</p><p>As a member, you can earn loyalty points for rewards, get cashback on your orders, and enjoy a faster checkout.</p><a href="${registrationLink}" style="display: inline-block; padding: 12px 24px; background-color: #F59E0B; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">Accept Invitation & Create Account</a><p style="margin-top: 20px;">Thanks,<br/>The Saucer Burger Team</p></div>`,
     });
     if (emailError) throw new Error(`Invitation created, but failed to send email: ${emailError.message}`);
 
