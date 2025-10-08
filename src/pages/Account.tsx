@@ -261,7 +261,7 @@ const Account = ({ session }: { session: Session }) => {
                         <img src="/images/bolt-logo.png" alt="Bolt Food" className="h-10 object-contain"/>
                         <span className="text-xs text-gray-400">Bolt Food</span>
                   </a>
-                  <a href="https://glovoapp.com/ge/en/tbilisi/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                  <a href="https://glovoapp.com/ge/en/tbilisi/saucer-burger-tbi/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
                         <img src="/images/glovo-logo.png" alt="Glovo" className="h-10 object-contain"/>
                         <span className="text-xs text-gray-400">Glovo</span>
                   </a>
