@@ -13,7 +13,6 @@ Deno.serve(async (req) => {
     const { invitee_email } = await req.json();
     if (!invitee_email) throw new Error("Friend's email is required.");
     
-    // --- FIX: Use your correct secret name ---
     const resendApiKey = Deno.env.get('INVITE_SYSTEM_KEY');
     if (!resendApiKey) throw new Error("INVITE_SYSTEM_KEY not found in Supabase Secrets.");
 
@@ -35,9 +34,13 @@ Deno.serve(async (req) => {
     
     if (inviterUser.email === invitee_email) throw new Error("You cannot invite yourself!");
 
-    const { data: { user: existingUser } } = await supabaseAdmin.auth.admin.getUserByEmail(invitee_email);
-    // Note: getUserByEmail throws its own "User not found" error, so we only need to check if a user *was* found.
-    if (existingUser) throw new Error("This person is already a registered user.");
+    // --- FIX: Use the new, correct RPC function to check if a user exists ---
+    const { data: userExists, error: rpcError } = await supabaseAdmin.rpc('does_user_exist', {
+      email_to_check: invitee_email
+    });
+    if (rpcError) throw new Error(`Error checking for existing user: ${rpcError.message}`);
+    if (userExists) throw new Error("This person is already a registered user.");
+    // ----------------------------------------------------------------------
 
     const { data: existingInvite } = await supabaseAdmin
       .from('invitations')
@@ -69,7 +72,7 @@ Deno.serve(async (req) => {
     if (creditError) throw new Error(`Failed to award points: ${creditError.message}`);
 
     const registrationLink = `https://saucerburger.ge/register?invite_code=${inviteCode}`;
-    const { error: emailError } = await resend.emails.send({
+    const { data: emailData, error: emailError } = await resend.emails.send({
         from: 'Saucer Burger <noreply@saucerburger.ge>',
         to: [invitee_email],
         subject: 'You\'ve been invited to Saucer Burger! 🍔',
