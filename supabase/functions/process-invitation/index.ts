@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
     const { invitee_email } = await req.json();
     if (!invitee_email) throw new Error("Friend's email is required.");
     
-    // --- FIX: Use your correct secret name 'INVITE_SYSTEM_KEY' ---
+    // --- FIX: Use your correct secret name ---
     const resendApiKey = Deno.env.get('INVITE_SYSTEM_KEY');
     if (!resendApiKey) throw new Error("INVITE_SYSTEM_KEY not found in Supabase Secrets.");
 
@@ -36,6 +36,7 @@ Deno.serve(async (req) => {
     if (inviterUser.email === invitee_email) throw new Error("You cannot invite yourself!");
 
     const { data: { user: existingUser } } = await supabaseAdmin.auth.admin.getUserByEmail(invitee_email);
+    // Note: getUserByEmail throws its own "User not found" error, so we only need to check if a user *was* found.
     if (existingUser) throw new Error("This person is already a registered user.");
 
     const { data: existingInvite } = await supabaseAdmin
@@ -74,7 +75,7 @@ Deno.serve(async (req) => {
         subject: 'You\'ve been invited to Saucer Burger! 🍔',
         html: `<div style="font-family: sans-serif; padding: 20px; color: #333;"><h2>You're Invited!</h2><p>Your friend thinks you'd love Saucer Burger, and they've sent you an invitation to join the experience.</p><p>As a member, you can earn loyalty points for rewards, get cashback on your orders, and enjoy a faster checkout.</p><a href="${registrationLink}" style="display: inline-block; padding: 12px 24px; background-color: #F59E0B; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">Accept Invitation & Create Account</a><p style="margin-top: 20px;">Thanks,<br/>The Saucer Burger Team</p></div>`,
     });
-    if (emailError) throw new Error(`Invitation created, but failed to send email: ${emailError.message}`);
+    if (emailError) throw new Error(`Invitation created, but failed to send email: ${JSON.stringify(emailError)}`);
 
     return new Response(JSON.stringify({ message: `Success! ${pointsForSending} points awarded.` }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
