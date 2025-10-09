@@ -1,4 +1,4 @@
-// supabase/functions/accept-invitation/index.ts
+// supabase/functions/process-referral-purchase/index.ts
 // --- NEW FILE ---
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -10,36 +10,38 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { invite_code } = await req.json()
-    if (!invite_code) throw new Error('Invite code is required.')
-
+    // This function must be called by an authenticated user (the one who just made a purchase)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
 
-    // Get the user who just signed up from their auth token
     const authHeader = req.headers.get('Authorization')!
-    const { data: { user: newUser }, error: userError } = await createClient(
+    const { data: { user: buyer } } = await createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: authHeader } } }
     ).auth.getUser()
 
-    if (userError || !newUser) throw new Error('Could not identify the new user.')
+    if (!buyer) throw new Error('Could not identify the buyer.')
 
-    // Find the original invitation
+    // Find a pending invitation linked to this buyer
     const { data: invitation, error: findError } = await supabaseAdmin
       .from('invitations')
-      .select('id, inviter_id, status, points_for_signup')
-      .eq('code', invite_code)
-      .eq('status', 'sent')
+      .select('id, inviter_id, points_for_signup')
+      .eq('invitee_id', buyer.id)
+      .eq('status', 'awaiting_purchase') // IMPORTANT: Look for this specific status
       .single()
-    
-    if (findError || !invitation) throw new Error('Invalid or expired invitation code.')
 
-    // Award points to the original inviter
+    // If no invitation is found, or an error occurs, it's not a referral purchase. Exit gracefully.
+    if (findError || !invitation) {
+      return new Response(JSON.stringify({ message: 'Not a referral purchase.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // If we found one, award points to the inviter
     const { error: creditError } = await supabaseAdmin.rpc('award_points', {
       p_user_id: invitation.inviter_id,
       p_points_to_add: invitation.points_for_signup
@@ -47,21 +49,16 @@ Deno.serve(async (req) => {
 
     if (creditError) throw new Error(`Could not award points: ${creditError.message}`)
 
-    // Update the invitation to mark it as completed
-    const { error: updateError } = await supabaseAdmin
+    // Finally, update the invitation to mark it as fully completed
+    await supabaseAdmin
       .from('invitations')
-      .update({
-        status: 'completed',
-        invitee_id: newUser.id, // Link the new user to the invitation
-        accepted_at: new Date().toISOString()
-      })
+      .update({ status: 'completed' })
       .eq('id', invitation.id)
 
-    if (updateError) throw new Error(`Could not update invitation status: ${updateError.message}`)
-    
-    return new Response(JSON.stringify({ message: 'Referral completed successfully!' }), {
+    return new Response(JSON.stringify({ message: 'Referral points awarded successfully!' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
+
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

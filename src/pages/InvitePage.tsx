@@ -51,7 +51,7 @@ const InvitePage = () => {
             <Gift className="w-6 h-6" /> Invite a Friend
           </CardTitle>
           <CardDescription className="text-gray-300 pt-2">
-            Invite a friend and earn **3 points** immediately. You'll get **3 more points** when they sign up!
+            Invite a friend to Saucer Burger. You'll get **6 points** when they make their first purchase!
           </CardDescription>
         </CardHeader>
         <CardContent>
