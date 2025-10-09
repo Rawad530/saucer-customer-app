@@ -248,6 +248,24 @@ All colors MUST be HSL.
   margin: 0 auto;
 }
 
+/* This media query targets screens 768px wide or smaller (tablets and phones) */
+@media (max-width: 768px) {
+  .footer-grid {
+    grid-template-columns: 1fr; /* Switch to a single column */
+    text-align: center; /* Center the text for a cleaner mobile look */
+    gap: 2.5rem; /* Adjust the gap for vertical stacking */
+  }
+
+  .landing-header {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .landing-nav {
+    order: 1; /* Puts the nav links below the sign-in button on mobile */
+  }
+}
+
 .landing-footer h4 {
   font-size: 1.1rem;
   font-weight: bold;
