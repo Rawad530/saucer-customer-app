@@ -395,3 +395,23 @@ All colors MUST be HSL.
 .divider-text::after {
   right: 0;
 }
+.header-left, .header-right {
+  display: flex;
+  align-items: center;
+  gap: 40px; /* Adjust the space between items */
+}
+
+/* Optional: Simple style for the language switcher */
+.language-switcher button {
+  background: none;
+  border: none;
+  color: var(--secondary-text);
+  font-weight: bold;
+  cursor: pointer;
+}
+.language-switcher button.active {
+  color: var(--primary-color);
+  background-color: #374151;
+  padding: 5px 10px;
+  border-radius: 6px;
+}
