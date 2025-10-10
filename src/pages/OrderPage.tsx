@@ -129,8 +129,54 @@ const OrderPage = () => {
   const walletCreditApplied = effectiveUseWallet ? Math.min(walletBalance, priceAfterPromo) : 0;
   const totalPrice = priceAfterPromo - walletCreditApplied;
 
+  // --- THIS IS THE UPDATED FUNCTION ---
   const handleApplyPromoCode = async () => {
-    // This function remains the same
+    if (!promoCode.trim()) {
+      setPromoMessage("Please enter a code.");
+      return;
+    }
+
+    // The Edge function requires authentication
+    if (!session) {
+      setPromoMessage("You must be logged in to use promo codes.");
+      return;
+    }
+
+    setIsCheckingPromo(true);
+    setPromoMessage("");
+
+    try {
+      // Call the updated Edge Function. The Supabase client automatically includes the Auth header.
+      const { data, error } = await supabase.functions.invoke('validate-promo-code', {
+        body: { promoCode: promoCode.trim() }
+      });
+
+      // Handle potential errors from the function invocation (e.g., network errors or non-200 status codes)
+      if (error) {
+        // Extracting the meaningful error message if available from the Edge Function response (status 400)
+        const errorMessage = error.context?.body?.error || error.message || "Validation failed.";
+        throw new Error(errorMessage);
+      }
+
+      // Handle errors returned within the function data body (if any)
+      if (data && data.error) throw new Error(data.error);
+
+      if (data && data.discount && data.discount > 0) {
+        setAppliedDiscount(data.discount);
+        setPromoMessage(`Success! ${data.discount}% discount applied.`);
+        // We keep the promoCode state set so it gets recorded in the transaction later.
+      } else {
+        throw new Error("Invalid response from server.");
+      }
+
+    } catch (err) {
+      console.error("Error applying promo code:", err);
+      setAppliedDiscount(0);
+      // Display the specific error message returned by the Edge function
+      setPromoMessage(err instanceof Error ? err.message : "Could not apply promo code.");
+    } finally {
+      setIsCheckingPromo(false);
+    }
   };
 
   const handleGuestSubmit = (details: { name: string; phone: string }) => {
@@ -151,10 +197,10 @@ const OrderPage = () => {
       setIsGuestModalOpen(true);
     }
   };
-  
+
   const placeOrder = async (currentGuestInfo: { name: string; phone: string } | null) => {
     setIsPlacingOrder(true);
-    
+
     try {
       const { data: orderNumberData, error: orderNumberError } = await supabase.functions.invoke(
         'generate-order-number',
@@ -163,12 +209,12 @@ const OrderPage = () => {
 
       if (orderNumberError) throw orderNumberError;
       if (!orderNumberData?.orderNumber) throw new Error("Failed to generate order number.");
-      
+
       const orderNumber = orderNumberData.orderNumber;
       const orderId = crypto.randomUUID();
 
       setCompletedOrderNumber(orderNumber);
-      
+
       const userId = session?.user?.id || null;
       const guestName = currentGuestInfo?.name || null;
       const guestPhone = currentGuestInfo?.phone || null;
@@ -176,16 +222,16 @@ const OrderPage = () => {
       if (!userId && (!guestName || !guestPhone)) {
         throw new Error("Guest name and phone number are required to proceed.");
       }
-      
+
       let paymentMode = 'Card - Online';
       if (walletCreditApplied > 0) {
         paymentMode = (totalPrice > 0.01) ? 'Wallet/Card Combo' : 'Wallet Only';
       }
-    
+
       const { error: insertError } = await supabase.from('transactions').insert([
-        { 
+        {
           transaction_id: orderId,
-          user_id: userId, 
+          user_id: userId,
           guest_name: guestName,
           guest_phone: guestPhone,
           order_number: orderNumber,
@@ -202,7 +248,7 @@ const OrderPage = () => {
       ]);
 
       if (insertError) throw new Error(`Failed to process order: ${insertError.message}`);
-    
+
       const { data: functionData, error: functionError } = await supabase.functions.invoke('initiate-payment', {
         body: { orderId },
       });
@@ -211,7 +257,7 @@ const OrderPage = () => {
       if (functionData.error) throw new Error(functionData.error);
 
       if (functionData.paymentComplete) {
-        clearCart(); 
+        clearCart();
         localStorage.removeItem('guest_info');
         setOrderPlaced(true);
         if (session) {
@@ -241,7 +287,7 @@ const OrderPage = () => {
       <div className="flex flex-col justify-center items-center h-96 text-center p-4">
         <h1 className="text-4xl font-bold text-amber-500 mb-2">Thank You{guestInfo ? `, ${guestInfo.name}` : ''}!</h1>
         <p className="text-lg mb-4">Your order has been placed successfully.</p>
-        
+
         {completedOrderNumber && (
           <div className="bg-gray-800 p-4 rounded-lg mb-6 border border-gray-700">
             <p className="text-sm text-gray-400">Your Order Number is:</p>
@@ -250,10 +296,8 @@ const OrderPage = () => {
           </div>
         )}
 
-        {/* --- CHANGES START HERE --- */}
         <div className="flex justify-center items-center gap-4">
           {session && (
-            // New Track Order Button (only for logged-in users)
             <Link
               to="/history"
               className="px-6 py-2 font-bold text-amber-500 border border-amber-500 rounded-md hover:bg-amber-500 hover:text-white transition-colors"
@@ -262,7 +306,6 @@ const OrderPage = () => {
             </Link>
           )}
 
-          {/* Existing Button Logic */}
           {session ? (
             <Link
               to="/account"
@@ -279,8 +322,6 @@ const OrderPage = () => {
             </Link>
           )}
         </div>
-        {/* --- CHANGES END HERE --- */}
-
       </div>
     );
   }
@@ -322,7 +363,7 @@ const OrderPage = () => {
               ))}
             </div>
             <div>
-              <div className="sticky top-16"> 
+              <div className="sticky top-16">
                 <OrderSummary
                   selectedItems={selectedItems}
                   pendingItem={pendingItem}
@@ -352,8 +393,8 @@ const OrderPage = () => {
           </div>
         </div>
       </div>
-      
-      <GuestOrderDialog 
+
+      <GuestOrderDialog
         isOpen={isGuestModalOpen}
         onClose={() => setIsGuestModalOpen(false)}
         onSubmit={handleGuestSubmit}

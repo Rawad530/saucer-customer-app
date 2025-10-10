@@ -7,6 +7,7 @@ import { Session } from '@supabase/supabase-js';
 import { User, Wallet, Star, History, Truck, Megaphone, QrCode, Gift } from 'lucide-react';
 import QRCode from "react-qr-code";
 import { Order, OrderItem } from '../types/order';
+import MyCoupons from '../components/MyCoupons'; // <-- STEP 1: IMPORTED THE COMPONENT
 
 interface ProfileData {
   full_name: string;
@@ -75,9 +76,9 @@ const Account = ({ session }: { session: Session }) => {
           setMostOrderedItem(mostOrdered[0]);
         }
       }
-      
+
       if (announcementRes.data) setAnnouncements(announcementRes.data);
-      
+
       if (statusRes.error) {
         console.error("Error checking restaurant status:", statusRes.error);
         setIsRestaurantOpen(false);
@@ -144,16 +145,16 @@ const Account = ({ session }: { session: Session }) => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
+
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-amber-600 p-8 rounded-lg text-center">
-                <h2 className="text-3xl font-bold mb-4">Ready for another round?</h2>
-                <PlaceOrderButton />
+              <h2 className="text-3xl font-bold mb-4">Ready for another round?</h2>
+              <PlaceOrderButton />
             </div>
 
             <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="flex items-center text-xl font-bold mb-4"><Star className="w-6 h-6 mr-2 text-amber-400"/> Your Rewards Status</h3>
-              
+              <h3 className="flex items-center text-xl font-bold mb-4"><Star className="w-6 h-6 mr-2 text-amber-400" /> Your Rewards Status</h3>
+
               {profileData && (
                 <div className="text-center mb-4 border-b border-gray-700 pb-4">
                   <p className="text-sm font-medium text-gray-400">YOUR CURRENT POINT BALANCE</p>
@@ -174,33 +175,35 @@ const Account = ({ session }: { session: Session }) => {
                     You're {pointsNeeded} points away! Spend ₾{moneyNeeded.toFixed(2)} more to unlock.
                   </p>
                 </div>
-              ) : ( 
+              ) : (
                 <div className="text-center">
-                    <p className="font-semibold text-green-400">You've unlocked all available rewards!</p>
-                    <p className="text-sm text-gray-400 mt-1">Keep collecting points for future goodies.</p>
+                  <p className="font-semibold text-green-400">You've unlocked all available rewards!</p>
+                  <p className="text-sm text-gray-400 mt-1">Keep collecting points for future goodies.</p>
                 </div>
               )}
               <Link to="/rewards" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View All Rewards &rarr;</Link>
             </div>
-            
+
+            {/* --- STEP 2: PLACED THE COMPONENT HERE --- */}
+            <MyCoupons />
+
             <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="flex items-center text-xl font-bold mb-4"><History className="w-6 h-6 mr-2 text-gray-300"/> Recent Activity</h3>
+              <h3 className="flex items-center text-xl font-bold mb-4"><History className="w-6 h-6 mr-2 text-gray-300" /> Recent Activity</h3>
               {lastOrder ? (
-                  <div>
-                    <p className="text-sm text-gray-400">Last Order: #{lastOrder.order_number}</p>
-                    <p className="font-semibold truncate">{(lastOrder.items || []).map(i => i.menuItem.name).join(', ')}</p>
-                    <hr className="border-gray-700 my-3" />
-                    <p className="text-sm text-gray-400">Your Favorite Item:</p>
-                    <p className="font-semibold">{mostOrderedItem || 'Not enough data'}</p>
-                  </div>
-              ) : ( <p className="text-gray-400">You haven't placed any orders yet.</p> )}
+                <div>
+                  <p className="text-sm text-gray-400">Last Order: #{lastOrder.order_number}</p>
+                  <p className="font-semibold truncate">{(lastOrder.items || []).map(i => i.menuItem.name).join(', ')}</p>
+                  <hr className="border-gray-700 my-3" />
+                  <p className="text-sm text-gray-400">Your Favorite Item:</p>
+                  <p className="font-semibold">{mostOrderedItem || 'Not enough data'}</p>
+                </div>
+              ) : (<p className="text-gray-400">You haven't placed any orders yet.</p>)}
               <Link to="/history" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View Full History &rarr;</Link>
             </div>
 
-            {/* --- NEW CARD ADDED FROM CODE 2 --- */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4">
-                <Gift className="w-6 h-6 mr-2 text-purple-400"/> 
+                <Gift className="w-6 h-6 mr-2 text-purple-400" />
                 Side Quests
               </h3>
               <p className="text-gray-400">Complete special tasks like leaving a review to earn bonus loyalty points.</p>
@@ -208,11 +211,10 @@ const Account = ({ session }: { session: Session }) => {
                 View All Quests &rarr;
               </Link>
             </div>
-            {/* --- END OF NEW CARD --- */}
 
             {announcements.length > 0 && (
               <div className="bg-gray-800 p-6 rounded-lg">
-                <h3 className="flex items-center text-xl font-bold mb-4"><Megaphone className="w-6 h-6 mr-2 text-blue-400"/> What's New?</h3>
+                <h3 className="flex items-center text-xl font-bold mb-4"><Megaphone className="w-6 h-6 mr-2 text-blue-400" /> What's New?</h3>
                 <div className="space-y-4">
                   {announcements.map((announcement) => (
                     <div key={announcement.id} className="border-t border-gray-700 pt-4 first:border-t-0 first:pt-0">
@@ -227,44 +229,44 @@ const Account = ({ session }: { session: Session }) => {
 
           <div className="space-y-6">
             <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="flex items-center text-xl font-bold mb-4"><User className="w-6 h-6 mr-2 text-gray-300"/> Profile & Wallet</h3>
+              <h3 className="flex items-center text-xl font-bold mb-4"><User className="w-6 h-6 mr-2 text-gray-300" /> Profile & Wallet</h3>
               <div className="text-center bg-gray-700/50 p-4 rounded-md mb-4">
-                  <p className="text-gray-400">Wallet Balance</p>
-                  <p className="text-3xl font-bold text-green-400">₾{profileData?.wallet_balance.toFixed(2) || '0.00'}</p>
+                <p className="text-gray-400">Wallet Balance</p>
+                <p className="text-3xl font-bold text-green-400">₾{profileData?.wallet_balance.toFixed(2) || '0.00'}</p>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
-                  <Link to="/wallet" className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 text-sm">Add Funds</Link>
-                  <Link to="/profile" className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700 text-sm">Edit Profile</Link>
-                  <Link to="/invite" className="w-full px-4 py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 text-sm flex items-center justify-center gap-1">
-                    <Gift className="w-4 h-4" /> Invite
-                  </Link>
+                <Link to="/wallet" className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 text-sm">Add Funds</Link>
+                <Link to="/profile" className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700 text-sm">Edit Profile</Link>
+                <Link to="/invite" className="w-full px-4 py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 text-sm flex items-center justify-center gap-1">
+                  <Gift className="w-4 h-4" /> Invite
+                </Link>
               </div>
             </div>
 
             <div className="bg-gray-800 p-6 rounded-lg text-center">
-              <h3 className="flex items-center justify-center text-xl font-bold mb-4"><QrCode className="w-6 h-6 mr-2 text-gray-300"/> Your Loyalty Code</h3>
+              <h3 className="flex items-center justify-center text-xl font-bold mb-4"><QrCode className="w-6 h-6 mr-2 text-gray-300" /> Your Loyalty Code</h3>
               <div className="bg-white p-4 rounded-md inline-block">
-                  <QRCode value={session.user.id} size={200} viewBox={`0 0 256 256`}/>
+                <QRCode value={session.user.id} size={200} viewBox={`0 0 256 256`} />
               </div>
               <p className="text-xs text-gray-400 mt-2">Scan this code at the counter for cashback.</p>
             </div>
-            
+
             <div className="bg-gray-800 p-6 rounded-lg">
-              <h3 className="flex items-center text-xl font-bold mb-4"><Truck className="w-6 h-6 mr-2 text-gray-300"/> Delivery Partners</h3>
+              <h3 className="flex items-center text-xl font-bold mb-4"><Truck className="w-6 h-6 mr-2 text-gray-300" /> Delivery Partners</h3>
               <p className="text-gray-400 mb-4 text-sm">Order for delivery through our official partners:</p>
               <div className="grid grid-cols-3 gap-2 items-center">
-                  <a href="https://wolt.com/ka/geo/tbilisi/restaurant/saucer-burger" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
-                        <img src="/images/logo-wolt.png" alt="Wolt" className="h-10 object-contain"/>
-                        <span className="text-xs text-gray-400">Wolt</span>
-                  </a>
-                  <a href="https://food.bolt.eu/en-US/15-tbilisi/p/150123-saucer-burger" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
-                        <img src="/images/bolt-logo.png" alt="Bolt Food" className="h-10 object-contain"/>
-                        <span className="text-xs text-gray-400">Bolt Food</span>
-                  </a>
-                  <a href="https://glovoapp.com/ge/en/tbilisi/saucer-burger-tbi/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
-                        <img src="/images/glovo-logo.png" alt="Glovo" className="h-10 object-contain"/>
-                        <span className="text-xs text-gray-400">Glovo</span>
-                  </a>
+                <a href="https://wolt.com/ka/geo/tbilisi/restaurant/saucer-burger" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                  <img src="/images/logo-wolt.png" alt="Wolt" className="h-10 object-contain" />
+                  <span className="text-xs text-gray-400">Wolt</span>
+                </a>
+                <a href="https://food.bolt.eu/en-US/15-tbilisi/p/150123-saucer-burger" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                  <img src="/images/bolt-logo.png" alt="Bolt Food" className="h-10 object-contain" />
+                  <span className="text-xs text-gray-400">Bolt Food</span>
+                </a>
+                <a href="https://glovoapp.com/ge/en/tbilisi/saucer-burger-tbi/" target="_blank" rel="noopener noreferrer" className="flex flex-col items-center justify-start gap-2 p-2">
+                  <img src="/images/glovo-logo.png" alt="Glovo" className="h-10 object-contain" />
+                  <span className="text-xs text-gray-400">Glovo</span>
+                </a>
               </div>
             </div>
           </div>
