@@ -7,7 +7,7 @@ import { Session } from '@supabase/supabase-js';
 import { User, Wallet, Star, History, Truck, Megaphone, QrCode, Gift } from 'lucide-react';
 import QRCode from "react-qr-code";
 import { Order, OrderItem } from '../types/order';
-import MyCoupons from '../components/MyCoupons'; // <-- STEP 1: IMPORTED THE COMPONENT
+import MyCoupons from '../components/MyCoupons';
 
 interface ProfileData {
   full_name: string;
@@ -54,7 +54,7 @@ const Account = ({ session }: { session: Session }) => {
         if (next) {
           setNextReward(next);
         } else {
-          setNextReward(null); // Explicitly set to null if no next reward is found
+          setNextReward(null);
         }
       }
 
@@ -92,10 +92,6 @@ const Account = ({ session }: { session: Session }) => {
     fetchDashboardData();
   }, [session]);
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-  };
-
   const PlaceOrderButton = () => {
     if (isRestaurantOpen === null) {
       return (
@@ -129,23 +125,19 @@ const Account = ({ session }: { session: Session }) => {
 
   const rewardProgress = nextReward && profileData ? (profileData.points / nextReward.points_required) * 100 : 0;
   const pointsNeeded = nextReward && profileData ? nextReward.points_required - profileData.points : 0;
-  const moneyNeeded = pointsNeeded; // Assuming 1 GEL = 1 Point for simplicity, adjust if needed
+  const moneyNeeded = pointsNeeded;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
+        
+        {/* The welcome message and redundant sign out button were here. They have been removed. */}
+        <div className="mb-8">
             <h1 className="text-3xl font-bold">Welcome, {profileData?.full_name || session.user.email}!</h1>
             <p className="text-gray-400">Here's a summary of your Saucer Burger activity.</p>
-          </div>
-          <button onClick={handleSignOut} className="px-4 py-2 font-bold text-white bg-red-600 rounded-md hover:bg-red-700">
-            Sign Out
-          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-amber-600 p-8 rounded-lg text-center">
               <h2 className="text-3xl font-bold mb-4">Ready for another round?</h2>
@@ -154,14 +146,12 @@ const Account = ({ session }: { session: Session }) => {
 
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><Star className="w-6 h-6 mr-2 text-amber-400" /> Your Rewards Status</h3>
-
               {profileData && (
                 <div className="text-center mb-4 border-b border-gray-700 pb-4">
                   <p className="text-sm font-medium text-gray-400">YOUR CURRENT POINT BALANCE</p>
                   <p className="text-5xl font-bold text-amber-400 tracking-tight">{profileData.points}</p>
                 </div>
               )}
-
               {nextReward && profileData ? (
                 <div>
                   <div className="flex justify-between items-end mb-1">
@@ -184,7 +174,6 @@ const Account = ({ session }: { session: Session }) => {
               <Link to="/rewards" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View All Rewards &rarr;</Link>
             </div>
 
-            {/* --- STEP 2: PLACED THE COMPONENT HERE --- */}
             <MyCoupons />
 
             <div className="bg-gray-800 p-6 rounded-lg">
