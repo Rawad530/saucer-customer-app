@@ -129,7 +129,7 @@ const LandingPage = () => {
 
       <main>
         {/* Hero Section */}
-        <section className="bg-gray-900 py-20 lg:py-32">
+        <section className="bg-gray-900 pt-20 lg:pt-32 pb-10 lg:pb-16">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-amber-400 mb-6">{t.hero_title}</h1>
             <p className="text-lg lg:text-xl text-gray-300 mb-10 max-w-3xl mx-auto">{t.hero_subtitle}</p>
@@ -138,7 +138,7 @@ const LandingPage = () => {
         </section>
 
         {/* Divider */}
-        <div className="relative container mx-auto px-4 my-8">
+        <div className="relative container mx-auto px-4 my-4">
             <div className="absolute inset-0 flex items-center" aria-hidden="true">
                 <div className="w-full border-t border-gray-700"></div>
             </div>
@@ -148,7 +148,7 @@ const LandingPage = () => {
         </div>
 
         {/* Benefits Section */}
-        <section id="benefits" className="container mx-auto px-4 py-16 lg:py-24">
+        <section id="benefits" className="container mx-auto px-4 pt-8 lg:pt-12 pb-16 lg:pb-24">
           <h2 className="text-3xl lg:text-4xl font-bold text-center text-amber-400 mb-4">{t.benefits_title}</h2>
           <p className="text-center text-gray-300 mb-12 lg:mb-16">{t.benefits_subtitle}</p>
           
