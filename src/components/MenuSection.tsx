@@ -1,4 +1,4 @@
-// src/components/MenuSection.tsx -- Focus on the DialogContent
+// src/components/MenuSection.tsx
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,17 +37,21 @@ const MenuSection = ({ title, items, onAddItem }: MenuSectionProps) => {
                         className="w-24 h-24 rounded-md object-cover shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                       />
                     </DialogTrigger>
-                    {/* --- START OF MODIFIED DIALOGCONTENT --- */}
-                    <DialogContent className="max-w-xl md:max-w-2xl lg:max-w-3xl p-6 bg-gray-900 border-gray-700 rounded-lg">
+                    
+                    <DialogContent 
+                      // --- MODIFIED LINE 1: Increased max-width of the dialog itself ---
+                      className="max-w-2xl md:max-w-3xl lg:max-w-4xl p-6 bg-gray-900 border-gray-700 rounded-lg"
+                    >
                       <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
                         {/* Image on one side (or top on small screens) */}
                         <img 
                           src={item.image_url} 
                           alt={item.name} 
-                          className="w-full md:w-1/2 h-auto rounded-lg object-cover max-h-80" 
+                          // --- MODIFIED LINE 2: Increased image width within the dialog ---
+                          className="w-full md:w-3/5 lg:w-2/3 h-auto rounded-lg object-cover max-h-96" // Changed md:w-1/2 to md:w-3/5, added lg:w-2/3, and max-h-80 to max-h-96
                         />
                         {/* Details on the other side (or bottom on small screens) */}
-                        <div className="flex flex-col justify-between flex-grow w-full md:w-1/2">
+                        <div className="flex flex-col justify-between flex-grow w-full md:w-2/5 lg:w-1/3"> {/* Adjusted md:w-1/2 to md:w-2/5 and added lg:w-1/3 */}
                           <div>
                             <h3 className="text-2xl font-bold text-white mb-2">{item.name}</h3>
                             {item.description && (
@@ -56,7 +60,6 @@ const MenuSection = ({ title, items, onAddItem }: MenuSectionProps) => {
                           </div>
                           <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-700">
                             <p className="text-amber-400 font-bold text-xl">₾{item.price.toFixed(2)}</p>
-                            {/* Optionally, add an "Add to Cart" button directly in the dialog */}
                             <Button
                               onClick={() => {
                                 onAddItem(item);
@@ -72,7 +75,6 @@ const MenuSection = ({ title, items, onAddItem }: MenuSectionProps) => {
                         </div>
                       </div>
                     </DialogContent>
-                    {/* --- END OF MODIFIED DIALOGCONTENT --- */}
                   </Dialog>
                 )}
 
