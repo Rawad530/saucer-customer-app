@@ -24,9 +24,9 @@ const MenuSection = ({ title, items, onAddItem }: MenuSectionProps) => {
       </h2>
       <div className="grid md:grid-cols-2 gap-4">
         {items.map(item => (
-          <Card key={item.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700/50 transition-colors flex">
-            <CardContent className="p-4 flex-grow">
-              <div className="flex items-start gap-4 h-full">
+          <Card key={item.id} className="bg-gray-800 border-gray-700 hover:bg-gray-700/50 transition-colors">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
                 
                 {/* --- Image Zoom Implementation --- */}
                 {item.image_url && (
@@ -47,29 +47,18 @@ const MenuSection = ({ title, items, onAddItem }: MenuSectionProps) => {
                 )}
                 {/* --- End of Image Zoom Implementation --- */}
 
-                {/* This container will now hold both the top row and the description below it */}
-                <div className="flex-grow flex flex-col">
-                  {/* This top row keeps the name/price and button aligned */}
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h5 className="font-semibold text-white">{item.name}</h5>
-                      <p className="text-amber-500 font-bold">₾{item.price.toFixed(2)}</p>
-                    </div>
-                    <Button
-                      onClick={() => onAddItem(item)}
-                      size="sm"
-                      className="bg-amber-600 hover:bg-amber-700 shrink-0"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                <div className="flex-grow flex justify-between items-center">
+                  <div>
+                    <h5 className="font-semibold text-white">{item.name}</h5>
+                    <p className="text-amber-500 font-bold">₾{item.price.toFixed(2)}</p>
                   </div>
-
-                  {/* This conditionally renders the description if it exists */}
-                  {item.description && (
-                    <p className="text-sm text-gray-400 mt-2 pr-2">
-                      {item.description}
-                    </p>
-                  )}
+                  <Button
+                    onClick={() => onAddItem(item)}
+                    size="sm"
+                    className="bg-amber-600 hover:bg-amber-700 shrink-0"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </CardContent>
