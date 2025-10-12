@@ -131,7 +131,7 @@ const Account = ({ session }: { session: Session }) => {
 
   const rewardProgress = nextReward && profileData ? (profileData.points / nextReward.points_required) * 100 : 0;
   const pointsNeeded = nextReward && profileData ? nextReward.points_required - profileData.points : 0;
-  const moneyNeeded = pointsNeeded;
+  const moneyNeeded = pointsNeeded * 10;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
