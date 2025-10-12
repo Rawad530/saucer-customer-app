@@ -32,6 +32,8 @@ const Account = ({ session }: { session: Session }) => {
   const [mostOrderedItem, setMostOrderedItem] = useState<string | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
+  // --- FIX: State to track if any rewards exist at all ---
+  const [rewardsAvailable, setRewardsAvailable] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -48,15 +50,19 @@ const Account = ({ session }: { session: Session }) => {
 
       if (profileRes.data) setProfileData(profileRes.data);
 
-      if (profileRes.data && rewardsRes.data) {
-        const currentPoints = profileRes.data.points;
-        const next = rewardsRes.data.find(reward => reward.points_required > currentPoints);
-        if (next) {
-          setNextReward(next);
-        } else {
-          setNextReward(null);
+      // --- FIX: More robust logic to handle rewards ---
+      if (rewardsRes.data && rewardsRes.data.length > 0) {
+        setRewardsAvailable(true); // We found rewards!
+        if (profileRes.data) {
+          const currentPoints = profileRes.data.points;
+          const next = rewardsRes.data.find(reward => reward.points_required > currentPoints);
+          setNextReward(next || null); // Set to null if no 'next' reward is found (i.e., all are unlocked)
         }
+      } else {
+        setRewardsAvailable(false); // No rewards found in the database
+        setNextReward(null);
       }
+      // --- END OF FIX ---
 
       if (ordersRes.data && ordersRes.data.length > 0) {
         const typedOrders = ordersRes.data as Order[];
@@ -131,7 +137,6 @@ const Account = ({ session }: { session: Session }) => {
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         
-        {/* The welcome message and redundant sign out button were here. They have been removed. */}
         <div className="mb-8">
             <h1 className="text-3xl font-bold">Welcome, {profileData?.full_name || session.user.email}!</h1>
             <p className="text-gray-400">Here's a summary of your Saucer Burger activity.</p>
@@ -144,6 +149,7 @@ const Account = ({ session }: { session: Session }) => {
               <PlaceOrderButton />
             </div>
 
+            {/* --- FIX: This rewards card is now updated with robust logic --- */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><Star className="w-6 h-6 mr-2 text-amber-400" /> Your Rewards Status</h3>
               {profileData && (
@@ -152,7 +158,14 @@ const Account = ({ session }: { session: Session }) => {
                   <p className="text-5xl font-bold text-amber-400 tracking-tight">{profileData.points}</p>
                 </div>
               )}
-              {nextReward && profileData ? (
+              
+              {!rewardsAvailable ? (
+                // Case 1: No rewards exist in the database
+                <div className="text-center">
+                    <p className="text-gray-400">New rewards are coming soon! Keep an eye on this space.</p>
+                </div>
+              ) : nextReward && profileData ? (
+                // Case 2: There is a next reward to work towards
                 <div>
                   <div className="flex justify-between items-end mb-1">
                     <p className="font-semibold">Next Up: {nextReward.title}</p>
@@ -166,6 +179,7 @@ const Account = ({ session }: { session: Session }) => {
                   </p>
                 </div>
               ) : (
+                // Case 3: All available rewards have been unlocked
                 <div className="text-center">
                   <p className="font-semibold text-green-400">You've unlocked all available rewards!</p>
                   <p className="text-sm text-gray-400 mt-1">Keep collecting points for future goodies.</p>
@@ -173,6 +187,7 @@ const Account = ({ session }: { session: Session }) => {
               )}
               <Link to="/rewards" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View All Rewards &rarr;</Link>
             </div>
+            {/* --- END OF FIX --- */}
 
             <MyCoupons />
 
