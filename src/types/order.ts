@@ -60,10 +60,10 @@ export interface Order {
   guest_phone: string | null;
 
   // Order details
-  order_number: string; // Changed to string to support new format
+  order_number: string;
   items: OrderItem[];
   total_price: number;
-  payment_mode: PaymentMode; // Using the comprehensive type now
+  payment_mode: PaymentMode;
   status: string;
   created_at: string;
   
@@ -72,5 +72,5 @@ export interface Order {
   discount_applied_percent: number | null;
   wallet_credit_applied: number;
   order_type: string;
-  rejection_reason?: string; // <-- ADDED THIS LINE
+  rejection_reason?: string; // This was missing
 }

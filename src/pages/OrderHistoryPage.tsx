@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { Order, PaymentMode } from '../types/order';
 import { Link } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Tag, CreditCard, AlertCircle } from 'lucide-react'; // --- CHANGE: Imported AlertCircle icon ---
+import { ChevronDown, Tag, CreditCard, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const OrderHistoryPage = () => {
@@ -16,7 +16,6 @@ const OrderHistoryPage = () => {
     const fetchOrders = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // --- CHANGE: Explicitly select the new 'rejection_reason' column ---
         const { data, error } = await supabase
           .from('transactions')
           .select('*, rejection_reason')
@@ -83,6 +82,7 @@ const OrderHistoryPage = () => {
                               <p className="text-sm mt-2">Status: <span className="capitalize font-medium text-amber-400">{order.status.replace('_', ' ')}</span></p>
                           </div>
                           <div className="flex items-center gap-4">
+                              {/* --- FIX: Corrected Currency Symbol --- */}
                               <p className="font-semibold text-xl">₾{order.total_price.toFixed(2)}</p>
                               <ChevronDown className="h-5 w-5 transition-transform duration-300" />
                           </div>
@@ -96,6 +96,7 @@ const OrderHistoryPage = () => {
                                           <div key={index} className="bg-gray-700/50 p-3 rounded-md text-sm">
                                               <div className="flex justify-between font-medium">
                                                   <span>{item.quantity} x {item.menuItem.name}</span>
+                                                  {/* --- FIX: Corrected Currency Symbol --- */}
                                                   <span>₾{(item.menuItem.price * item.quantity).toFixed(2)}</span>
                                               </div>
                                               <div className="text-xs text-gray-400 pl-4">
@@ -112,17 +113,20 @@ const OrderHistoryPage = () => {
                                   {order.promo_code_used && (
                                       <div className="flex justify-between items-center text-green-400">
                                           <span>Subtotal</span>
+                                           {/* --- FIX: Corrected Currency Symbol --- */}
                                           <span>₾{subtotal.toFixed(2)}</span>
                                       </div>
                                   )}
                                   {order.promo_code_used && (
                                       <div className="flex justify-between items-center text-green-400">
                                           <span>Discount ({order.promo_code_used})</span>
+                                          {/* --- FIX: Corrected Currency Symbol --- */}
                                           <span>- ₾{discountAmount.toFixed(2)}</span>
                                       </div>
                                   )}
                                   <div className="flex justify-between items-center font-bold text-lg">
                                       <span>Total</span>
+                                      {/* --- FIX: Corrected Currency Symbol --- */}
                                       <span>₾{order.total_price.toFixed(2)}</span>
                                   </div>
                               </div>
@@ -138,7 +142,6 @@ const OrderHistoryPage = () => {
                                       </Badge>
                                   )}
                               </div>
-                              {/* --- CHANGE: Added this block to display the rejection reason --- */}
                               {order.status === 'rejected' && (
                                 <div className="mt-4 pt-4 border-t border-dashed border-red-400/30 bg-red-900/20 p-3 rounded-md">
                                   <h5 className="font-semibold text-red-400 flex items-center gap-2">
