@@ -28,6 +28,7 @@ import RequestPasswordResetPage from './pages/RequestPasswordResetPage';
 import UpdatePasswordPage from './pages/UpdatePasswordPage';
 import TermsOfUsePage from './pages/TermsOfUsePage';
 import QuestsPage from './pages/QuestsPage';
+import ScrollToTop from './components/ScrollToTop'; // <-- IMPORTED THE COMPONENT
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -56,6 +57,7 @@ function App() {
   return (
     <LanguageProvider>
       <>
+        <ScrollToTop /> {/* <-- PLACED THE COMPONENT HERE */}
         <Routes>
           {/* Standalone Routes */}
           <Route path="/" element={!session ? <LandingPage /> : <Navigate to="/account" replace />} />
