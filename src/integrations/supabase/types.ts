@@ -683,24 +683,12 @@ export type Database = {
         Args: { decrement_quantity: number; item_name: string }
         Returns: undefined
       }
-      does_user_exist: {
-        Args: { email_to_check: string }
-        Returns: boolean
-      }
       finalize_wallet_topup: {
         Args: { topup_id_to_finalize: string }
         Returns: boolean
       }
       get_invite_details: {
         Args: { p_invite_code: string }
-        Returns: string
-      }
-      increment_point_count: {
-        Args: { user_id_to_update: string }
-        Returns: undefined
-      }
-      process_payment_callback: {
-        Args: { external_id: string } | { external_id: string }
         Returns: string
       }
       redeem_reward: {
