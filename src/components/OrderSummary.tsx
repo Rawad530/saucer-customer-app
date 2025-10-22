@@ -1,5 +1,6 @@
+// src/components/OrderSummary.tsx
+
 import React from "react";
-import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OrderItem as OrderItemType, PendingItem } from "@/types/order";
@@ -8,7 +9,6 @@ import ItemConfigurationCard from "./ItemConfigurationCard";
 import { addOnOptions } from "@/data/menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Truck, Pencil } from "lucide-react";
 
 interface OrderSummaryProps {
   selectedItems: OrderItemType[];
@@ -33,10 +33,6 @@ interface OrderSummaryProps {
   useWallet: boolean;
   onUseWalletChange: (use: boolean) => void;
   walletCreditApplied: number;
-  isDeliveryOrder?: boolean;
-  deliveryAddress?: string | null;
-  // --- CHANGE 1: Add new prop for the fee ---
-  deliveryFee?: number;
 }
 
 const OrderSummary = ({
@@ -62,20 +58,13 @@ const OrderSummary = ({
   useWallet,
   onUseWalletChange,
   walletCreditApplied,
-  isDeliveryOrder,
-  deliveryAddress,
-  // --- CHANGE 2: Destructure the new prop ---
-  deliveryFee,
 }: OrderSummaryProps) => {
 
   const isWalletDisabled = walletBalance <= 0;
 
   return (
-    // Removed overflow/max-height - scrolling is handled by parent now
     <div className="space-y-4 bg-gray-800 p-6 rounded-lg">
-      <h3 className="text-xl font-semibold text-amber-400">
-        {isDeliveryOrder ? "Delivery Order Summary" : "Pick-up Order Summary"}
-      </h3>
+      <h3 className="text-xl font-semibold text-amber-400">Order Summary</h3>
 
       {pendingItem && (
         <ItemConfigurationCard
@@ -90,23 +79,7 @@ const OrderSummary = ({
         <p className="text-gray-400 text-center py-8">Your cart is empty</p>
       ) : (
         <>
-          {isDeliveryOrder && deliveryAddress && (
-            <div className="p-3 bg-blue-900/40 border border-blue-700 rounded-md">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <Truck className="w-4 h-4 text-blue-300"/>
-                        <span className="text-sm font-medium text-blue-200">Delivering To:</span>
-                    </div>
-                     <Link to="/delivery-location" className="text-xs text-blue-300 hover:text-blue-100 underline flex items-center gap-1">
-                        <Pencil className="w-3 h-3"/> Change
-                     </Link>
-                </div>
-                <p className="text-sm text-gray-300 pl-6">{deliveryAddress}</p>
-            </div>
-          )}
-
-          {/* Item List with its own internal scroll */}
-          <div className="space-y-3 max-h-[calc(100vh-35rem)] overflow-y-auto pr-2">
+          <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-2">
             {selectedItems.map((item, index) => (
               <OrderItem
                 key={index}
@@ -119,7 +92,6 @@ const OrderSummary = ({
             ))}
           </div>
 
-          {/* Promo Code section */}
           <div className="border-t border-b border-gray-700 py-4 space-y-2">
             <div className="flex gap-2">
               <Input
@@ -145,7 +117,6 @@ const OrderSummary = ({
             )}
           </div>
 
-          {/* Wallet Toggle section */}
           <div className="border-b border-gray-700 pb-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="use-wallet" className={`flex flex-col ${isWalletDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
@@ -161,48 +132,29 @@ const OrderSummary = ({
             </div>
           </div>
 
-          {/* --- CHANGE 3: MODIFIED TOTALS SECTION --- */}
           <div className="space-y-2 pt-2">
-            {/* Subtotal */}
             <div className="flex justify-between items-center text-md">
               <span className="text-gray-400">Subtotal:</span>
               <span className="text-gray-400">₾{subtotal.toFixed(2)}</span>
             </div>
-            
-            {/* Discount (if applied) */}
             {appliedDiscount && (
               <div className="flex justify-between items-center text-md text-green-400">
                 <span>Discount:</span>
                 <span>- ₾{discountAmount.toFixed(2)}</span>
               </div>
             )}
-
-            {/* --- ADDED DELIVERY FEE LINE ITEM --- */}
-            {isDeliveryOrder && deliveryFee > 0 && (
-              <div className="flex justify-between items-center text-md text-gray-300">
-                <span>Delivery Fee:</span>
-                <span>₾{deliveryFee.toFixed(2)}</span>
-              </div>
-            )}
-            {/* --- END DELIVERY FEE --- */}
-
-            {/* Wallet Credit (if applied) */}
-            {useWallet && walletCreditApplied > 0 && (
+              {useWallet && walletCreditApplied > 0 && (
               <div className="flex justify-between items-center text-md text-green-400">
                 <span>Wallet Credit:</span>
                 <span>- ₾{walletCreditApplied.toFixed(2)}</span>
               </div>
             )}
-
-            {/* Final Total */}
             <div className="flex justify-between items-center text-xl font-bold">
               <span className="text-white">Total:</span>
               <span className="text-amber-500">₾{totalPrice.toFixed(2)}</span>
             </div>
           </div>
-          {/* --- END MODIFIED TOTALS SECTION --- */}
 
-          {/* Confirm Button */}
           <Button
             onClick={onProceedToPayment}
             className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 text-lg font-semibold"

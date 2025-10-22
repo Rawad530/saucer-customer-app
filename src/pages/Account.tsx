@@ -4,8 +4,7 @@ import { Link } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
-// Import MapPin and ShoppingBag icons
-import { User, Wallet, Star, History, Truck, Megaphone, QrCode, Gift, MapPin, ShoppingBag } from 'lucide-react';
+import { User, Wallet, Star, History, Truck, Megaphone, QrCode, Gift } from 'lucide-react';
 import QRCode from "react-qr-code";
 import { Order, OrderItem } from '../types/order';
 import MyCoupons from '../components/MyCoupons';
@@ -33,6 +32,7 @@ const Account = ({ session }: { session: Session }) => {
   const [mostOrderedItem, setMostOrderedItem] = useState<string | null>(null);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
+  // --- FIX: State to track if any rewards exist at all ---
   const [rewardsAvailable, setRewardsAvailable] = useState(false);
 
   useEffect(() => {
@@ -50,29 +50,32 @@ const Account = ({ session }: { session: Session }) => {
 
       if (profileRes.data) setProfileData(profileRes.data);
 
+      // --- FIX: More robust logic to handle rewards ---
       if (rewardsRes.data && rewardsRes.data.length > 0) {
-        setRewardsAvailable(true);
+        setRewardsAvailable(true); // We found rewards!
         if (profileRes.data) {
           const currentPoints = profileRes.data.points;
           const next = rewardsRes.data.find(reward => reward.points_required > currentPoints);
-          setNextReward(next || null);
+          setNextReward(next || null); // Set to null if no 'next' reward is found (i.e., all are unlocked)
         }
       } else {
-        setRewardsAvailable(false);
+        setRewardsAvailable(false); // No rewards found in the database
         setNextReward(null);
       }
+      // --- END OF FIX ---
 
       if (ordersRes.data && ordersRes.data.length > 0) {
         const typedOrders = ordersRes.data as Order[];
         setLastOrder(typedOrders[0]);
+
         const itemCounts = new Map<string, number>();
         typedOrders.forEach(order => {
-           (order.items || []).forEach((item: OrderItem) => {
-             if (item && item.menuItem && item.menuItem.name) {
-               const name = item.menuItem.name;
-               itemCounts.set(name, (itemCounts.get(name) || 0) + item.quantity);
-             }
-           });
+          (order.items || []).forEach((item: OrderItem) => {
+            if (item && item.menuItem && item.menuItem.name) {
+              const name = item.menuItem.name;
+              itemCounts.set(name, (itemCounts.get(name) || 0) + item.quantity);
+            }
+          });
         });
         if (itemCounts.size > 0) {
           const mostOrdered = [...itemCounts.entries()].reduce((a, b) => b[1] > a[1] ? b : a);
@@ -95,6 +98,33 @@ const Account = ({ session }: { session: Session }) => {
     fetchDashboardData();
   }, [session]);
 
+  const PlaceOrderButton = () => {
+    if (isRestaurantOpen === null) {
+      return (
+        <button className="inline-block w-full text-center px-12 py-4 text-lg font-bold bg-gray-500 text-white rounded-md cursor-not-allowed">
+          Checking Hours...
+        </button>
+      );
+    }
+    if (isRestaurantOpen) {
+      return (
+        <Link to="/order" className="inline-block w-full text-center px-12 py-4 text-lg font-bold bg-white text-amber-700 rounded-md hover:bg-gray-200">
+          Place a Pick-up Order
+        </Link>
+      );
+    }
+    return (
+      <div className="text-center">
+        <button className="inline-block w-full text-center px-12 py-4 text-lg font-bold bg-gray-500 text-white rounded-md cursor-not-allowed">
+          Place a Pick-up Order
+        </button>
+        <p className="text-sm font-semibold text-red-400 mt-2 bg-black/75 px-2 py-1 rounded-md inline-block">
+          We're currently closed for online orders.
+        </p>
+      </div>
+    );
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">Loading Dashboard...</div>;
   }
@@ -108,51 +138,18 @@ const Account = ({ session }: { session: Session }) => {
       <div className="max-w-7xl mx-auto">
 
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Welcome, {profileData?.full_name || session.user.email}!</h1>
-          <p className="text-gray-400">Here's a summary of your Saucer Burger activity.</p>
+            <h1 className="text-3xl font-bold">Welcome, {profileData?.full_name || session.user.email}!</h1>
+            <p className="text-gray-400">Here's a summary of your Saucer Burger activity.</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-
-            {/* --- CORRECTED ORDERING SECTION --- */}
             <div className="bg-amber-600 p-8 rounded-lg text-center">
-              <h2 className="text-3xl font-bold mb-6">Ready for another round?</h2>
-              {isRestaurantOpen === null ? (
-                // Loading state
-                <button className="w-full md:w-auto px-12 py-4 text-lg font-bold bg-gray-500 text-white rounded-md cursor-not-allowed mb-2">
-                  Checking Hours...
-                </button>
-              ) : isRestaurantOpen ? (
-                // OPEN STATE: Show BOTH buttons
-                <div className="flex flex-col md:flex-row justify-center gap-4">
-                  <Link
-                    to="/delivery-location"
-                    className="flex-1 md:flex-none inline-flex items-center justify-center px-8 py-4 text-lg font-bold bg-white text-amber-700 rounded-md hover:bg-gray-200 transition-colors"
-                  >
-                    <MapPin className="w-5 h-5 mr-2" /> Delivery
-                  </Link>
-                  <Link
-                    to="/order"
-                    className="flex-1 md:flex-none inline-flex items-center justify-center px-8 py-4 text-lg font-bold bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
-                  >
-                    <ShoppingBag className="w-5 h-5 mr-2" /> Pick-up
-                  </Link>
-                </div>
-              ) : (
-                // CLOSED STATE: Hide buttons, show message ONLY
-                <div className="text-center py-4"> {/* Added padding */}
-                  <p className="text-lg font-semibold text-red-100 bg-black/75 px-4 py-2 rounded-md inline-block">
-                    We're currently closed for online orders.
-                  </p>
-                  {/* Optional: Add operating hours here if desired */}
-                  {/* <p className="text-sm text-amber-100 mt-2">Open daily 12:00 PM - 2:00 AM</p> */}
-                </div>
-              )}
+              <h2 className="text-3xl font-bold mb-4">Ready for another round?</h2>
+              <PlaceOrderButton />
             </div>
-            {/* --- END OF CORRECTED SECTION --- */}
 
-            {/* Rewards Card */}
+            {/* --- FIX: This rewards card is now updated with robust logic --- */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><Star className="w-6 h-6 mr-2 text-amber-400" /> Your Rewards Status</h3>
               {profileData && (
@@ -161,11 +158,14 @@ const Account = ({ session }: { session: Session }) => {
                   <p className="text-5xl font-bold text-amber-400 tracking-tight">{profileData.points}</p>
                 </div>
               )}
+
               {!rewardsAvailable ? (
+                // Case 1: No rewards exist in the database
                 <div className="text-center">
-                  <p className="text-gray-400">New rewards are coming soon! Keep an eye on this space.</p>
+                    <p className="text-gray-400">New rewards are coming soon! Keep an eye on this space.</p>
                 </div>
               ) : nextReward && profileData ? (
+                // Case 2: There is a next reward to work towards
                 <div>
                   <div className="flex justify-between items-end mb-1">
                     <p className="font-semibold">Next Up: {nextReward.title}</p>
@@ -179,6 +179,7 @@ const Account = ({ session }: { session: Session }) => {
                   </p>
                 </div>
               ) : (
+                // Case 3: All available rewards have been unlocked
                 <div className="text-center">
                   <p className="font-semibold text-green-400">You've unlocked all available rewards!</p>
                   <p className="text-sm text-gray-400 mt-1">Keep collecting points for future goodies.</p>
@@ -186,10 +187,10 @@ const Account = ({ session }: { session: Session }) => {
               )}
               <Link to="/rewards" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View All Rewards &rarr;</Link>
             </div>
+            {/* --- END OF FIX --- */}
 
             <MyCoupons />
 
-            {/* Recent Activity Card */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><History className="w-6 h-6 mr-2 text-gray-300" /> Recent Activity</h3>
               {lastOrder ? (
@@ -204,7 +205,6 @@ const Account = ({ session }: { session: Session }) => {
               <Link to="/history" className="text-sm text-amber-400 hover:underline mt-4 inline-block">View Full History &rarr;</Link>
             </div>
 
-            {/* Side Quests Card */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4">
                 <Gift className="w-6 h-6 mr-2 text-purple-400" />
@@ -216,7 +216,6 @@ const Account = ({ session }: { session: Session }) => {
               </Link>
             </div>
 
-             {/* Announcements Card */}
             {announcements.length > 0 && (
               <div className="bg-gray-800 p-6 rounded-lg">
                 <h3 className="flex items-center text-xl font-bold mb-4"><Megaphone className="w-6 h-6 mr-2 text-blue-400" /> What's New?</h3>
@@ -232,9 +231,7 @@ const Account = ({ session }: { session: Session }) => {
             )}
           </div>
 
-          {/* Right Column */}
           <div className="space-y-6">
-            {/* Profile & Wallet Card */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><User className="w-6 h-6 mr-2 text-gray-300" /> Profile & Wallet</h3>
               <div className="text-center bg-gray-700/50 p-4 rounded-md mb-4">
@@ -250,7 +247,6 @@ const Account = ({ session }: { session: Session }) => {
               </div>
             </div>
 
-            {/* Loyalty Code Card */}
             <div className="bg-gray-800 p-6 rounded-lg text-center">
               <h3 className="flex items-center justify-center text-xl font-bold mb-4"><QrCode className="w-6 h-6 mr-2 text-gray-300" /> Your Loyalty Code</h3>
               <div className="bg-white p-4 rounded-md inline-block">
@@ -259,7 +255,6 @@ const Account = ({ session }: { session: Session }) => {
               <p className="text-xs text-gray-400 mt-2">Scan this code at the counter for cashback.</p>
             </div>
 
-            {/* Delivery Partners Card */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><Truck className="w-6 h-6 mr-2 text-gray-300" /> Delivery Partners</h3>
               <p className="text-gray-400 mb-4 text-sm">Order for delivery through our official partners:</p>

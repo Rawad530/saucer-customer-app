@@ -28,71 +28,69 @@ import RequestPasswordResetPage from './pages/RequestPasswordResetPage';
 import UpdatePasswordPage from './pages/UpdatePasswordPage';
 import TermsOfUsePage from './pages/TermsOfUsePage';
 import QuestsPage from './pages/QuestsPage';
-import DeliveryLocationPage from './pages/DeliveryLocationPage'; // <-- IMPORTED DeliveryLocationPage
 import ScrollToTop from './components/ScrollToTop';
 
 function App() {
-  const [session, setSession] = useState<Session | null>(null); //
-  const [loading, setLoading] = useState(true); //
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true); //
-    supabase.auth.getSession().then(({ data: { session } }) => { //
-      setSession(session); //
-      setLoading(false); //
+    setLoading(true);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
     });
 
     const {
-      data: { subscription }, //
-    } = supabase.auth.onAuthStateChange((_event, session) => { //
-      setSession(session); //
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
     });
 
-    return () => subscription.unsubscribe(); //
-  }, []); //
+    return () => subscription.unsubscribe();
+  }, []);
 
-  if (loading) { //
-    return <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">Loading...</div>; //
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">Loading...</div>;
   }
 
   return (
-    <LanguageProvider> //
+    <LanguageProvider>
       <>
-        <ScrollToTop /> //
-        <Routes> //
+        <ScrollToTop />
+        <Routes>
           {/* Standalone Routes */}
-          <Route path="/" element={!session ? <LandingPage /> : <Navigate to="/account" replace />} /> //
-          <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/account" replace />} /> //
-          <Route path="/register" element={!session ? <RegisterPage /> : <Navigate to="/account" replace />} /> //
-          <Route path="/request-password-reset" element={<RequestPasswordResetPage />} /> //
-          <Route path="/update-password" element={<UpdatePasswordPage />} /> //
-          <Route path="/terms-of-use" element={<TermsOfUsePage />} /> //
+          <Route path="/" element={!session ? <LandingPage /> : <Navigate to="/account" replace />} />
+          <Route path="/login" element={!session ? <LoginPage /> : <Navigate to="/account" replace />} />
+          <Route path="/register" element={!session ? <RegisterPage /> : <Navigate to="/account" replace />} />
+          <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
+          <Route path="/update-password" element={<UpdatePasswordPage />} />
+          <Route path="/terms-of-use" element={<TermsOfUsePage />} />
 
           {/* Application Routes (Wrapped in the standard Layout) */}
-          <Route element={<Layout />}> //
-            <Route path="/payment-status" element={<PaymentStatusPage />} /> //
-            <Route path="/order" element={<OrderPage />} /> //
-            <Route path="/delivery-location" element={<DeliveryLocationPage />} /> {/* <-- ADDED DeliveryLocationPage ROUTE */}
+          <Route element={<Layout />}>
+            <Route path="/payment-status" element={<PaymentStatusPage />} />
+            <Route path="/order" element={<OrderPage />} />
 
             {/* Protected Routes */}
-            <Route path="/account" element={session ? <Account session={session} /> : <Navigate to="/login" replace />} /> //
-            <Route path="/wallet" element={session ? <WalletPage /> : <Navigate to="/login" replace />} /> //
-            <Route path="/history" element={session ? <OrderHistoryPage /> : <Navigate to="/login" replace />} /> //
-            <Route path="/rewards" element={session ? <RewardsPage /> : <Navigate to="/login" replace />} /> //
-            <Route path="/profile" element={session ? <ProfilePage /> : <Navigate to="/login" replace />} /> //
-            <Route path="/invite" element={session ? <InvitePage /> : <Navigate to="/login" replace />} /> //
-            <Route path="/quests" element={session ? <QuestsPage /> : <Navigate to="/login" replace />} /> //
+            <Route path="/account" element={session ? <Account session={session} /> : <Navigate to="/login" replace />} />
+            <Route path="/wallet" element={session ? <WalletPage /> : <Navigate to="/login" replace />} />
+            <Route path="/history" element={session ? <OrderHistoryPage /> : <Navigate to="/login" replace />} />
+            <Route path="/rewards" element={session ? <RewardsPage /> : <Navigate to="/login" replace />} />
+            <Route path="/profile" element={session ? <ProfilePage /> : <Navigate to="/login" replace />} />
+            <Route path="/invite" element={session ? <InvitePage /> : <Navigate to="/login" replace />} />
+            <Route path="/quests" element={session ? <QuestsPage /> : <Navigate to="/login" replace />} />
 
             {/* Catch-all */}
-            <Route path="*" element={<Navigate to="/" replace />} /> //
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
-        </Routes> //
+        </Routes>
 
         {/* Add the Toaster component here */}
-        <Toaster /> //
+        <Toaster />
       </>
-    </LanguageProvider> //
+    </LanguageProvider>
   );
 }
 
-export default App; //
+export default App;
