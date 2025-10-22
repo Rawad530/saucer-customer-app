@@ -75,59 +75,56 @@ const MyCoupons = () => {
     <Card className="bg-gray-800 border-gray-700 text-white">
       <CardHeader>
         <CardTitle className="text-amber-400 flex items-center gap-2">
-            <Tag className="h-5 w-5" />
-            My Coupons
+          <Tag className="h-5 w-5" />
+          My Coupons
         </CardTitle>
       </CardHeader>
       <CardContent>
         {activeCoupons.length === 0 && usedCoupons.length === 0 && (
-            <p className="text-gray-400">You don't have any coupons right now.</p>
+          <p className="text-gray-400">You don't have any coupons right now.</p>
         )}
 
         {activeCoupons.length > 0 && (
-            <div className="space-y-3">
-                <h3 className="font-semibold">Available</h3>
-                {activeCoupons.map(coupon => (
-                    <div key={coupon.id} className="flex justify-between items-center p-3 bg-gray-700 rounded-lg border border-green-600">
-                        <div>
-                            <p className="font-bold">{coupon.discount_percent}% OFF</p>
-                            <p className="text-sm text-gray-300">{coupon.description}</p>
-                        </div>
-                        
-                        {/* --- MODIFIED SECTION --- */}
-                        <div className="flex items-center gap-2"> {/* Wrapper div */}
-                          <Badge variant="default" className="text-lg font-mono bg-green-600 hover:bg-green-700">{coupon.code}</Badge>
-                          {/* Add the Button */}
-                          <Button
-                            variant="ghost" // Minimal styling
-                            size="icon" // Makes it small and square
-                            className="h-8 w-8 text-gray-300 hover:text-white hover:bg-gray-600" // Size and hover effects
-                            onClick={() => handleCopy(coupon.code)} // Call handleCopy on click
-                          >
-                            <Copy className="h-4 w-4" /> {/* The copy icon */}
-                            <span className="sr-only">Copy code</span> {/* For screen readers */}
-                          </Button>
-                        </div>
-                        {/* --- END OF MODIFICATION --- */}
-
-                    </div>
-                ))}
-            </div>
+          <div className="space-y-3">
+            <h3 className="font-semibold">Available</h3>
+            {activeCoupons.map(coupon => (
+              <div key={coupon.id} className="flex justify-between items-center p-3 bg-gray-700 rounded-lg border border-green-600">
+                <div>
+                  <p className="font-bold">{coupon.discount_percent}% OFF</p>
+                  <p className="text-sm text-gray-300">{coupon.description}</p>
+                </div>
+                {/* --- MODIFIED THIS SECTION --- */}
+                <div className="flex items-center gap-2">
+                  <Badge variant="default" className="text-lg font-mono bg-green-600 hover:bg-green-700">{coupon.code}</Badge>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleCopy(coupon.code)}
+                    className="text-gray-300 hover:text-white"
+                    aria-label="Copy coupon code"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                {/* --- END OF MODIFICATION --- */}
+              </div>
+            ))}
+          </div>
         )}
         
         {usedCoupons.length > 0 && (
-            <div className="space-y-3 mt-6 pt-4 border-t border-gray-700">
-                <h3 className="font-semibold text-gray-500">Used or Expired</h3>
-                {usedCoupons.map(coupon => (
-                     <div key={coupon.id} className="flex justify-between items-center p-3 bg-gray-700 rounded-lg opacity-50">
-                        <div>
-                            <p className="font-bold">{coupon.discount_percent}% OFF</p>
-                            <p className="text-sm text-gray-300">{coupon.description}</p>
-                        </div>
-                        <Badge variant="secondary" className="text-lg font-mono line-through">{coupon.code}</Badge>
-                    </div>
-                ))}
-            </div>
+          <div className="space-y-3 mt-6 pt-4 border-t border-gray-700">
+            <h3 className="font-semibold text-gray-500">Used or Expired</h3>
+            {usedCoupons.map(coupon => (
+              <div key={coupon.id} className="flex justify-between items-center p-3 bg-gray-700 rounded-lg opacity-50">
+                <div>
+                  <p className="font-bold">{coupon.discount_percent}% OFF</p>
+                  <p className="text-sm text-gray-300">{coupon.description}</p>
+                </div>
+                <Badge variant="secondary" className="text-lg font-mono line-through">{coupon.code}</Badge>
+              </div>
+            ))}
+          </div>
         )}
 
       </CardContent>
