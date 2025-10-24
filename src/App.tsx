@@ -29,6 +29,7 @@ import UpdatePasswordPage from './pages/UpdatePasswordPage';
 import TermsOfUsePage from './pages/TermsOfUsePage';
 import QuestsPage from './pages/QuestsPage';
 import ScrollToTop from './components/ScrollToTop';
+import DeliveryLocationPage from './pages/DeliveryLocationPage'; // <-- Correctly added import
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -66,12 +67,14 @@ function App() {
           <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
           <Route path="/terms-of-use" element={<TermsOfUsePage />} />
+          {/* --- ADDED DELIVERY LOCATION ROUTE --- */}
+          <Route path="/delivery-location" element={<DeliveryLocationPage />} />
+          {/* -------------------------------------- */}
 
           {/* Application Routes (Wrapped in the standard Layout) */}
           <Route element={<Layout />}>
             <Route path="/payment-status" element={<PaymentStatusPage />} />
             <Route path="/order" element={<OrderPage />} />
-
             {/* Protected Routes */}
             <Route path="/account" element={session ? <Account session={session} /> : <Navigate to="/login" replace />} />
             <Route path="/wallet" element={session ? <WalletPage /> : <Navigate to="/login" replace />} />
@@ -86,7 +89,6 @@ function App() {
           </Route>
         </Routes>
 
-        {/* Add the Toaster component here */}
         <Toaster />
       </>
     </LanguageProvider>
