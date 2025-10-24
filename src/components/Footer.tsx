@@ -11,18 +11,14 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-semibold text-amber-400 mb-4">Contact & Location</h4>
             <div className="space-y-2 text-gray-400 text-sm">
-              
-              {/* --- CHANGE: The address is now a clickable link --- */}
-              <a 
-                href="https://maps.google.com/?cid=11266092328424134394&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ" 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <a
+                href="https://maps.google.com/?cid=11266092328424134394&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center gap-2 hover:text-white transition-colors"
               >
                 <MapPin className="w-4 h-4" /> 45 Petre Kavtaradze St, Tbilisi, Georgia
               </a>
-              {/* ------------------------------------------- */}
-
               <p className="flex items-center gap-2"><Clock className="w-4 h-4" /> Open Daily: 12:00 PM - 2:00 AM</p>
               <p className="flex items-center gap-2"><Phone className="w-4 h-4" /> +995 591 22 96 58</p>
             </div>
@@ -32,6 +28,7 @@ const Footer = () => {
             <ul className="space-y-2 text-gray-400 text-sm">
               <li><Link to="/account" className="hover:text-white transition-colors">My Account</Link></li>
               <li><Link to="/order" className="hover:text-white transition-colors">Order Now</Link></li>
+              <li><Link to="/terms-of-use" className="hover:text-white transition-colors">Terms of Use</Link></li>
             </ul>
           </div>
           <div>
@@ -40,7 +37,7 @@ const Footer = () => {
           </div>
         </div>
         <div className="mt-8 text-center text-gray-500 text-xs border-t border-gray-700 pt-6">
-          &copy; {new Date().getFullYear()} Saucer Burger. All rights reserved.
+          © {new Date().getFullYear()} Saucer Burger. All rights reserved.
         </div>
       </div>
     </footer>
