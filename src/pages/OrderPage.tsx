@@ -68,6 +68,10 @@ const OrderPage = () => {
   const getSummary = useCartStore((state) => state.getSummary);
 
   useEffect(() => {
+    // --- ADDED CONSOLE LOG ---
+    console.log('OrderPage Mounted - location.state:', location.state);
+    // --- END CONSOLE LOG ---
+
     // Reads the detailed deliveryDetails from location state
     const comesFromDeliveryPage = location.state?.isDelivery === true && location.state?.deliveryDetails;
 
