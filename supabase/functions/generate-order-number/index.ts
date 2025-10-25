@@ -18,22 +18,27 @@ Deno.serve(async (req) => {
     );
 
     const { orderType } = await req.json();
-    if (!orderType || !['app_pickup', 'shop_pickup', 'dine_in'].includes(orderType)) {
-      throw new Error('Invalid orderType provided.');
-    }
 
+    // --- MODIFICATION 1: Add 'delivery' to allowed types ---
+    if (!orderType || !['app_pickup', 'shop_pickup', 'dine_in', 'delivery'].includes(orderType)) {
+      throw new Error(`Invalid orderType provided: ${orderType}`); // Added type to error message
+    }
+    // --------------------------------------------------------
+
+    // --- MODIFICATION 2: Add 'delivery' prefix ---
     const prefixMap = {
       app_pickup: 'APP',
       shop_pickup: 'SHOP',
       dine_in: 'DINE',
+      delivery: 'DLV', // Added delivery prefix
     };
+    // ---------------------------------------------
     const prefix = prefixMap[orderType];
 
     const now = new Date(Date.now() + TBILISI_OFFSET);
     const datePart = format(now, "ddMMyy");
     const timePart = format(now, "HHmmss");
 
-    // Corrected to use datePart
     const searchPattern = `${prefix}-${datePart}-%`;
 
     const { data: lastOrder, error: queryError } = await supabaseAdmin
@@ -42,19 +47,29 @@ Deno.serve(async (req) => {
       .like('order_number', searchPattern)
       .order('order_number', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle(); // Use maybeSingle() instead of single() to handle no rows gracefully
 
-    if (queryError && queryError.code !== 'PGRST116') {
-      throw queryError;
+    // Simplified error handling
+    if (queryError && queryError.code !== 'PGRST116') { // PGRST116 = 0 rows returned
+        console.error("Database query error:", queryError);
+        throw new Error(`Database error fetching last order number: ${queryError.message}`);
     }
+
 
     let nextSequence = 1;
-    if (lastOrder) {
-      // The sequence is the 4th part (index 3) of the string
-      const lastSequence = parseInt(lastOrder.order_number.split('-')[3], 10);
-      nextSequence = lastSequence + 1;
+    if (lastOrder && lastOrder.order_number) { // Check if order_number exists
+       // --- MODIFICATION 3: More robust sequence extraction ---
+       const parts = lastOrder.order_number.split('-');
+       if (parts.length === 4 && !isNaN(parseInt(parts[3], 10))) {
+           const lastSequence = parseInt(parts[3], 10);
+           nextSequence = lastSequence + 1;
+       } else {
+           console.warn(`Could not parse sequence from unexpected order number format: ${lastOrder.order_number}. Resetting sequence to 1.`);
+           // Reset sequence if format is wrong, preventing NaN
+       }
+       // ----------------------------------------------------
     }
-    
+
     const paddedSequence = String(nextSequence).padStart(6, '0');
     const newOrderNumber = `${prefix}-${datePart}-${timePart}-${paddedSequence}`;
 
@@ -63,6 +78,7 @@ Deno.serve(async (req) => {
       status: 200,
     });
   } catch (error) {
+    console.error("!!! Error in generate-order-number:", error.message); // Added console log for errors
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
