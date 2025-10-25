@@ -209,7 +209,7 @@ const OrderPage = () => {
   const placeOrder = async (currentGuestInfo: { name: string; phone: string } | null) => {
     setIsPlacingOrder(true);
     // Uses 'app_delivery' or 'app_pickup' based on deliveryDetails
-    const orderType = deliveryDetails ? 'app_delivery' : 'app_pickup';
+    const orderType = deliveryDetails ? 'delivery' : 'app_pickup';
     let orderId = crypto.randomUUID();
 
     try {
