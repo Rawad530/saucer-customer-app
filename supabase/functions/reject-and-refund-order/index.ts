@@ -68,13 +68,11 @@ Deno.serve(async (req) => {
     // 3. Credit the user's wallet if a refund is applicable
     if (refundAmount > 0 && order.user_id) {
       console.log(`Attempting to credit wallet for user ${order.user_id} with amount ${refundAmount}`);
-      // --- CORRECTED ARGUMENT NAMES HERE ---
       const { error: rpcError } = await supabaseAdmin.rpc('credit_wallet', {
         customer_id_to_credit: order.user_id,
         amount_to_credit: refundAmount,
         transaction_description: refundDescription
       })
-      // ------------------------------------
 
       if (rpcError) throw new Error(`Failed to credit wallet: ${rpcError.message}`)
       console.log("Wallet credited successfully.");
@@ -93,6 +91,7 @@ Deno.serve(async (req) => {
     if (updateError) throw new Error(`Failed to update order status: ${updateError.message}`)
     console.log("Order status updated successfully.");
 
+    // Restored original success message
     return new Response(JSON.stringify({ message: "Order successfully rejected and refunded." }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

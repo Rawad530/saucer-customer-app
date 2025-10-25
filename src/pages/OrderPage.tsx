@@ -10,7 +10,7 @@ import OrderSummary from "../components/OrderSummary";
 import { Session } from "@supabase/supabase-js";
 import { useCartStore } from "../store/cartStore";
 import GuestOrderDialog from '../components/GuestOrderDialog';
-import { Truck } from "lucide-react";
+import { Truck, MapPin } from "lucide-react"; // Added MapPin for display
 
 interface PendingItem {
   menuItem: MenuItem;
@@ -68,7 +68,7 @@ const OrderPage = () => {
       setIsDeliveryOrder(true);
       setDeliveryAddress(locationState.deliveryAddress ?? null);
       setDeliveryFee(locationState.deliveryFee ?? 0);
-      window.history.replaceState({}, document.title);
+      window.history.replaceState({}, document.title); // Clear state after reading
     } else {
       setIsDeliveryOrder(false);
       setDeliveryAddress(null);
@@ -78,7 +78,7 @@ const OrderPage = () => {
     const paymentFailedFlag = sessionStorage.getItem('paymentFailed');
     if (paymentFailedFlag) {
       sessionStorage.removeItem('paymentFailed');
-    } else if (!comesFromDeliveryPage) {
+    } else if (!comesFromDeliveryPage) { // Only clear cart if not coming from delivery page or failed payment
       clearCart();
     }
 
@@ -87,15 +87,17 @@ const OrderPage = () => {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       setSession(currentSession);
       if (!currentSession) {
+        // Handle guest info persistence only if NOT coming from delivery page
         if (!comesFromDeliveryPage) {
-            const storedGuestInfo = localStorage.getItem('guest_info');
-            if (storedGuestInfo) {
-              try {
-                setGuestInfo(JSON.parse(storedGuestInfo));
-              } catch (e) { console.error("Error parsing guest info", e); }
-            }
+           const storedGuestInfo = localStorage.getItem('guest_info');
+           if (storedGuestInfo) {
+             try {
+               setGuestInfo(JSON.parse(storedGuestInfo));
+             } catch (e) { console.error("Error parsing guest info", e); }
+           }
         } else {
-             setGuestInfo(null);
+            // If coming from delivery page as guest, ensure guestInfo is null initially
+            setGuestInfo(null);
         }
       }
       const menuPromise = supabase.from('menu_items').select('*').eq('is_available', true).order('id');
@@ -176,92 +178,118 @@ const OrderPage = () => {
 
   const handleProceedToPayment = async () => {
     if (selectedItems.length === 0) { alert("Your cart is empty."); return; }
+    // Check delivery address ONLY if it's a delivery order
     if (isDeliveryOrder && !deliveryAddress) { alert("Delivery address is missing."); navigate('/delivery-location'); return; }
+    // Proceed if logged in, or if guest info exists (for pickup), or if it's delivery (address checked above)
     if (session || guestInfo || isDeliveryOrder) {
-      placeOrder(guestInfo);
+      // For delivery orders where user isn't logged in, pass null for guestInfo initially
+      placeOrder(isDeliveryOrder ? null : guestInfo);
     } else {
+      // Only open guest modal for non-delivery orders if not logged in and no guest info
       setIsGuestModalOpen(true);
     }
   };
 
-  // --- THIS IS THE CORRECTED CALCULATION BLOCK ---
-  const { subtotal } = getSummary(); // This is just the food total
+  const { subtotal } = getSummary();
   const effectiveDiscountRate = session ? appliedDiscount : 0;
   const effectiveUseWallet = session ? useWallet : false;
-
-  // 1. Apply promo discount to food subtotal ONLY
   const promoDiscountAmount = subtotal * (effectiveDiscountRate / 100);
   const priceAfterPromo = subtotal - promoDiscountAmount;
-
-  // 2. Add delivery fee to get the total amount due before wallet
-  const totalDueBeforeWallet = priceAfterPromo + deliveryFee;
-
-  // 3. Apply wallet to the *entire* amount due (food + delivery)
+  const totalDueBeforeWallet = priceAfterPromo + (isDeliveryOrder ? deliveryFee : 0); // Add delivery fee if applicable
   const walletCreditApplied = effectiveUseWallet ? Math.min(walletBalance, totalDueBeforeWallet) : 0;
-
-  // 4. The final payable amount (the amount that goes to the card payment)
-  const totalPrice = totalDueBeforeWallet - walletCreditApplied;
-  // --- END OF CORRECTED BLOCK ---
-
+  const totalPrice = totalDueBeforeWallet - walletCreditApplied; // Final amount to charge card
 
   const placeOrder = async (currentGuestInfo: { name: string; phone: string } | null) => {
     setIsPlacingOrder(true);
     const orderType = isDeliveryOrder ? 'delivery' : 'app_pickup';
+    let orderId = crypto.randomUUID(); // Generate ID early for logging
 
     try {
       const { data: orderNumberData, error: orderNumberError } = await supabase.functions.invoke('generate-order-number', { body: { orderType: orderType } });
       if (orderNumberError) throw orderNumberError;
       if (!orderNumberData?.orderNumber) throw new Error("Failed to generate order number.");
       const orderNumber = orderNumberData.orderNumber;
-      const orderId = crypto.randomUUID();
       setCompletedOrderNumber(orderNumber);
 
       const userId = session?.user?.id || null;
+      // Guest info is only relevant for non-delivery orders
       const guestName = !isDeliveryOrder && currentGuestInfo ? currentGuestInfo.name : null;
       const guestPhone = !isDeliveryOrder && currentGuestInfo ? currentGuestInfo.phone : null;
 
+      // Validation checks
       if (!userId && !isDeliveryOrder && (!guestName || !guestPhone)) {
         throw new Error("Guest name and phone number are required for pick-up orders.");
       }
-      if (!userId && isDeliveryOrder && !deliveryAddress) {
-        throw new Error("Delivery address is missing for guest delivery order.");
-      }
+      // Delivery address check now happens before calling placeOrder
 
       let paymentMode: PaymentMode = 'Card - Online';
-      // FIX: Check if final price is effectively zero
       if (walletCreditApplied > 0) {
         paymentMode = (totalPrice > 0.01) ? 'Wallet/Card Combo' : 'Wallet Only';
       }
 
       const transactionData = {
-        transaction_id: orderId, user_id: userId, guest_name: guestName, guest_phone: guestPhone,
-        order_number: orderNumber, items: selectedItems as any,
-        total_price: totalPrice, // This is the final amount charged to card
-        wallet_credit_applied: walletCreditApplied, // How much was paid by wallet
-        payment_mode: paymentMode, status: 'pending_payment',
+        transaction_id: orderId,
+        user_id: userId,
+        guest_name: guestName, // Will be null for delivery orders unless logged in
+        guest_phone: guestPhone, // Will be null for delivery orders unless logged in
+        order_number: orderNumber,
+        items: selectedItems as any,
+        total_price: totalPrice, // Final amount charged to card (can be 0)
+        wallet_credit_applied: walletCreditApplied,
+        payment_mode: paymentMode,
+        status: 'pending_payment',
         created_at: new Date().toISOString(),
         promo_code_used: effectiveDiscountRate > 0 ? promoCode.toUpperCase() : null,
         discount_applied_percent: effectiveDiscountRate > 0 ? effectiveDiscountRate : null,
         order_type: orderType,
-        delivery_address: isDeliveryOrder ? deliveryAddress : null,
-        delivery_fee: isDeliveryOrder ? deliveryFee : null,
+        delivery_address: isDeliveryOrder ? deliveryAddress : null, // Correctly includes address
+        delivery_fee: isDeliveryOrder ? deliveryFee : null, // Correctly includes fee
       };
 
+      // --- ADD DETAILED LOGGING AROUND INSERT ---
+      console.log("Attempting to insert transaction:", JSON.stringify(transactionData, null, 2));
       const { error: insertError } = await supabase.from('transactions').insert([transactionData]);
-      if (insertError) throw new Error(`DB Error: ${insertError.message}`);
 
+      if (insertError) {
+        console.error("!!! DATABASE INSERT FAILED !!!");
+        console.error("Insert Error Code:", insertError.code);
+        console.error("Insert Error Message:", insertError.message);
+        console.error("Insert Error Details:", insertError.details);
+        // Re-throw a more specific error to be caught below
+        throw new Error(`Database Insert Failed: ${insertError.message} (Code: ${insertError.code})`);
+      }
+      console.log("Database insert successful for orderId:", orderId);
+      // --- END DETAILED LOGGING ---
+
+      // If insert succeeds, proceed to initiate payment (or complete if totalPrice is 0)
       const { data: functionData, error: functionError } = await supabase.functions.invoke('initiate-payment', { body: { orderId } });
       if (functionError) throw new Error(`Payment Init Error: ${functionError.message}`);
       if (functionData?.error) throw new Error(`Payment Init Error: ${functionData.error}`);
 
-      if (functionData?.paymentComplete) {
+      if (functionData?.paymentComplete) { // Wallet only case handled by initiate-payment
         clearCart(); localStorage.removeItem('guest_info'); setOrderPlaced(true);
         if (session) setWalletBalance(prev => prev - walletCreditApplied);
-      } else if (functionData?.redirectUrl) {
+      } else if (functionData?.redirectUrl) { // Card payment needed
         window.location.href = functionData.redirectUrl;
       } else { throw new Error("Invalid response from payment function."); }
 
     } catch (err) {
+      // This catch block will now show the more specific error from the insert if it failed
+      console.error("Place Order Failed. Full Error Object:", err);
+      if (err instanceof Error) {
+         console.error("Error Name:", err.name);
+         console.error("Error Message:", err.message);
+         // Check if it's a Supabase PostgrestError for more details
+         if ('code' in err) {
+            console.error("Supabase Error Code:", (err as any).code);
+            console.error("Supabase Error Details:", (err as any).details);
+         }
+         // Log context only if it's likely an Edge Function error (less likely now)
+         else if ((err as any).context) {
+            console.error("Supabase Function Context:", (err as any).context);
+         }
+      }
+      // Update alert to show the more specific message from the insert error
       alert(`Order Failed: ${err instanceof Error ? err.message : "Unknown error"}`);
       setIsPlacingOrder(false);
     }
@@ -279,9 +307,10 @@ const OrderPage = () => {
     return (
        <div className="flex flex-col justify-center items-center h-96 text-center p-4 text-white">
          <h1 className="text-4xl font-bold text-amber-500 mb-2">Thank You{
-            !isDeliveryOrder && guestInfo ? `, ${guestInfo.name}` :
-            session ? `, ${session.user?.user_metadata?.full_name || ''}` :
-            ''
+             // Show guest name only for pickup, otherwise show logged-in user name
+             !isDeliveryOrder && guestInfo ? `, ${guestInfo.name}` :
+             session?.user?.user_metadata?.full_name ? `, ${session.user.user_metadata.full_name}` :
+             ''
          }!</h1>
          <p className="text-lg mb-4">Your order has been placed successfully.</p>
          {completedOrderNumber && (
@@ -296,7 +325,7 @@ const OrderPage = () => {
          <div className="flex justify-center items-center gap-4">
            {session && (<Link to="/history" className="px-6 py-2 font-bold text-amber-500 border border-amber-500 rounded-md hover:bg-amber-500 hover:text-white transition-colors">Track Order</Link>)}
            {session ? (<Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">Back to Account</Link>)
-                  : (<Link to="/" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">Back to Home</Link>)}
+                   : (<Link to="/" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">Back to Home</Link>)}
          </div>
        </div>
     );
@@ -310,17 +339,26 @@ const OrderPage = () => {
     <>
       <div className="p-4 bg-gray-900 text-white min-h-screen">
         <div className="max-w-6xl mx-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold">
-              {isDeliveryOrder ? "Place a Delivery Order" : "Place a Pick-up Order"}
-            </h1>
+          <div className="flex justify-between items-start mb-6"> {/* Changed items-center to items-start */}
+            <div> {/* Wrap title/subtitle */}
+              <h1 className="text-3xl font-bold">
+                {isDeliveryOrder ? "Complete Your Delivery Order" : "Place a Pick-up Order"}
+              </h1>
+              {/* Display address clearly under title for delivery */}
+              {isDeliveryOrder && deliveryAddress && (
+                <p className="text-sm text-amber-400 mt-1 flex items-center gap-1">
+                  <MapPin className="w-4 h-4 inline shrink-0" /> {deliveryAddress}
+                </p>
+              )}
+            </div>
             {session ? (
-              <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700">
+              <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700 shrink-0"> {/* Added shrink-0 */}
                 &larr; Back to Account
               </Link>
             ) : (
+              // Show guest info only for pickup orders
               !isDeliveryOrder && guestInfo ? (
-                <div className="text-right">
+                <div className="text-right shrink-0"> {/* Added shrink-0 */}
                   <p className="text-sm text-gray-400">Ordering as Guest:</p>
                   <p className="text-sm font-semibold">{guestInfo.name}</p>
                 </div>
@@ -328,14 +366,17 @@ const OrderPage = () => {
             )}
           </div>
 
+          {/* Moved Delivery Address Info Box here */}
           {isDeliveryOrder && deliveryAddress && (
-            <div className="mb-6 p-4 bg-blue-900/30 border border-blue-700 rounded-md flex items-center gap-3">
-              <Truck className="w-5 h-5 text-blue-300 shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-blue-200">Delivering To:</p>
-                <p className="text-sm text-blue-300">{deliveryAddress}</p>
+            <div className="mb-6 p-4 bg-blue-900/30 border border-blue-700 rounded-md flex justify-between items-center gap-3">
+              <div className="flex items-center gap-3">
+                 <Truck className="w-5 h-5 text-blue-300 shrink-0" />
+                 <div>
+                   <p className="text-sm font-semibold text-blue-200">Delivering To:</p>
+                   <p className="text-sm text-blue-300">{deliveryAddress}</p>
+                 </div>
               </div>
-              <Link to="/delivery-location" className="ml-auto text-xs text-blue-300 hover:text-blue-100 underline shrink-0">Change</Link>
+              <Link to="/delivery-location" className="text-xs text-blue-300 hover:text-blue-100 underline shrink-0">Change</Link>
             </div>
           )}
 
@@ -357,7 +398,7 @@ const OrderPage = () => {
                   pendingItem={pendingItem}
                   subtotal={subtotal}
                   discountAmount={promoDiscountAmount}
-                  totalPrice={totalPrice} // This is the final amount due
+                  totalPrice={totalPrice} // Final amount due
                   onUpdateItemQuantity={updateItemQuantity}
                   onUpdatePendingItem={setPendingItem}
                   onConfirmPendingItem={confirmPendingItem}
@@ -375,9 +416,9 @@ const OrderPage = () => {
                   useWallet={effectiveUseWallet}
                   onUseWalletChange={setUseWallet}
                   walletCreditApplied={walletCreditApplied}
-                  isDeliveryOrder={isDeliveryOrder}
-                  deliveryAddress={deliveryAddress}
-                  deliveryFee={deliveryFee} // Pass the fee to the summary
+                  isDeliveryOrder={isDeliveryOrder} // Pass down delivery status
+                  deliveryAddress={deliveryAddress} // Pass down address
+                  deliveryFee={deliveryFee} // Pass down fee
                 />
             </div>
           </div>
