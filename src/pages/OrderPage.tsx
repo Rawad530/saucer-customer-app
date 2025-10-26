@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { OrderItem, MenuItem, PaymentMode } from "../types/order"; // Make sure Order type includes new delivery fields if needed elsewhere
+import { OrderItem, MenuItem, PaymentMode } from "../types/order";
 import { supabase } from "../lib/supabaseClient";
 import MenuSection from "../components/MenuSection";
 import OrderSummary from "../components/OrderSummary";
@@ -37,7 +37,7 @@ interface DeliveryDetails {
 }
 
 const OrderPage = () => {
-  const location = useLocation(); // Keep for payment failure flag?
+  const location = useLocation();
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [guestInfo, setGuestInfo] = useState<{ name: string; phone: string } | null>(null);
@@ -56,51 +56,52 @@ const OrderPage = () => {
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
 
-  // --- REMOVED Local State for deliveryDetails and deliveryFee ---
-
   // --- READ FROM STORE ---
   const deliveryDetails = useCartStore((state) => state.deliveryDetails);
-  const deliveryFee = deliveryDetails?.deliveryFee ?? 0; // Derive fee from store details
+  const deliveryFee = deliveryDetails?.deliveryFee ?? 0;
   // --- END READ ---
   const selectedItems = useCartStore((state) => state.items);
   const addItem = useCartStore((state) => state.addItem);
   const updateItemQuantity = useCartStore((state) => state.updateItemQuantity);
   const updateItemDetails = useCartStore((state) => state.updateItemDetails);
-  const clearCart = useCartStore((state) => state.clearCart);
+  const clearCart = useCartStore((state) => state.clearCart); // Keep clearCart action if needed elsewhere
   const getSummary = useCartStore((state) => state.getSummary);
 
 
   useEffect(() => {
     // --- SIMPLIFIED useEffect ---
-    // No longer need to read location.state for delivery details
-    console.log('OrderPage Mounted - deliveryDetails from store:', deliveryDetails); // Log store state
+    console.log('OrderPage Mounted - deliveryDetails from store:', deliveryDetails);
 
+    // Check if returning from a failed payment
     const paymentFailedFlag = sessionStorage.getItem('paymentFailed');
     if (paymentFailedFlag) {
       console.log("Detected return from failed payment.");
       sessionStorage.removeItem('paymentFailed');
-      // Cart & delivery details are already preserved in Zustand store
-    } else {
-      // Logic for clearing cart on non-delivery fresh load (if desired)
-      // This implementation preserves the cart unless explicitly cleared elsewhere
-      // if (!deliveryDetails) {
-      //   console.log("Not a delivery order and not from failed payment, clearing cart.");
-      //   clearCart(); // Uncomment this line if you WANT to clear cart on non-delivery load
-      // }
+      // No need to clear cart or delivery details, they are persisted in the store.
     }
+    // --- REMOVED automatic clearCart() logic ---
+    // Cart clearing should happen explicitly, e.g., after successful order,
+    // or when the user starts a completely new order flow.
 
     const fetchData = async () => {
        setLoadingMenu(true);
        const { data: { session: currentSession } } = await supabase.auth.getSession();
        setSession(currentSession);
-       // Load guest info only if NOT a delivery order (read from store)
+
+       // Load guest info only if NOT logged in AND NOT a delivery order
        if (!currentSession && !deliveryDetails) {
            const storedGuestInfo = localStorage.getItem('guest_info');
            if (storedGuestInfo) {
              try { setGuestInfo(JSON.parse(storedGuestInfo)); }
              catch (e) { console.error("Error parsing guest info", e); }
+           } else {
+             setGuestInfo(null); // Ensure guest info is null if nothing stored
            }
+       } else if (currentSession || deliveryDetails) {
+           // Clear local guestInfo state if logged in or it's a delivery order
+           setGuestInfo(null);
        }
+
        // Fetch menu and wallet balance
        const menuPromise = supabase.from('menu_items').select('*').eq('is_available', true).order('id');
        let walletPromise;
@@ -114,12 +115,12 @@ const OrderPage = () => {
     };
 
     fetchData();
-  // Update dependencies - removed location.state, added deliveryDetails
-  }, [clearCart, session, deliveryDetails]);
+  // Dependencies now only include things that should genuinely trigger a refetch
+  // Note: `clearCart` is removed as a dependency since it's not called here.
+  }, [session, deliveryDetails]); // `session` might change if user logs in/out
 
 
   // --- All other functions (addItemToOrder, confirmPendingItem, handleEditItem, etc.) remain unchanged ---
-  // --- They will automatically use `deliveryDetails` and `deliveryFee` read from the store ---
 
   const addItemToOrder = (menuItem: MenuItem) => {
     if (menuItem.requires_sauce || menuItem.is_combo || ['mains', 'value'].includes(menuItem.category)) {
@@ -220,8 +221,10 @@ const OrderPage = () => {
         // --- End Generate Order Number ---
 
         const userId = session?.user?.id || null;
+        // Guest info logic updated in useEffect, use component state here
         const guestName = !deliveryDetails && currentGuestInfo ? currentGuestInfo.name : null;
         const guestPhone = !deliveryDetails && currentGuestInfo ? currentGuestInfo.phone : null;
+
 
         // Validation
         if (!userId && !deliveryDetails && (!guestName || !guestPhone)) {
@@ -251,7 +254,7 @@ const OrderPage = () => {
            order_type: orderType,
            // Read directly from store's deliveryDetails object
            delivery_address: deliveryDetails?.addressText || null,
-           delivery_fee: deliveryDetails ? deliveryFee : null, // Use fee derived from store
+           delivery_fee: deliveryDetails ? deliveryFee : null,
            delivery_gmaps_link: deliveryDetails?.gmapsLink || null,
            delivery_building: deliveryDetails?.building || null,
            delivery_level: deliveryDetails?.level || null,
@@ -274,19 +277,25 @@ const OrderPage = () => {
         if (functionData?.error) throw new Error(`Payment Init Error: ${functionData.error}`);
 
         if (functionData?.paymentComplete) { // Wallet only case
-          clearCart(); localStorage.removeItem('guest_info'); setOrderPlaced(true);
-          if (session) setWalletBalance(prev => prev - walletCreditApplied);
+          clearCart(); // Clear cart AFTER successful order
+          localStorage.removeItem('guest_info');
+          setOrderPlaced(true);
+          if (session) setWalletBalance(prev => prev - walletCreditApplied); // Adjust local balance display
         } else if (functionData?.redirectUrl) { // Card payment needed
+          // Don't clear cart here, wait for payment success callback
           window.location.href = functionData.redirectUrl;
         } else { throw new Error("Invalid response from payment function."); }
         // --- End Initiate Payment ---
 
     } catch (err) {
         console.error("Place Order Failed. Full Error Object:", err);
+        // Set flag before redirecting back from payment gateway is better
+        // sessionStorage.setItem('paymentFailed', 'true'); // Maybe set this on the callback URL instead?
         alert(`Order Failed: ${err instanceof Error ? err.message : "Unknown error"}`);
         setIsPlacingOrder(false);
     }
   };
+
 
   const categorizedItems = {
     value: menuItems.filter(item => item.category === 'value'),
@@ -345,9 +354,10 @@ const OrderPage = () => {
              </div>
              {session ? (
                <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700 shrink-0">
-                 &larr; Back to Account
+                 ← Back to Account
                </Link>
              ) : (
+               // Guest info logic uses deliveryDetails from store
                !deliveryDetails && guestInfo ? (
                  <div className="text-right shrink-0">
                    <p className="text-sm text-gray-400">Ordering as Guest:</p>
