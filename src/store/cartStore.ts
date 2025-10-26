@@ -1,16 +1,34 @@
 // src/store/cartStore.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { OrderItem } from '../types/order';
+import { OrderItem, MenuItem } from '../types/order'; // Ensure MenuItem is imported if needed, adjust path
 import { addOnOptions } from '../data/menu'; // Used for calculations
+
+// --- ADDED: DeliveryDetails Interface (ensure path is correct or define here) ---
+// If this interface exists elsewhere (e.g., types/order.ts), import it instead.
+// import { DeliveryDetails } from '../types/order';
+interface DeliveryDetails {
+  addressText: string;
+  gmapsLink: string;
+  lat: number;
+  lng: number;
+  building?: string;
+  level?: string;
+  unit?: string;
+  notes?: string;
+  deliveryFee: number;
+}
+// --- END ADDED INTERFACE ---
 
 interface CartState {
   items: OrderItem[];
+  deliveryDetails: DeliveryDetails | null; // <-- ADDED STATE
   // Actions
   addItem: (item: OrderItem) => void;
   updateItemQuantity: (index: number, newQuantity: number) => void;
   updateItemDetails: (index: number, item: OrderItem) => void;
   clearCart: () => void;
+  setDeliveryDetails: (details: DeliveryDetails | null) => void; // <-- ADDED ACTION
   // Derived state
   getSummary: () => { subtotal: number; itemCount: number };
 }
@@ -19,6 +37,7 @@ export const useCartStore = create<CartState>()(
   persist(
     (set, get) => ({
       items: [],
+      deliveryDetails: null, // <-- INITIAL STATE
 
       addItem: (item) => set((state) => {
         // Logic to merge quantities if the exact same item configuration exists
@@ -40,7 +59,7 @@ export const useCartStore = create<CartState>()(
             newItems[existingIndex] = {
                 ...newItems[existingIndex],
                 // We assume item.quantity is the amount to add (usually 1)
-                quantity: newItems[existingIndex].quantity + item.quantity 
+                quantity: newItems[existingIndex].quantity + item.quantity
             };
             return { items: newItems };
         }
@@ -68,7 +87,9 @@ export const useCartStore = create<CartState>()(
         return { items: newItems };
       }),
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], deliveryDetails: null }), // <-- MODIFIED clearCart
+
+      setDeliveryDetails: (details) => set({ deliveryDetails: details }), // <-- ADDED ACTION IMPLEMENTATION
 
       getSummary: () => {
         const items = get().items;

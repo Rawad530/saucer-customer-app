@@ -7,7 +7,7 @@ import { supabase } from "../lib/supabaseClient";
 import MenuSection from "../components/MenuSection";
 import OrderSummary from "../components/OrderSummary";
 import { Session } from "@supabase/supabase-js";
-import { useCartStore } from "../store/cartStore";
+import { useCartStore } from "../store/cartStore"; // <-- IMPORT STORE
 import GuestOrderDialog from '../components/GuestOrderDialog';
 import { Truck, MapPin } from "lucide-react";
 
@@ -23,7 +23,7 @@ interface PendingItem {
   discount?: number;
 }
 
-// Interface for the detailed delivery information
+// Interface for the detailed delivery information (can be imported if defined elsewhere)
 interface DeliveryDetails {
   addressText: string;
   gmapsLink: string;
@@ -37,7 +37,7 @@ interface DeliveryDetails {
 }
 
 const OrderPage = () => {
-  const location = useLocation();
+  const location = useLocation(); // Keep for payment failure flag?
   const navigate = useNavigate();
   const [session, setSession] = useState<Session | null>(null);
   const [guestInfo, setGuestInfo] = useState<{ name: string; phone: string } | null>(null);
@@ -56,10 +56,12 @@ const OrderPage = () => {
   const [isGuestModalOpen, setIsGuestModalOpen] = useState(false);
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
 
-  // State uses the detailed DeliveryDetails object
-  const [deliveryDetails, setDeliveryDetails] = useState<DeliveryDetails | null>(null);
-  const [deliveryFee, setDeliveryFee] = useState(0);
+  // --- REMOVED Local State for deliveryDetails and deliveryFee ---
 
+  // --- READ FROM STORE ---
+  const deliveryDetails = useCartStore((state) => state.deliveryDetails);
+  const deliveryFee = deliveryDetails?.deliveryFee ?? 0; // Derive fee from store details
+  // --- END READ ---
   const selectedItems = useCartStore((state) => state.items);
   const addItem = useCartStore((state) => state.addItem);
   const updateItemQuantity = useCartStore((state) => state.updateItemQuantity);
@@ -67,60 +69,57 @@ const OrderPage = () => {
   const clearCart = useCartStore((state) => state.clearCart);
   const getSummary = useCartStore((state) => state.getSummary);
 
+
   useEffect(() => {
-    // --- ADDED CONSOLE LOG ---
-    console.log('OrderPage Mounted - location.state:', location.state);
-    // --- END CONSOLE LOG ---
-
-    // Reads the detailed deliveryDetails from location state
-    const comesFromDeliveryPage = location.state?.isDelivery === true && location.state?.deliveryDetails;
-
-    if (comesFromDeliveryPage) {
-      const details = location.state.deliveryDetails as DeliveryDetails;
-      console.log("Received Delivery Details:", details);
-      setDeliveryDetails(details);
-      setDeliveryFee(details.deliveryFee || 0);
-      window.history.replaceState({}, document.title); // Clear state after reading
-    } else {
-      setDeliveryDetails(null);
-      setDeliveryFee(0);
-    }
+    // --- SIMPLIFIED useEffect ---
+    // No longer need to read location.state for delivery details
+    console.log('OrderPage Mounted - deliveryDetails from store:', deliveryDetails); // Log store state
 
     const paymentFailedFlag = sessionStorage.getItem('paymentFailed');
     if (paymentFailedFlag) {
+      console.log("Detected return from failed payment.");
       sessionStorage.removeItem('paymentFailed');
-    } else if (!comesFromDeliveryPage) {
-      clearCart();
+      // Cart & delivery details are already preserved in Zustand store
+    } else {
+      // Logic for clearing cart on non-delivery fresh load (if desired)
+      // This implementation preserves the cart unless explicitly cleared elsewhere
+      // if (!deliveryDetails) {
+      //   console.log("Not a delivery order and not from failed payment, clearing cart.");
+      //   clearCart(); // Uncomment this line if you WANT to clear cart on non-delivery load
+      // }
     }
 
     const fetchData = async () => {
-      setLoadingMenu(true);
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      setSession(currentSession);
-      if (!currentSession) {
-        if (!comesFromDeliveryPage) {
+       setLoadingMenu(true);
+       const { data: { session: currentSession } } = await supabase.auth.getSession();
+       setSession(currentSession);
+       // Load guest info only if NOT a delivery order (read from store)
+       if (!currentSession && !deliveryDetails) {
            const storedGuestInfo = localStorage.getItem('guest_info');
            if (storedGuestInfo) {
              try { setGuestInfo(JSON.parse(storedGuestInfo)); }
              catch (e) { console.error("Error parsing guest info", e); }
            }
-        } else {
-            setGuestInfo(null);
-        }
-      }
-      const menuPromise = supabase.from('menu_items').select('*').eq('is_available', true).order('id');
-      let walletPromise;
-      if (currentSession?.user) {
-        walletPromise = supabase.from('customer_profiles').select('wallet_balance').eq('id', currentSession.user.id).single();
-      }
-      const [menuResult, walletResult] = await Promise.all([menuPromise, walletPromise]);
-      if (menuResult.data) setMenuItems(menuResult.data);
-      if (walletResult?.data) setWalletBalance(walletResult.data.wallet_balance || 0);
-      setLoadingMenu(false);
+       }
+       // Fetch menu and wallet balance
+       const menuPromise = supabase.from('menu_items').select('*').eq('is_available', true).order('id');
+       let walletPromise;
+       if (currentSession?.user) {
+         walletPromise = supabase.from('customer_profiles').select('wallet_balance').eq('id', currentSession.user.id).single();
+       }
+       const [menuResult, walletResult] = await Promise.all([menuPromise, walletPromise]);
+       if (menuResult.data) setMenuItems(menuResult.data);
+       if (walletResult?.data) setWalletBalance(walletResult.data.wallet_balance || 0);
+       setLoadingMenu(false);
     };
 
     fetchData();
-  }, [clearCart, location.state]);
+  // Update dependencies - removed location.state, added deliveryDetails
+  }, [clearCart, session, deliveryDetails]);
+
+
+  // --- All other functions (addItemToOrder, confirmPendingItem, handleEditItem, etc.) remain unchanged ---
+  // --- They will automatically use `deliveryDetails` and `deliveryFee` read from the store ---
 
   const addItemToOrder = (menuItem: MenuItem) => {
     if (menuItem.requires_sauce || menuItem.is_combo || ['mains', 'value'].includes(menuItem.category)) {
@@ -186,7 +185,7 @@ const OrderPage = () => {
 
   const handleProceedToPayment = async () => {
     if (selectedItems.length === 0) { alert("Your cart is empty."); return; }
-    // Checks the detailed deliveryDetails object
+    // Use deliveryDetails directly from store state
     if (deliveryDetails && !deliveryDetails.addressText) { alert("Delivery address is missing."); navigate('/delivery-location'); return; }
     if (session || guestInfo || deliveryDetails) {
       placeOrder(deliveryDetails ? null : guestInfo);
@@ -200,100 +199,94 @@ const OrderPage = () => {
   const effectiveUseWallet = session ? useWallet : false;
   const promoDiscountAmount = subtotal * (effectiveDiscountRate / 100);
   const priceAfterPromo = subtotal - promoDiscountAmount;
-  // Calculation uses the detailed deliveryDetails object
+  // Use fee derived from store details
   const totalDueBeforeWallet = priceAfterPromo + (deliveryDetails ? deliveryFee : 0);
   const walletCreditApplied = effectiveUseWallet ? Math.min(walletBalance, totalDueBeforeWallet) : 0;
   const totalPrice = totalDueBeforeWallet - walletCreditApplied;
 
-  // --- THIS IS THE CORRECTED placeOrder FUNCTION ---
   const placeOrder = async (currentGuestInfo: { name: string; phone: string } | null) => {
     setIsPlacingOrder(true);
-    // Uses 'app_delivery' or 'app_pickup' based on deliveryDetails
-    const orderType = deliveryDetails ? 'delivery' : 'app_pickup';
+    // Use deliveryDetails directly from store state
+    const orderType = deliveryDetails ? 'delivery' : 'app_pickup'; // Using 'delivery' as requested
     let orderId = crypto.randomUUID();
 
     try {
-      // --- Generate Order Number ---
-      const { data: orderNumberData, error: orderNumberError } = await supabase.functions.invoke('generate-order-number', { body: { orderType: orderType } });
-      if (orderNumberError) throw orderNumberError;
-      if (!orderNumberData?.orderNumber) throw new Error("Failed to generate order number.");
-      const orderNumber = orderNumberData.orderNumber;
-      setCompletedOrderNumber(orderNumber);
-      // --- End Generate Order Number ---
+        // --- Generate Order Number ---
+        const { data: orderNumberData, error: orderNumberError } = await supabase.functions.invoke('generate-order-number', { body: { orderType: orderType } });
+        if (orderNumberError) throw orderNumberError;
+        if (!orderNumberData?.orderNumber) throw new Error("Failed to generate order number.");
+        const orderNumber = orderNumberData.orderNumber;
+        setCompletedOrderNumber(orderNumber);
+        // --- End Generate Order Number ---
 
-      const userId = session?.user?.id || null;
-      const guestName = !deliveryDetails && currentGuestInfo ? currentGuestInfo.name : null;
-      const guestPhone = !deliveryDetails && currentGuestInfo ? currentGuestInfo.phone : null;
+        const userId = session?.user?.id || null;
+        const guestName = !deliveryDetails && currentGuestInfo ? currentGuestInfo.name : null;
+        const guestPhone = !deliveryDetails && currentGuestInfo ? currentGuestInfo.phone : null;
 
-      // Validation
-      if (!userId && !deliveryDetails && (!guestName || !guestPhone)) {
-        throw new Error("Guest name and phone number are required for pick-up orders.");
-      }
+        // Validation
+        if (!userId && !deliveryDetails && (!guestName || !guestPhone)) {
+          throw new Error("Guest name and phone number are required for pick-up orders.");
+        }
 
-      // Determine Payment Mode
-      let paymentMode: PaymentMode = 'Card - Online';
-      if (walletCreditApplied > 0) {
-        paymentMode = (totalPrice > 0.01) ? 'Wallet/Card Combo' : 'Wallet Only';
-      }
+        // Determine Payment Mode
+        let paymentMode: PaymentMode = 'Card - Online';
+        if (walletCreditApplied > 0) {
+          paymentMode = (totalPrice > 0.01) ? 'Wallet/Card Combo' : 'Wallet Only';
+        }
 
-      // --- Transaction object includes all detailed delivery fields ---
-      const transactionData = {
-        transaction_id: orderId,
-        user_id: userId,
-        guest_name: guestName,
-        guest_phone: guestPhone,
-        order_number: orderNumber,
-        items: selectedItems as any,
-        total_price: totalPrice, // Final total including fee
-        wallet_credit_applied: walletCreditApplied,
-        payment_mode: paymentMode,
-        status: 'pending_payment',
-        created_at: new Date().toISOString(),
-        promo_code_used: effectiveDiscountRate > 0 ? promoCode.toUpperCase() : null,
-        discount_applied_percent: effectiveDiscountRate > 0 ? effectiveDiscountRate : null,
-        order_type: orderType,
+        const transactionData = {
+           transaction_id: orderId,
+           user_id: userId,
+           guest_name: guestName,
+           guest_phone: guestPhone,
+           order_number: orderNumber,
+           items: selectedItems as any,
+           total_price: totalPrice,
+           wallet_credit_applied: walletCreditApplied,
+           payment_mode: paymentMode,
+           status: 'pending_payment',
+           created_at: new Date().toISOString(),
+           promo_code_used: effectiveDiscountRate > 0 ? promoCode.toUpperCase() : null,
+           discount_applied_percent: effectiveDiscountRate > 0 ? effectiveDiscountRate : null,
+           order_type: orderType,
+           // Read directly from store's deliveryDetails object
+           delivery_address: deliveryDetails?.addressText || null,
+           delivery_fee: deliveryDetails ? deliveryFee : null, // Use fee derived from store
+           delivery_gmaps_link: deliveryDetails?.gmapsLink || null,
+           delivery_building: deliveryDetails?.building || null,
+           delivery_level: deliveryDetails?.level || null,
+           delivery_unit: deliveryDetails?.unit || null,
+           delivery_address_notes: deliveryDetails?.notes || null,
+        };
 
-        // --- All Delivery Fields Included ---
-        delivery_address: deliveryDetails?.addressText || null,
-        delivery_fee: deliveryDetails ? deliveryFee : null,
-        delivery_gmaps_link: deliveryDetails?.gmapsLink || null,
-        delivery_building: deliveryDetails?.building || null,
-        delivery_level: deliveryDetails?.level || null,
-        delivery_unit: deliveryDetails?.unit || null,
-        delivery_address_notes: deliveryDetails?.notes || null,
-        // --- END All Delivery Fields ---
-      };
-      // --- END Transaction object ---
+        console.log("Attempting to insert transaction:", JSON.stringify(transactionData, null, 2));
+        const { error: insertError } = await supabase.from('transactions').insert([transactionData]);
 
-      console.log("Attempting to insert transaction:", JSON.stringify(transactionData, null, 2));
-      const { error: insertError } = await supabase.from('transactions').insert([transactionData]);
+        if (insertError) {
+          console.error("!!! DATABASE INSERT FAILED !!!", insertError);
+          throw new Error(`Database Insert Failed: ${insertError.message} (Code: ${insertError.code})`);
+        }
+        console.log("Database insert successful for orderId:", orderId);
 
-      if (insertError) {
-        console.error("!!! DATABASE INSERT FAILED !!!", insertError);
-        throw new Error(`Database Insert Failed: ${insertError.message} (Code: ${insertError.code})`);
-      }
-      console.log("Database insert successful for orderId:", orderId);
+        // --- Initiate Payment ---
+        const { data: functionData, error: functionError } = await supabase.functions.invoke('initiate-payment', { body: { orderId } });
+        if (functionError) throw new Error(`Payment Init Error: ${functionError.message}`);
+        if (functionData?.error) throw new Error(`Payment Init Error: ${functionData.error}`);
 
-      // --- Initiate Payment ---
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('initiate-payment', { body: { orderId } });
-      if (functionError) throw new Error(`Payment Init Error: ${functionError.message}`);
-      if (functionData?.error) throw new Error(`Payment Init Error: ${functionData.error}`);
-
-      if (functionData?.paymentComplete) { // Wallet only case
-        clearCart(); localStorage.removeItem('guest_info'); setOrderPlaced(true);
-        if (session) setWalletBalance(prev => prev - walletCreditApplied);
-      } else if (functionData?.redirectUrl) { // Card payment needed
-        window.location.href = functionData.redirectUrl;
-      } else { throw new Error("Invalid response from payment function."); }
-      // --- End Initiate Payment ---
+        if (functionData?.paymentComplete) { // Wallet only case
+          clearCart(); localStorage.removeItem('guest_info'); setOrderPlaced(true);
+          if (session) setWalletBalance(prev => prev - walletCreditApplied);
+        } else if (functionData?.redirectUrl) { // Card payment needed
+          window.location.href = functionData.redirectUrl;
+        } else { throw new Error("Invalid response from payment function."); }
+        // --- End Initiate Payment ---
 
     } catch (err) {
-      console.error("Place Order Failed. Full Error Object:", err);
-      alert(`Order Failed: ${err instanceof Error ? err.message : "Unknown error"}`);
-      setIsPlacingOrder(false);
+        console.error("Place Order Failed. Full Error Object:", err);
+        alert(`Order Failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+        setIsPlacingOrder(false);
     }
   };
-  // --- END placeOrder FUNCTION ---
 
   const categorizedItems = {
     value: menuItems.filter(item => item.category === 'value'),
@@ -306,7 +299,6 @@ const OrderPage = () => {
   if (orderPlaced) {
     return (
        <div className="flex flex-col justify-center items-center h-96 text-center p-4 text-white">
-         {/* Logic uses deliveryDetails */}
          <h1 className="text-4xl font-bold text-amber-500 mb-2">Thank You{
              !deliveryDetails && guestInfo ? `, ${guestInfo.name}` :
              session?.user?.user_metadata?.full_name ? `, ${session.user.user_metadata.full_name}` :
@@ -318,7 +310,6 @@ const OrderPage = () => {
              <p className="text-sm text-gray-400">Your Order Number is:</p>
              <p className="text-2xl md:text-3xl font-bold tracking-wider break-all px-2">{completedOrderNumber}</p>
              <p className="text-xs text-gray-400 mt-2">
-                 {/* Logic uses deliveryDetails */}
                  {deliveryDetails ? "Your order will be delivered soon." : "Please use this number for pickup."}
              </p>
            </div>
@@ -340,96 +331,93 @@ const OrderPage = () => {
     <>
       <div className="p-4 bg-gray-900 text-white min-h-screen">
         <div className="max-w-6xl mx-auto">
+          {/* Header uses deliveryDetails from store */}
           <div className="flex justify-between items-start mb-6">
-            <div>
-              {/* Title uses deliveryDetails */}
-              <h1 className="text-3xl font-bold">
-                {deliveryDetails ? "Complete Your Delivery Order" : "Place a Pick-up Order"}
-              </h1>
-              {/* Address display uses deliveryDetails.addressText */}
-              {deliveryDetails && deliveryDetails.addressText && (
-                <p className="text-sm text-amber-400 mt-1 flex items-center gap-1">
-                  <MapPin className="w-4 h-4 inline shrink-0" /> {deliveryDetails.addressText}
-                </p>
-              )}
-            </div>
-            {session ? (
-              <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700 shrink-0">
-                &larr; Back to Account
-              </Link>
-            ) : (
-              // Guest info logic uses deliveryDetails
-              !deliveryDetails && guestInfo ? (
-                <div className="text-right shrink-0">
-                  <p className="text-sm text-gray-400">Ordering as Guest:</p>
-                  <p className="text-sm font-semibold">{guestInfo.name}</p>
-                </div>
-              ) : null
-            )}
+             <div>
+               <h1 className="text-3xl font-bold">
+                 {deliveryDetails ? "Complete Your Delivery Order" : "Place a Pick-up Order"}
+               </h1>
+               {deliveryDetails && deliveryDetails.addressText && (
+                 <p className="text-sm text-amber-400 mt-1 flex items-center gap-1">
+                   <MapPin className="w-4 h-4 inline shrink-0" /> {deliveryDetails.addressText}
+                 </p>
+               )}
+             </div>
+             {session ? (
+               <Link to="/account" className="px-4 py-2 text-sm font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700 shrink-0">
+                 &larr; Back to Account
+               </Link>
+             ) : (
+               !deliveryDetails && guestInfo ? (
+                 <div className="text-right shrink-0">
+                   <p className="text-sm text-gray-400">Ordering as Guest:</p>
+                   <p className="text-sm font-semibold">{guestInfo.name}</p>
+                 </div>
+               ) : null
+             )}
           </div>
 
-          {/* Delivery info box uses deliveryDetails */}
+          {/* Delivery info box uses deliveryDetails from store */}
           {deliveryDetails && deliveryDetails.addressText && (
-            <div className="mb-6 p-4 bg-blue-900/30 border border-blue-700 rounded-md flex justify-between items-center gap-3">
-              <div className="flex items-center gap-3">
-                 <Truck className="w-5 h-5 text-blue-300 shrink-0" />
-                 <div>
-                   <p className="text-sm font-semibold text-blue-200">Delivering To:</p>
-                   <p className="text-sm text-blue-300">{deliveryDetails.addressText}</p>
-                 </div>
-              </div>
-              <Link to="/delivery-location" className="text-xs text-blue-300 hover:text-blue-100 underline shrink-0">Change</Link>
-            </div>
+             <div className="mb-6 p-4 bg-blue-900/30 border border-blue-700 rounded-md flex justify-between items-center gap-3">
+               <div className="flex items-center gap-3">
+                  <Truck className="w-5 h-5 text-blue-300 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-blue-200">Delivering To:</p>
+                    <p className="text-sm text-blue-300">{deliveryDetails.addressText}</p>
+                  </div>
+               </div>
+               <Link to="/delivery-location" className="text-xs text-blue-300 hover:text-blue-100 underline shrink-0">Change</Link>
+             </div>
           )}
 
+          {/* Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            <div className="space-y-6">
-              {Object.entries(categorizedItems).map(([category, items]) => (
-                <MenuSection
-                  key={category}
-                  title={category.charAt(0).toUpperCase() + category.slice(1)}
-                  items={items}
-                  onAddItem={addItemToOrder}
-                />
-              ))}
-            </div>
-
-            <div className="sticky top-16 self-start">
-               {/* OrderSummary receives props based on deliveryDetails */}
+             {/* Menu Section */}
+             <div className="space-y-6">
+               {Object.entries(categorizedItems).map(([category, items]) => (
+                 <MenuSection
+                   key={category}
+                   title={category.charAt(0).toUpperCase() + category.slice(1)}
+                   items={items}
+                   onAddItem={addItemToOrder}
+                 />
+               ))}
+             </div>
+             {/* Order Summary Section */}
+             <div className="sticky top-16 self-start">
                <OrderSummary
-                  selectedItems={selectedItems}
-                  pendingItem={pendingItem}
-                  subtotal={subtotal}
-                  discountAmount={promoDiscountAmount}
-                  totalPrice={totalPrice}
-                  onUpdateItemQuantity={updateItemQuantity}
-                  onUpdatePendingItem={setPendingItem}
-                  onConfirmPendingItem={confirmPendingItem}
-                  onCancelPendingItem={handleCancelPendingItem}
-                  onProceedToPayment={handleProceedToPayment}
-                  promoCode={promoCode}
-                  setPromoCode={setPromoCode}
-                  handleApplyPromoCode={handleApplyPromoCode}
-                  promoMessage={promoMessage}
-                  isCheckingPromo={isCheckingPromo}
-                  appliedDiscount={effectiveDiscountRate > 0}
-                  isPlacingOrder={isPlacingOrder}
-                  onEditItem={handleEditItem}
-                  walletBalance={walletBalance}
-                  useWallet={effectiveUseWallet}
-                  onUseWalletChange={setUseWallet}
-                  walletCreditApplied={walletCreditApplied}
-
-                  // Pass the correct props based on deliveryDetails state
-                  deliveryAddress={deliveryDetails?.addressText || null}
-                  deliveryFee={deliveryDetails ? deliveryFee : 0}
-                  // isDeliveryOrder prop is effectively replaced by checking deliveryAddress
+                 selectedItems={selectedItems}
+                 pendingItem={pendingItem}
+                 subtotal={subtotal}
+                 discountAmount={promoDiscountAmount}
+                 totalPrice={totalPrice}
+                 onUpdateItemQuantity={updateItemQuantity}
+                 onUpdatePendingItem={setPendingItem}
+                 onConfirmPendingItem={confirmPendingItem}
+                 onCancelPendingItem={handleCancelPendingItem}
+                 onProceedToPayment={handleProceedToPayment}
+                 promoCode={promoCode}
+                 setPromoCode={setPromoCode}
+                 handleApplyPromoCode={handleApplyPromoCode}
+                 promoMessage={promoMessage}
+                 isCheckingPromo={isCheckingPromo}
+                 appliedDiscount={effectiveDiscountRate > 0}
+                 isPlacingOrder={isPlacingOrder}
+                 onEditItem={handleEditItem}
+                 walletBalance={walletBalance}
+                 useWallet={effectiveUseWallet}
+                 onUseWalletChange={setUseWallet}
+                 walletCreditApplied={walletCreditApplied}
+                 // Pass props derived from store state
+                 deliveryAddress={deliveryDetails?.addressText || null}
+                 deliveryFee={deliveryDetails ? deliveryFee : 0}
                />
-            </div>
+             </div>
           </div>
         </div>
       </div>
-
+      {/* Guest Modal */}
       <GuestOrderDialog
         isOpen={isGuestModalOpen}
         onClose={() => setIsGuestModalOpen(false)}

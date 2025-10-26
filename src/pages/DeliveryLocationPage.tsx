@@ -4,33 +4,31 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label'; // ** Import Label **
-import { Textarea } from '@/components/ui/textarea'; // ** Import Textarea **
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { AlertCircle, CheckCircle, MapPin, Loader2 } from 'lucide-react';
 import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
+import { useCartStore } from '../store/cartStore'; // <-- IMPORT STORE
 
 // --- Configuration ---
-// !!! IMPORTANT: Replace with your ACTUAL restaurant coordinates !!!
-const RESTAURANT_LAT = 41.72051; // Your coordinates
-const RESTAURANT_LNG = 44.72121; // Your coordinates
-// -------------------------------------------------------------
-const DELIVERY_RADIUS_METERS = 5000; // 5km
-const TIER_1_BOUNDARY_METERS = 2500; // 2.5km
-const TIER_1_FEE = 3; // 3 GEL
-const TIER_2_FEE = 5; // 5 GEL
-// -------------------------------------------------------------
+const RESTAURANT_LAT = 41.72051;
+const RESTAURANT_LNG = 44.72121;
+const DELIVERY_RADIUS_METERS = 5000;
+const TIER_1_BOUNDARY_METERS = 2500;
+const TIER_1_FEE = 3;
+const TIER_2_FEE = 5;
 const MAP_CENTER = { lat: RESTAURANT_LAT, lng: RESTAURANT_LNG };
 const MAP_ZOOM = 14;
 const MAP_CONTAINER_STYLE = {
   width: '100%',
   height: '350px',
   borderRadius: '0.375rem',
-  border: '1px solid #4B5563', // gray-600
+  border: '1px solid #4B5563',
 };
 const libraries: ('places' | 'geometry' | 'geocoding' | 'routes')[] = ['places', 'geometry', 'geocoding', 'routes'];
 // --- End Configuration ---
 
-// --- NEW: Define state structure for ALL address details ---
+// Interface for delivery details (can be imported if defined elsewhere)
 interface DeliveryDetails {
   addressText: string;
   gmapsLink: string;
@@ -40,11 +38,12 @@ interface DeliveryDetails {
   level?: string;
   unit?: string;
   notes?: string;
-  deliveryFee: number; // Added fee here
+  deliveryFee: number;
 }
 
 const DeliveryLocationPage = () => {
   const navigate = useNavigate();
+  const setDeliveryDetailsStore = useCartStore((state) => state.setDeliveryDetails); // <-- GET ACTION FROM STORE
   const [userAddress, setUserAddress] = useState('');
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [distanceText, setDistanceText] = useState<string | null>(null);
@@ -55,23 +54,18 @@ const DeliveryLocationPage = () => {
   const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const [deliveryFee, setDeliveryFee] = useState(0);
-
-  // --- NEW: State for the Google Maps link ---
   const [gmapsLink, setGmapsLink] = useState('');
-  // --- NEW: State for detailed address fields ---
   const [building, setBuilding] = useState('');
   const [level, setLevel] = useState('');
   const [unit, setUnit] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Load Google Maps Script
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
     libraries: libraries,
   });
 
-  // Initialize Geocoder once map script is loaded
   useEffect(() => {
     if (isLoaded && window.google) {
       setGeocoder(new google.maps.Geocoder());
@@ -79,7 +73,6 @@ const DeliveryLocationPage = () => {
     }
   }, [isLoaded]);
 
-  // --- UPDATED: Utility: Check Distance & Generate Link ---
   const checkDistanceAndGetAddress = useCallback((latLng: { lat: number; lng: number }) => {
     if (!isLoaded || !window.google || !geocoder || !latLng) {
       console.warn("Google Maps script or geocoder not ready or LatLng missing.");
@@ -93,25 +86,22 @@ const DeliveryLocationPage = () => {
     setIsWithinRadius(null);
     setDistanceText(null);
     setDeliveryFee(0);
-    setUserAddress(''); // Reset address text while checking
-    setGmapsLink(''); // Reset link
+    setUserAddress('');
+    setGmapsLink('');
 
-    // --- Generate Google Maps Link ---
     const link = `https://www.google.com/maps?q=latitude,longitudez=18`;
-    setGmapsLink(link); // Set the link state
+    setGmapsLink(link);
 
-    // --- Geocode to get address text ---
     geocoder.geocode({ location: latLng }, (results, status) => {
-      let formattedAddress = `Lat: ${latLng.lat.toFixed(4)}, Lng: ${latLng.lng.toFixed(4)}`; // Fallback address
+      let formattedAddress = `Lat: ${latLng.lat.toFixed(4)}, Lng: ${latLng.lng.toFixed(4)}`;
       if (status === 'OK' && results?.[0]) {
         formattedAddress = results[0].formatted_address;
-        setUserAddress(formattedAddress); // Set the address text state
+        setUserAddress(formattedAddress);
       } else {
-        setUserAddress(formattedAddress); // Set fallback address
+        setUserAddress(formattedAddress);
         console.warn('Reverse geocode failed:', status);
       }
 
-      // --- Check Distance using Distance Matrix ---
       const service = new google.maps.DistanceMatrixService();
       service.getDistanceMatrix(
         {
@@ -120,7 +110,7 @@ const DeliveryLocationPage = () => {
           travelMode: google.maps.TravelMode.DRIVING,
         },
         (response, matrixStatus) => {
-          setIsLoading(false); // Stop loading indicator here
+          setIsLoading(false);
           if (matrixStatus === 'OK' && response?.rows[0]?.elements[0]?.status === 'OK') {
             const element = response.rows[0].elements[0];
             const distanceInMeters = element.distance.value;
@@ -143,109 +133,93 @@ const DeliveryLocationPage = () => {
           } else {
             setErrorMessage('Could not calculate driving distance. Please check the location or try again.');
             console.error('Distance Matrix failed:', matrixStatus, response);
-            setIsWithinRadius(null); // Explicitly set to null on failure
+            setIsWithinRadius(null);
           }
         }
-      ); // End Distance Matrix call
-    }); // End Geocoder call
-  }, [isLoaded, geocoder]); // Depend on isLoaded and geocoder
+      );
+    });
+  }, [isLoaded, geocoder]);
 
 
-  // --- Map Event Handlers ---
-  const onLoad = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-  }, []);
-
-  const onUnmount = useCallback(() => {
-    mapRef.current = null;
-  }, []);
+  const onLoad = useCallback((map: google.maps.Map) => { mapRef.current = map; }, []);
+  const onUnmount = useCallback(() => { mapRef.current = null; }, []);
 
   const onMapClick = useCallback((event: google.maps.MapMouseEvent) => {
     if (event.latLng) {
       const lat = event.latLng.lat();
       const lng = event.latLng.lng();
       const newPosition = { lat, lng };
-      setMarkerPosition(newPosition); // Update marker position state
-      checkDistanceAndGetAddress(newPosition); // Trigger check
+      setMarkerPosition(newPosition);
+      checkDistanceAndGetAddress(newPosition);
     }
-  }, [checkDistanceAndGetAddress]); // Use the combined function
+  }, [checkDistanceAndGetAddress]);
 
   const onMarkerDragEnd = useCallback((event: google.maps.MapMouseEvent) => {
      if (event.latLng) {
       const lat = event.latLng.lat();
       const lng = event.latLng.lng();
       const newPosition = { lat, lng };
-      // No need to setMarkerPosition here, it happens visually.
-      // We just need to trigger the check based on the new final position.
-      checkDistanceAndGetAddress(newPosition); // Trigger check
+      checkDistanceAndGetAddress(newPosition);
     }
-  }, [checkDistanceAndGetAddress]); // Use the combined function
+  }, [checkDistanceAndGetAddress]);
 
 
-  // --- Address Input Geocoding ---
   const handleCheckAddress = useCallback(() => {
     if (!userAddress || !geocoder) return;
-    setIsLoading(true); // Set loading for this action too
+    setIsLoading(true);
     setErrorMessage('');
     geocoder.geocode({ address: userAddress }, (results, status) => {
-      // Keep setIsLoading(true) until Distance Matrix finishes
       if (status === 'OK' && results?.[0]?.geometry?.location) {
         const location = results[0].geometry.location;
         const lat = location.lat();
         const lng = location.lng();
         const newPosition = { lat, lng };
-        // Update marker FIRST
         setMarkerPosition(newPosition);
-        // Pan map
         mapRef.current?.panTo(newPosition);
         mapRef.current?.setZoom(16);
-        // THEN check distance and reverse geocode
         checkDistanceAndGetAddress(newPosition);
       } else {
         setErrorMessage('Could not find location for the address entered. Please try again or place a pin on the map.');
-        setIsLoading(false); // Stop loading on error
+        setIsLoading(false);
         setMarkerPosition(null);
         setIsWithinRadius(null);
         setDistanceText(null);
-        setGmapsLink(''); // Clear link on error
+        setGmapsLink('');
       }
     });
   }, [userAddress, geocoder, checkDistanceAndGetAddress]);
 
 
-  // --- Navigation ---
   const handleProceedToOrder = () => {
-    // Check using markerPosition as the source of truth for coordinates
     if (isWithinRadius && markerPosition) {
-      // Ensure address text reflects the marker position if it was dragged/clicked last
       const finalAddress = userAddress || `Location (${markerPosition.lat.toFixed(4)}, ${markerPosition.lng.toFixed(4)})`;
 
-      // --- UPDATED: Gather all details ---
-      const deliveryDetails: DeliveryDetails = {
+      const deliveryData: DeliveryDetails = {
         addressText: finalAddress,
-        gmapsLink: gmapsLink, // Pass the link
+        gmapsLink: gmapsLink,
         lat: markerPosition.lat,
         lng: markerPosition.lng,
-        building: building.trim(), // Pass new fields
+        building: building.trim(),
         level: level.trim(),
         unit: unit.trim(),
         notes: notes.trim(),
-        deliveryFee: deliveryFee // Pass the fee
+        deliveryFee: deliveryFee
       };
 
-      navigate('/order', {
-        state: {
-          isDelivery: true,
-          deliveryDetails: deliveryDetails // Pass the complete object
-        }
-      });
+      // --- SAVE TO ZUSTAND STORE ---
+      setDeliveryDetailsStore(deliveryData);
+      // --- END SAVE ---
+
+      // --- REMOVE location.state ---
+      navigate('/order'); // Navigate without state
+      // --- END REMOVE ---
+
     } else {
         alert("Please select a valid delivery location within the radius first.");
     }
   };
 
 
-  // --- Loading/Error states ---
   if (loadError) {
     return <div className="text-red-500 text-center p-8">Error loading Google Maps script. Please check your API key setup and internet connection.</div>;
   }
@@ -254,7 +228,6 @@ const DeliveryLocationPage = () => {
   }
 
 
-  // --- Main Render ---
   return (
     <div className="flex justify-center items-start py-12 min-h-screen bg-gray-900">
       <Card className="w-full max-w-2xl bg-gray-800 border-gray-700 text-white">
@@ -308,13 +281,10 @@ const DeliveryLocationPage = () => {
                 value={userAddress}
                 onChange={(e) => {
                   setUserAddress(e.target.value);
-                  // Reset status when user types new address
                   setIsWithinRadius(null);
                   setDistanceText(null);
                   setErrorMessage('');
-                  setGmapsLink(''); // Clear link too
-                  // Optionally clear marker or keep it? Depends on desired UX
-                  // setMarkerPosition(null);
+                  setGmapsLink('');
                 }}
                 className="flex-grow bg-gray-700 border-gray-600 text-white"
                 disabled={isLoading}
@@ -330,25 +300,25 @@ const DeliveryLocationPage = () => {
             </div>
           </div>
 
-          {/* --- NEW: Detailed Address Fields --- */}
+          {/* Detailed Address Fields */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-700">
             <div>
               <Label htmlFor="building" className="text-sm font-medium text-gray-300">Building / Villa / Compound</Label>
               <Input
                 id="building"
-                value={building} // Link to state variable
-                onChange={(e) => setBuilding(e.target.value)} // Link to state setter
+                value={building}
+                onChange={(e) => setBuilding(e.target.value)}
                 placeholder="e.g., Tower A, Villa 12"
                 className="mt-1 bg-gray-700 border-gray-600 text-white"
-                disabled={isLoading} // Optionally disable while loading distance
+                disabled={isLoading}
               />
             </div>
             <div>
               <Label htmlFor="level" className="text-sm font-medium text-gray-300">Level / Floor</Label>
               <Input
                 id="level"
-                value={level} // Link to state variable
-                onChange={(e) => setLevel(e.target.value)} // Link to state setter
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
                 placeholder="e.g., 3rd Floor"
                 className="mt-1 bg-gray-700 border-gray-600 text-white"
                 disabled={isLoading}
@@ -358,30 +328,29 @@ const DeliveryLocationPage = () => {
               <Label htmlFor="unit" className="text-sm font-medium text-gray-300">Unit / Apt / Office No.</Label>
               <Input
                 id="unit"
-                value={unit} // Link to state variable
-                onChange={(e) => setUnit(e.target.value)} // Link to state setter
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
                 placeholder="e.g., Apt 305, Office 12B"
                 className="mt-1 bg-gray-700 border-gray-600 text-white"
                 disabled={isLoading}
               />
             </div>
           </div>
-          {/* --- NEW: Optional Notes Field --- */}
+          {/* Optional Notes Field */}
           <div className="pt-4 border-t border-gray-700">
               <Label htmlFor="notes" className="text-sm font-medium text-gray-300">Delivery Notes (Optional)</Label>
               <Textarea
                 id="notes"
-                value={notes} // Link to state variable
-                onChange={(e) => setNotes(e.target.value)} // Link to state setter
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
                 placeholder="e.g., Gate code is 1234, leave at reception"
                 className="mt-1 bg-gray-700 border-gray-600 text-white"
                 disabled={isLoading}
               />
           </div>
-          {/* --- END: New Fields --- */}
 
 
-          {/* --- Results Display Area --- */}
+          {/* Results Display Area */}
           {isLoading && !errorMessage && (
             <div className="text-center text-amber-400">
                  <Loader2 className="animate-spin h-5 w-5 inline mr-2" />Calculating distance...
@@ -393,10 +362,9 @@ const DeliveryLocationPage = () => {
                 <CheckCircle className="w-5 h-5" /> Great! You're within the delivery radius.
               </p>
               <p className="text-sm">(Approximately {distanceText} driving distance)</p>
-              {/* Display the generated link for confirmation */}
               {gmapsLink && (
                  <a href={gmapsLink} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-xs block">
-                    View on Google Maps (Opens new tab)
+                   View on Google Maps (Opens new tab)
                  </a>
               )}
               <Button
@@ -418,7 +386,7 @@ const DeliveryLocationPage = () => {
           {!isLoading && isWithinRadius === null && errorMessage && (
              <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-md text-center">
                <p className="font-semibold flex items-center justify-center gap-2">
-                  <AlertCircle className="w-5 h-5" /> Error
+                 <AlertCircle className="w-5 h-5" /> Error
                </p>
                <p className="text-sm mt-1">{errorMessage}</p>
              </div>
@@ -427,7 +395,7 @@ const DeliveryLocationPage = () => {
           {/* Back Link */}
           <div className="text-center pt-4 border-t border-gray-700">
             <Link to="/account" className="text-sm text-gray-400 hover:text-amber-400 transition">
-              &larr; Back to Account or Choose Pick-up
+              ← Back to Account or Choose Pick-up
             </Link>
           </div>
         </CardContent>
