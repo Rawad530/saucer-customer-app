@@ -193,6 +193,15 @@ const LandingPage = () => {
               <div className="flex flex-col space-y-2">
                 <a href="#" className="text-gray-400 hover:text-white hover:underline">{t.footer_home}</a>
                 <Link to="/order" className="text-gray-400 hover:text-white hover:underline">{t.footer_fullMenu}</Link>
+                {/* --- ADDED POLICY LINKS FOR BOG COMPLIANCE --- */}
+                <Link to="/terms-of-use" className="text-gray-400 hover:text-white hover:underline">
+                    Terms and Conditions
+                </Link>
+                {/* Link to the new combined policy page */}
+                 <Link to="/shipping-return-policy" className="text-gray-400 hover:text-white hover:underline">
+                    Shipping and Return Policy
+                </Link>
+                {/* ------------------------------------------------ */}
               </div>
             </div>
             <div>
