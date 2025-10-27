@@ -31,6 +31,7 @@ import QuestsPage from './pages/QuestsPage';
 import ScrollToTop from './components/ScrollToTop';
 import DeliveryLocationPage from './pages/DeliveryLocationPage';
 import ShippingReturnPolicyPage from './pages/ShippingReturnPolicyPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -69,6 +70,7 @@ function App() {
           <Route path="/update-password" element={<UpdatePasswordPage />} />
           <Route path="/terms-of-use" element={<TermsOfUsePage />} />
           <Route path="/shipping-return-policy" element={<ShippingReturnPolicyPage />} /> {/* <-- Add this line */}
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} /> {/* <-- Add this line */}
           {/* REMOVED Delivery Location Route from Standalone section */}
 
           {/* Application Routes (Wrapped in the standard Layout) */}

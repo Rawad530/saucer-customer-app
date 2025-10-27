@@ -201,6 +201,10 @@ const LandingPage = () => {
                  <Link to="/shipping-return-policy" className="text-gray-400 hover:text-white hover:underline">
                     Shipping and Return Policy
                 </Link>
+                {/* Add the new Privacy Policy Link */}
+                <Link to="/privacy-policy" className="text-gray-400 hover:text-white hover:underline">
+                    Privacy Policy
+                </Link>
                 {/* ------------------------------------------------ */}
               </div>
             </div>
