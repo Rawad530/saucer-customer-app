@@ -89,7 +89,7 @@ const DeliveryLocationPage = () => {
     setUserAddress('');
     setGmapsLink('');
 
-    const link = `https://www.google.com/maps?q=latitude,longitudez=18`;
+    const link = `https://www.google.com/maps?q=${latLng.lat},${latLng.lng}&z=18`;
     setGmapsLink(link);
 
     geocoder.geocode({ location: latLng }, (results, status) => {

@@ -29,6 +29,11 @@ interface CartState {
   updateItemDetails: (index: number, item: OrderItem) => void;
   clearCart: () => void;
   setDeliveryDetails: (details: DeliveryDetails | null) => void; // <-- ADDED ACTION
+  
+  // ADD THESE LINES
+  _hasHydrated: boolean;
+  setHasHydrated: (hydrated: boolean) => void;
+  
   // Derived state
   getSummary: () => { subtotal: number; itemCount: number };
 }
@@ -38,6 +43,14 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       deliveryDetails: null, // <-- INITIAL STATE
+
+      // 1. Initialize the new state
+      _hasHydrated: false, 
+
+      // 2. Define the new action
+      setHasHydrated: (hydrated) => {
+        set({ _hasHydrated: hydrated });
+      },
 
       addItem: (item) => set((state) => {
         // Logic to merge quantities if the exact same item configuration exists
@@ -108,8 +121,15 @@ export const useCartStore = create<CartState>()(
       }
     }),
     {
-      name: 'saucer-cart-storage', // Key used in browser localStorage
+      name: 'cart-storage', // Key used in browser localStorage (as per instructions)
       storage: createJSONStorage(() => localStorage),
+
+      // 3. ADD THIS 'onRehydrateStorage' CONFIGURATION
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.setHasHydrated(true);
+        }
+      },
     }
   )
 );
