@@ -67,12 +67,12 @@ const Account = ({ session }: { session: Session }) => {
         setLastOrder(typedOrders[0]);
         const itemCounts = new Map<string, number>();
         typedOrders.forEach(order => {
-           (order.items || []).forEach((item: OrderItem) => {
-             if (item && item.menuItem && item.menuItem.name) {
-               const name = item.menuItem.name;
-               itemCounts.set(name, (itemCounts.get(name) || 0) + item.quantity);
-             }
-           });
+            (order.items || []).forEach((item: OrderItem) => {
+              if (item && item.menuItem && item.menuItem.name) {
+                const name = item.menuItem.name;
+                itemCounts.set(name, (itemCounts.get(name) || 0) + item.quantity);
+              }
+            });
         });
         if (itemCounts.size > 0) {
           const mostOrdered = [...itemCounts.entries()].reduce((a, b) => b[1] > a[1] ? b : a);
@@ -86,7 +86,8 @@ const Account = ({ session }: { session: Session }) => {
         console.error("Error checking restaurant status:", statusRes.error);
         setIsRestaurantOpen(false);
       } else {
-        setIsRestaurantOpen(statusRes.data.isOpen);
+        // Added nullish coalescing for safety
+        setIsRestaurantOpen(statusRes.data?.isOpen ?? false);
       }
 
       setLoading(false);
@@ -126,18 +127,29 @@ const Account = ({ session }: { session: Session }) => {
               ) : isRestaurantOpen ? (
                 // OPEN STATE: Show BOTH buttons
                 <div className="flex flex-col md:flex-row justify-center gap-4">
-                  <Link
-                    to="/delivery-location"
-                    className="flex-1 md:flex-none inline-flex items-center justify-center px-8 py-4 text-lg font-bold bg-white text-amber-700 rounded-md hover:bg-gray-200 transition-colors"
-                  >
-                    <MapPin className="w-5 h-5 mr-2" /> Delivery
-                  </Link>
-                  <Link
-                    to="/order"
-                    className="flex-1 md:flex-none inline-flex items-center justify-center px-8 py-4 text-lg font-bold bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
-                  >
-                    <ShoppingBag className="w-5 h-5 mr-2" /> Pick-up
-                  </Link>
+                  
+                  {/* Delivery Button + Note */}
+                  <div className="flex-1 md:flex-none flex flex-col items-center">
+                    <Link
+                      to="/delivery-location"
+                      className="w-full inline-flex items-center justify-center px-8 py-4 text-lg font-bold bg-white text-amber-700 rounded-md hover:bg-gray-200 transition-colors"
+                    >
+                      <MapPin className="w-5 h-5 mr-2" /> Delivery
+                    </Link>
+                    <p className="text-sm text-amber-100 mt-2">(Minimum order ₾20)</p>
+                  </div>
+
+                  {/* Pick-up Button + Note */}
+                  <div className="flex-1 md:flex-none flex flex-col items-center">
+                    <Link
+                      to="/order"
+                      className="w-full inline-flex items-center justify-center px-8 py-4 text-lg font-bold bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
+                    >
+                      <ShoppingBag className="w-5 h-5 mr-2" /> Pick-up
+                    </Link>
+                    <p className="text-sm text-amber-100 mt-2">Choose for self pick-up or sending a courier.</p>
+                  </div>
+                	
                 </div>
               ) : (
                 // CLOSED STATE: Hide buttons, show message ONLY
@@ -195,7 +207,8 @@ const Account = ({ session }: { session: Session }) => {
               {lastOrder ? (
                 <div>
                   <p className="text-sm text-gray-400">Last Order: #{lastOrder.order_number}</p>
-                  <p className="font-semibold truncate">{(lastOrder.items || []).map(i => i.menuItem.name).join(', ')}</p>
+                  {/* Added optional chaining and filtering for safety */}
+                  <p className="font-semibold truncate">{(lastOrder.items || []).map(i => i.menuItem?.name).filter(Boolean).join(', ')}</p>
                   <hr className="border-gray-700 my-3" />
                   <p className="text-sm text-gray-400">Your Favorite Item:</p>
                   <p className="font-semibold">{mostOrderedItem || 'Not enough data'}</p>
@@ -239,7 +252,10 @@ const Account = ({ session }: { session: Session }) => {
               <h3 className="flex items-center text-xl font-bold mb-4"><User className="w-6 h-6 mr-2 text-gray-300" /> Profile & Wallet</h3>
               <div className="text-center bg-gray-700/50 p-4 rounded-md mb-4">
                 <p className="text-gray-400">Wallet Balance</p>
-                <p className="text-3xl font-bold text-green-400">₾{profileData?.wallet_balance.toFixed(2) || '0.00'}</p>
+                {/* Ensure balance exists before calling toFixed */}
+                <p className="text-3xl font-bold text-green-400">
+                  ₾{profileData?.wallet_balance ? profileData.wallet_balance.toFixed(2) : '0.00'}
+                </p>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <Link to="/wallet" className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 text-sm">Add Funds</Link>
