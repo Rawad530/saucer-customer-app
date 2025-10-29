@@ -3,7 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { Award, Wallet, History, Truck, Bell, ArrowRight, Menu, X } from 'lucide-react';
+import { 
+  Award, Wallet, History, Truck, Bell, ArrowRight, Menu, X, 
+  Phone, Mail, MessageCircle  // <-- ADDED NEW ICONS
+} from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const LandingPage = () => {
@@ -186,7 +189,7 @@ const LandingPage = () => {
                 <p>{t.footer_address_line1}</p>
                 <p>{t.footer_address_line2}</p>
               </a>
-              <p className="text-gray-400"><strong>{t.footer_hours}</strong> 12:00 PM - 2:00 AM</p>
+              <p className="text-gray-400"><strong>{t.footer_hours}</strong> 14:00 PM - 00:00 AM</p>
             </div>
             <div>
               <h4 className="text-xl font-bold text-amber-400 mb-4">{t.footer_quickLinks}</h4>
@@ -206,11 +209,25 @@ const LandingPage = () => {
                 {/* ------------------------------------------------ */}
               </div>
             </div>
+            {/* ===== UPDATED CONTACT SECTION ===== */}
             <div>
               <h4 className="text-xl font-bold text-amber-400 mb-4">{t.footer_contactUs}</h4>
-              <p className="text-gray-400 mb-2"><strong>{t.footer_phone}</strong> +995 591 22 96 58</p>
-              <p className="text-gray-400"><strong>{t.footer_email}</strong> saucerburger@gmail.com</p>
+              <div className="flex flex-col space-y-2 items-center md:items-start">
+                <a href="tel:+995591229658" className="flex items-center gap-2 text-gray-400 hover:text-white hover:underline w-fit">
+                  <Phone className="w-4 h-4" />
+                  <span>{t.footer_callUs}</span>
+                </a>
+                <a href="mailto:saucerburger@gmail.com" className="flex items-center gap-2 text-gray-400 hover:text-white hover:underline w-fit">
+                  <Mail className="w-4 h-4" />
+                  <span>{t.footer_mailUs}</span>
+                </a>
+                <a href="https://wa.me/995591229658" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-400 hover:text-white hover:underline w-fit">
+                  <MessageCircle className="w-4 h-4" />
+                  <span>{t.footer_chatUs}</span>
+                </a>
+              </div>
             </div>
+            {/* ===== END OF UPDATED SECTION ===== */}
           </div>
         </div>
       </footer>

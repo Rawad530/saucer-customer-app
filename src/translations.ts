@@ -51,12 +51,15 @@ export const translations = {
     footer_quickLinks: "Quick Links",
     footer_home: "Home",
     footer_fullMenu: "Full Menu / Order",
+    // Objective 1 Keys
     footer_terms: "Terms and Conditions",
     footer_shipping: "Shipping and Return Policy",
     footer_privacy: "Privacy Policy",
+    // Objective 2 Keys
     footer_contactUs: "Contact Us",
-    footer_phone: "Phone:",
-    footer_email: "Email:"
+    footer_callUs: "Call us",
+    footer_mailUs: "Mail us",
+    footer_chatUs: "Chat with us",
   },
   ka: {
     // --- Navigation & Header ---
@@ -108,11 +111,14 @@ export const translations = {
     footer_quickLinks: "სწრაფი ბმულები",
     footer_home: "მთავარი",
     footer_fullMenu: "სრული მენიუ / შეკვეთა",
+    // Objective 1 Keys
     footer_terms: "წესები და პირობები",
     footer_shipping: "მიწოდებისა და დაბრუნების პოლიტიკა",
     footer_privacy: "კონფიდენციალურობის პოლიტიკა",
+    // Objective 2 Keys
     footer_contactUs: "დაგვიკავშირდით",
-    footer_phone: "ტელეფონი:",
-    footer_email: "ელ. ფოსტა:",
+    footer_callUs: "დაგვირეკეთ",
+    footer_mailUs: "მოგვწერეთ",
+    footer_chatUs: "გვესაუბრეთ ჩატში",
   }
 };
