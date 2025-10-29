@@ -195,15 +195,13 @@ const LandingPage = () => {
                 <Link to="/order" className="text-gray-400 hover:text-white hover:underline">{t.footer_fullMenu}</Link>
                 {/* --- ADDED POLICY LINKS FOR BOG COMPLIANCE --- */}
                 <Link to="/terms-of-use" className="text-gray-400 hover:text-white hover:underline">
-                    Terms and Conditions
+                  {t.footer_terms}
                 </Link>
-                {/* Link to the new combined policy page */}
-                 <Link to="/shipping-return-policy" className="text-gray-400 hover:text-white hover:underline">
-                    Shipping and Return Policy
+                <Link to="/shipping-return-policy" className="text-gray-400 hover:text-white hover:underline">
+                  {t.footer_shipping}
                 </Link>
-                {/* Add the new Privacy Policy Link */}
                 <Link to="/privacy-policy" className="text-gray-400 hover:text-white hover:underline">
-                    Privacy Policy
+                  {t.footer_privacy}
                 </Link>
                 {/* ------------------------------------------------ */}
               </div>
