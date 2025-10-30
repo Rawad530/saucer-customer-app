@@ -8,19 +8,9 @@ import {
 import { useLanguage } from '../contexts/LanguageContext'; // <-- 1. IMPORT THE HOOK
 
 const Footer = () => {
-  const { t, language, setLanguage } = useLanguage(); // <-- 2. USE THE HOOK
+  const { t } = useLanguage(); // <-- 2. USE THE HOOK (removed language and setLanguage)
 
-  // 3. ADD THE LANGUAGE BUTTON COMPONENT
-  const LanguageButton = ({ langCode, label }: { langCode: 'en' | 'ka', label: string }) => (
-    <button
-      onClick={() => setLanguage(langCode)}
-      className={`px-3 py-1 border border-amber-500 rounded-md text-sm transition-colors ${
-        language === langCode ? 'bg-amber-500 text-white' : 'text-gray-300 hover:bg-amber-700/20'
-      }`}
-    >
-      {label}
-    </button>
-  );
+  // 3. REMOVED THE LANGUAGE BUTTON COMPONENT
 
   return (
     <footer className="bg-gray-800 mt-auto border-t border-gray-700">
@@ -71,16 +61,12 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* --- COLUMN 3: BRAND & LANGUAGE (NOW TRANSLATED) --- */}
+          {/* --- COLUMN 3: BRAND (NOW TRANSLATED) --- */}
           <div>
             <h4 className="text-lg font-semibold text-amber-400 mb-4">{t.footer_saucerBurger}</h4>
             <p className="text-gray-400 text-sm">{t.footer_tagline}</p>
             
-            {/* 4. ADD THE LANGUAGE BUTTONS */}
-            <div className="flex gap-2 justify-start mt-4">
-              <LanguageButton langCode="en" label="EN" />
-              <LanguageButton langCode="ka" label="GE" />
-            </div>
+            {/* 4. REMOVED THE LANGUAGE BUTTONS */}
           </div>
         </div>
         
