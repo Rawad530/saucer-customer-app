@@ -29,7 +29,7 @@ const Footer = () => {
               >
                 <MapPin className="w-4 h-4" /> {t.footer_address_line1}, {t.footer_address_line2}
               </a>
-              <p className="flex items-center gap-2"><Clock className="w-4 h-4" /> {t.footer_hours} 12:00 PM - 2:00 AM</p>
+              <p className="flex items-center gap-2"><Clock className="w-4 h-4" /> {t.footer_hours} 02:00 PM - 12:00 AM</p>
               
               {/* ===== START: UPDATED CONTACT LINKS (NOW TRANSLATED) ===== */}
               <a href="tel:+995591229658" className="flex items-center gap-2 hover:text-white transition-colors pt-1">
