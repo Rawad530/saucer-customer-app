@@ -92,7 +92,6 @@ const MyCoupons = () => {
                 <div>
                   <p className="font-bold">{coupon.discount_percent}% {t.coupons_off}</p>
                   <p className="text-sm text-gray-300">{coupon.description}</p>
-I don't have this in my code.
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="default" className="text-lg font-mono bg-green-600 hover:bg-green-700">{coupon.code}</Badge>
