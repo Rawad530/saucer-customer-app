@@ -117,7 +117,28 @@ export const translations = {
     coupons_copied_title: "Copied!",
     coupons_copied_desc: "Coupon code \"{code}\" copied to clipboard.",
     coupons_error_title: "Error",
-    coupons_error_desc: "Could not copy code. Please try again."
+    coupons_error_desc: "Could not copy code. Please try again.",
+
+     // --- Terms Page ---
+    terms_back_button: "Back",
+    terms_title: "Terms of Use",
+    terms_last_updated: "Last updated: October 5, 2025",
+    terms_p1: "Welcome to Saucer Burger! These terms and conditions outline the rules and regulations for the use of our application and services. By creating an account, you accept these terms and conditions in full.",
+    terms_h1: "1. User Accounts",
+    terms_p2: "When you create an account with us, you must provide information that is accurate, complete, and current at all times. Failure to do so constitutes a breach of the Terms, which may result in immediate termination of your account on our Service.",
+    terms_h2: "2. Ordering and Payment",
+    terms_p3: "By placing an order through our application, you warrant that you are legally capable of entering into binding contracts. All payments are processed securely. We accept payments via online card processing and our in-app wallet.",
+    terms_h3: "3. Loyalty Program (Points & Rewards)",
+    terms_p4: "Our loyalty program allows you to earn points for purchases and other activities. These points can be redeemed for rewards as specified in the \"Rewards\" section of the application. Points have no cash value and cannot be exchanged for cash.",
+    terms_h4: "4. Cancellations and Refund Policy",
+    terms_p5: "Please read our refund policy carefully. By placing an order, you agree to these terms.",
+    terms_li1: "Orders may be rejected by restaurant staff for reasons including, but not limited to, item unavailability or operational constraints.",
+    terms_li2: "All refunds, regardless of the original payment method (Online Card Payment, Wallet Balance, or a combination), will be credited exclusively to your in-app Saucer Burger Wallet.",
+    terms_li3: "No cash refunds or chargebacks to your bank card will be issued. The refunded amount will be available in your wallet for immediate use on your next order.",
+    terms_h5: "5. Limitation of Liability",
+    terms_p6: "In no event shall Saucer Burger, nor its directors, employees, partners, or agents, be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, or other intangible losses, resulting from your access to or use of the Service.",
+    terms_h6: "6. Changes to Terms",
+    terms_p7: "We reserve the right, at our sole discretion, to modify or replace these Terms at any time. We will provide notice of any changes by posting the new Terms of Use on this page.",
   },
   ka: {
     // --- Navigation & Header ---
@@ -235,6 +256,27 @@ export const translations = {
     coupons_copied_title: "დაკოპირდა!",
     coupons_copied_desc: "კუპონის კოდი \"{code}\" დაკოპირებულია ბუფერში.",
     coupons_error_title: "შეცდომა",
-    coupons_error_desc: "კოდის დაკოპირება ვერ მოხერხდა. გთხოვთ სცადოთ თავიდან."
+    coupons_error_desc: "კოდის დაკოპირება ვერ მოხერხდა. გთხოვთ სცადოთ თავიდან.",
+
+    // --- Terms Page ---
+    terms_back_button: "უკან",
+    terms_title: "გამოყენების წესები",
+    terms_last_updated: "ბოლო განახლება: 5 ოქტომბერი, 2025",
+    terms_p1: "კეთილი იყოს თქვენი მობრძანება Saucer Burger-ში! ეს წესები და პირობები განსაზღვრავს ჩვენი აპლიკაციისა და სერვისების გამოყენების წესებს. ანგარიშის შექმნით, თქვენ სრულად ეთანხმებით ამ წესებსა და პირობებს.",
+    terms_h1: "1. მომხმარებლის ანგარიშები",
+    terms_p2: "ჩვენთან ანგარიშის შექმნისას, თქვენ უნდა მოგვაწოდოთ ინფორმაცია, რომელიც არის ზუსტი, სრული და განახლებული. ამის შეუსრულებლობა წარმოადგენს პირობების დარღვევას, რამაც შეიძლება გამოიწვიოს თქვენი ანგარიშის დაუყოვნებლივი შეწყვეტა ჩვენს სერვისზე.",
+    terms_h2: "2. შეკვეთა და გადახდა",
+    terms_p3: "ჩვენი აპლიკაციის საშუალებით შეკვეთის განთავსებით, თქვენ ადასტურებთ, რომ იურიდიულად უფლებამოსილი ხართ დადოთ სავალდებულო ხელშეკრულებები. ყველა გადახდა მუშავდება უსაფრთხოდ. ჩვენ ვიღებთ გადახდებს ონლაინ ბარათით და ჩვენი აპლიკაციის შიდა საფულით.",
+    terms_h3: "3. ლოიალურობის პროგრამა (ქულები და ჯილდოები)",
+    terms_p4: "ჩვენი ლოიალურობის პროგრამა გაძლევთ საშუალებას დააგროვოთ ქულები შესყიდვებისა და სხვა აქტივობებისთვის. ამ ქულების გადაცვლა შესაძლებელია ჯილდოებზე, რომლებიც მითითებულია აპლიკაციის \"ჯილდოების\" განყოფილებაში. ქულებს არ აქვთ ფულადი ღირებულება და მათი ნაღდი ფულით განაღდება შეუძლებელია.",
+    terms_h4: "4. გაუქმებისა და თანხის დაბრუნების პოლიტიკა",
+    terms_p5: "გთხოვთ, ყურადღებით წაიკითხოთ ჩვენი თანხის დაბრუნების პოლიტიკა. შეკვეთის განთავსებით, თქვენ ეთანხმებით ამ პირობებს.",
+    terms_li1: "რესტორნის პერსონალმა შეიძლება უარყოს შეკვეთები სხვადასხვა მიზეზის გამო, მათ შორის, მაგრამ არ შემოიფარგლება მხოლოდ, პროდუქტის მიუწვდომელობით ან საოპერაციო შეზღუდვებით.",
+    terms_li2: "ყველა თანხის დაბრუნება, მიუხედავად გადახდის საწყისი მეთოდისა (ონლაინ ბარათით გადახდა, საფულის ბალანსი, ან კომბინაცია), ჩაირიცხება ექსკლუზიურად თქვენს აპლიკაციის შიდა Saucer Burger-ის საფულეზე.",
+    terms_li3: "ნაღდი ფულის დაბრუნება ან თქვენს საბანკო ბარათზე თანხის დაბრუნება არ მოხდება. დაბრუნებული თანხა ხელმისაწვდომი იქნება თქვენს საფულეში დაუყოვნებლივ, თქვენი შემდეგი შეკვეთისთვის გამოსაყენებლად.",
+    terms_h5: "5. პასუხისმგებლობის შეზღუდვა",
+    terms_p6: "არცერთ შემთხვევაში Saucer Burger-ი, არც მისი დირექტორები, თანამშრომლები, პარტნიორები, ან აგენტები არ იქნებიან პასუხისმგებელი რაიმე არაპირდაპირი, შემთხვევითი, სპეციალური, თანმიმდევრული ან სადამსჯელო ზიანისთვის, მათ შორის, შეზღუდვის გარეშე, მოგების, მონაცემების, ან სხვა არამატერიალური ზარალისთვის, რომელიც გამოწვეულია თქვენი წვდომით ან სერვისის გამოყენებით.",
+    terms_h6: "6. წესების ცვლილებები",
+    terms_p7: "ჩვენ ვიტოვებთ უფლებას, ჩვენი შეხედულებისამებრ, შევცვალოთ ან შევცვალოთ ეს პირობები ნებისმიერ დროს. ჩვენ გაცნობებთ ნებისმიერი ცვლილების შესახებ ამ გვერდზე გამოყენების ახალი წესების გამოქვეყნებით.",
   }
 };
