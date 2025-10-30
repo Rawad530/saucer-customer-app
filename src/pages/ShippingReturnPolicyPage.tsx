@@ -30,8 +30,8 @@ const ShippingReturnPolicyPage = () => {
                 Delivery is strictly available within a <strong>5 km radius</strong> of our restaurant location. The shipping costs are structured as follows:
             </p>
             <ul className="list-disc pl-5 space-y-2">
-                <li><strong>0 km to 3 km:</strong> 3 GEL</li>
-                <li><strong>3 km to 5 km:</strong> 5 GEL</li>
+                <li><strong>0 km to 2.5 km:</strong> 3 GEL</li>
+                <li><strong>2.6 km to 5 km:</strong> 5 GEL</li>
             </ul>
             <p>
                 The applicable fee will be calculated and displayed during the checkout process. We do not offer delivery outside the 5 km radius.
