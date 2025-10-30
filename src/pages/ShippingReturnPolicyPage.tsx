@@ -27,7 +27,8 @@ const ShippingReturnPolicyPage = () => {
 
             <h3 className="text-2xl font-semibold text-gray-200">2. Delivery Area and Costs</h3>
             <p>
-                Delivery is strictly available within a <strong>5 km radius</strong> of our restaurant location. The shipping costs are structured as follows:
+                Delivery is strictly available within a <strong>5 km radius</strong> of our restaurant location and a <strong>minimum order of 20 GEL</strong>.
+                The shipping costs are structured as follows:
             </p>
             <ul className="list-disc pl-5 space-y-2">
                 <li><strong>0 km to 2.5 km:</strong> 3 GEL</li>
