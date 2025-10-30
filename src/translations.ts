@@ -7,6 +7,8 @@ export const translations = {
     nav_benefits: "BENEFITS",
     nav_sauces: "THE SAUCES",
     nav_signIn: "Sign In",
+    header_account: "Account",
+    header_signOut: "Sign Out",
 
     // --- Hero Section ---
     hero_title: "More Sauce. Less Mess.",
@@ -45,21 +47,21 @@ export const translations = {
 
     // --- Footer Section ---
     footer_saucerBurger: "Saucer Burger",
+    footer_tagline: "The best burgers in the galaxy.",
     footer_address_line1: "45 Petre Kavtaradze St",
     footer_address_line2: "Tbilisi, Georgia",
     footer_hours: "Hours:",
     footer_quickLinks: "Quick Links",
+    footer_myAccount: "My Account",
     footer_home: "Home",
     footer_fullMenu: "Full Menu / Order",
-    // Objective 1 Keys
     footer_terms: "Terms and Conditions",
     footer_shipping: "Shipping and Return Policy",
     footer_privacy: "Privacy Policy",
-    // Objective 2 Keys
-    footer_contactUs: "Contact Us",
+    footer_contactLocation: "Contact & Location",
     footer_callUs: "Call us",
     footer_mailUs: "Mail us",
-    footer_chatUs: "Chat with us",
+    footer_chatUs: "Chat with us"
   },
   ka: {
     // --- Navigation & Header ---
@@ -67,6 +69,8 @@ export const translations = {
     nav_benefits: "ბენეფიტები",
     nav_sauces: "სოუსები",
     nav_signIn: "შესვლა",
+    header_account: "ანგარიში",
+    header_signOut: "გამოსვლა",
 
     // --- Hero Section ---
     hero_title: "მეტი სოუსი. ნაკლები არეულობა.",
@@ -105,20 +109,20 @@ export const translations = {
 
     // --- Footer Section ---
     footer_saucerBurger: "სოსერ ბურგერი",
+    footer_tagline: "საუკეთესო ბურგერები გალაქტიკაში.",
     footer_address_line1: "პეტრე ქავთარაძის ქ. 45",
     footer_address_line2: "თბილისი, საქართველო",
     footer_hours: "სამუშაო საათები:",
     footer_quickLinks: "სწრაფი ბმულები",
+    footer_myAccount: "ჩემი ანგარიში",
     footer_home: "მთავარი",
     footer_fullMenu: "სრული მენიუ / შეკვეთა",
-    // Objective 1 Keys
     footer_terms: "წესები და პირობები",
     footer_shipping: "მიწოდებისა და დაბრუნების პოლიტიკა",
     footer_privacy: "კონფიდენციალურობის პოლიტიკა",
-    // Objective 2 Keys
-    footer_contactUs: "დაგვიკავშირდით",
+    footer_contactLocation: "კონტაქტი და ლოკაცია",
     footer_callUs: "დაგვირეკეთ",
     footer_mailUs: "მოგვწერეთ",
-    footer_chatUs: "გვესაუბრეთ ჩატში",
+    footer_chatUs: "მოგვწერეთ ჩატში"
   }
 };

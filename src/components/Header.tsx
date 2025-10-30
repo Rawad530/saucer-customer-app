@@ -60,16 +60,16 @@ const Header = () => {
               <LanguageButton langCode="en" label="EN" />
               <LanguageButton langCode="ka" label="GE" />
             </div>
-            {/* --- END OF LANGUAGE SWITCHER --- */}
+            {/* --- END OF LANGUAGE SWITCHTER --- */}
 
             {session ? (
               // User is logged in
               <>
                 <Link to="/account" className="text-white hover:text-amber-400 transition text-sm font-medium">
-                  Account
+                  {t.header_account} {/* <-- TRANSLATED */}
                 </Link>
                 <Button onClick={handleSignOut} variant="outline" size="sm" className="bg-transparent text-white border-gray-600 hover:bg-gray-700">
-                  Sign Out
+                  {t.header_signOut} {/* <-- TRANSLATED */}
                 </Button>
               </>
             ) : (
@@ -88,3 +88,4 @@ const Header = () => {
 };
 
 export default Header;
+
