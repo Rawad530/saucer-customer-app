@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tag, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '../contexts/LanguageContext'; // <-- IMPORT HOOK
 
 interface Coupon {
   id: string;
@@ -21,6 +22,7 @@ const MyCoupons = () => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { t } = useLanguage(); // <-- USE HOOK
 
   useEffect(() => {
     const fetchCoupons = async () => {
@@ -41,30 +43,28 @@ const MyCoupons = () => {
     fetchCoupons();
   }, []);
 
-  // --- ADDED FUNCTION ---
   const handleCopy = (code: string) => {
     navigator.clipboard.writeText(code) // Use browser API to copy
       .then(() => {
         // Show success toast
         toast({
-          title: "Copied!",
-          description: `Coupon code "${code}" copied to clipboard.`,
+          title: t.coupons_copied_title,
+          description: t.coupons_copied_desc.replace('{code}', code),
         });
       })
       .catch(err => {
         // Show error toast if copying fails
         console.error('Failed to copy code: ', err);
         toast({
-          title: "Error",
-          description: "Could not copy code. Please try again.",
+          title: t.coupons_error_title,
+          description: t.coupons_error_desc,
           variant: "destructive",
         });
       });
   };
-  // --- END OF FUNCTION ---
 
   if (loading) {
-    return <p className="text-gray-400">Loading coupons...</p>;
+    return <p className="text-gray-400">{t.coupons_loading}</p>;
   }
 
   // Filter coupons on the frontend
@@ -76,24 +76,24 @@ const MyCoupons = () => {
       <CardHeader>
         <CardTitle className="text-amber-400 flex items-center gap-2">
           <Tag className="h-5 w-5" />
-          My Coupons
+          {t.coupons_title}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {activeCoupons.length === 0 && usedCoupons.length === 0 && (
-          <p className="text-gray-400">You don't have any coupons right now.</p>
+          <p className="text-gray-400">{t.coupons_none}</p>
         )}
 
         {activeCoupons.length > 0 && (
           <div className="space-y-3">
-            <h3 className="font-semibold">Available</h3>
+            <h3 className="font-semibold">{t.coupons_available}</h3>
             {activeCoupons.map(coupon => (
               <div key={coupon.id} className="flex justify-between items-center p-3 bg-gray-700 rounded-lg border border-green-600">
                 <div>
-                  <p className="font-bold">{coupon.discount_percent}% OFF</p>
+                  <p className="font-bold">{coupon.discount_percent}% {t.coupons_off}</p>
                   <p className="text-sm text-gray-300">{coupon.description}</p>
+I don't have this in my code.
                 </div>
-                {/* --- MODIFIED THIS SECTION --- */}
                 <div className="flex items-center gap-2">
                   <Badge variant="default" className="text-lg font-mono bg-green-600 hover:bg-green-700">{coupon.code}</Badge>
                   <Button
@@ -101,12 +101,11 @@ const MyCoupons = () => {
                     size="icon"
                     onClick={() => handleCopy(coupon.code)}
                     className="text-gray-300 hover:text-white"
-                    aria-label="Copy coupon code"
+                    aria-label={t.coupons_copy_aria}
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
-                {/* --- END OF MODIFICATION --- */}
               </div>
             ))}
           </div>
@@ -114,11 +113,11 @@ const MyCoupons = () => {
         
         {usedCoupons.length > 0 && (
           <div className="space-y-3 mt-6 pt-4 border-t border-gray-700">
-            <h3 className="font-semibold text-gray-500">Used or Expired</h3>
+            <h3 className="font-semibold text-gray-500">{t.coupons_used_expired}</h3>
             {usedCoupons.map(coupon => (
               <div key={coupon.id} className="flex justify-between items-center p-3 bg-gray-700 rounded-lg opacity-50">
                 <div>
-                  <p className="font-bold">{coupon.discount_percent}% OFF</p>
+                  <p className="font-bold">{coupon.discount_percent}% {t.coupons_off}</p>
                   <p className="text-sm text-gray-300">{coupon.description}</p>
                 </div>
                 <Badge variant="secondary" className="text-lg font-mono line-through">{coupon.code}</Badge>
