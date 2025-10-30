@@ -113,7 +113,7 @@ I don't have this in my code.
         
         {usedCoupons.length > 0 && (
           <div className="space-y-3 mt-6 pt-4 border-t border-gray-700">
-            <h3 className="font-semibold text-gray-500">{t.coupons_used_expired}</h3>
+            <h3 className="font-semibold text-gray-500">{t.coupons_used}</h3>
             {usedCoupons.map(coupon => (
               <div key={coupon.id} className="flex justify-between items-center p-3 bg-gray-700 rounded-lg opacity-50">
                 <div>
