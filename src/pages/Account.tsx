@@ -260,9 +260,10 @@ const Account = ({ session }: { session: Session }) => {
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
-                <Link to="/wallet" className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 text-sm">{t.account_profileAddFunds}</Link>
-                <Link to="/profile" className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700 text-sm">{t.account_profileEdit}</Link>
-                <Link to="/invite" className="w-full px-4 py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 text-sm flex items-center justify-center gap-1">
+                {/* --- FIX: Changed text-sm to text-xs to prevent overflow in Georgian --- */}
+                <Link to="/wallet" className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 text-xs">{t.account_profileAddFunds}</Link>
+                <Link to="/profile" className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700 text-xs">{t.account_profileEdit}</Link>
+                <Link to="/invite" className="w-full px-4 py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 text-xs flex items-center justify-center gap-1">
                   <Gift className="w-4 h-4" /> {t.account_profileInvite}
                 </Link>
               </div>
