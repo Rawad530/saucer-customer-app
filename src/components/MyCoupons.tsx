@@ -116,7 +116,7 @@ const MyCoupons = () => {
             {usedCoupons.map(coupon => (
               <div key={coupon.id} className="flex justify-between items-center p-3 bg-gray-700 rounded-lg opacity-50">
                 <div>
-                  <p className="font-bold">{coupon.discount_percent}% {t.coupons_off}</p>
+                  <p className="font-bold">{coupon.discount_percent} {t.coupons_off}</p>
                   <p className="text-sm text-gray-300">{coupon.description}</p>
                 </div>
                 <Badge variant="secondary" className="text-lg font-mono line-through">{coupon.code}</Badge>
