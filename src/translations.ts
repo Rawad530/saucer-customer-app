@@ -82,16 +82,16 @@ export const translations = {
     account_rewardsPointsAway: "You're {pointsNeeded} points away! Spend ₾{moneyNeeded} more to unlock.",
     account_rewardsUnlocked: "You've unlocked all available rewards!",
     account_rewardsKeepCollecting: "Keep collecting points for future goodies.",
-    account_rewardsViewAll: "View All Rewards;",
+    account_rewardsViewAll: "View All Rewards &rarr;",
     account_activityTitle: "Recent Activity",
     account_activityLastOrder: "Last Order: #{orderNumber}",
     account_activityFavorite: "Your Favorite Item:",
     account_activityFavoriteNone: "Not enough data",
     account_activityNoOrders: "You haven't placed any orders yet.",
-    account_activityViewHistory: "View Full History;",
+    account_activityViewHistory: "View Full History &rarr;",
     account_questsTitle: "Side Quests",
     account_questsDesc: "Complete special tasks like leaving a review to earn bonus loyalty points.",
-    account_questsViewAll: "View All Quests;",
+    account_questsViewAll: "View All Quests &rarr;",
     account_announcementsTitle: "What's New?",
     account_profileTitle: "Profile & Wallet",
     account_profileWalletBalance: "Wallet Balance",
@@ -104,7 +104,20 @@ export const translations = {
     account_partnersDesc: "Order for delivery through our official partners:",
     account_partnersWolt: "Wolt",
     account_partnersBolt: "Bolt Food",
-    account_partnersGlovo: "Glovo"
+    account_partnersGlovo: "Glovo",
+
+    // --- Coupons Component ---
+    coupons_loading: "Loading coupons...",
+    coupons_title: "My Coupons",
+    coupons_none: "You don't have any coupons right now.",
+    coupons_available: "Available",
+    coupons_used: "Used or Expired",
+    coupons_off: "% OFF",
+    coupons_copy_aria: "Copy coupon code",
+    coupons_copied_title: "Copied!",
+    coupons_copied_desc: "Coupon code \"{code}\" copied to clipboard.",
+    coupons_error_title: "Error",
+    coupons_error_desc: "Could not copy code. Please try again."
   },
   ka: {
     // --- Navigation & Header ---
@@ -187,16 +200,16 @@ export const translations = {
     account_rewardsPointsAway: "დაგრჩა {pointsNeeded} ქულა! დახარჯე კიდევ ₾{moneyNeeded} განსაბლოკად.",
     account_rewardsUnlocked: "გილოცავთ, თქვენ განბლოკეთ ყველა ხელმისაწვდომი ჯილდო!",
     account_rewardsKeepCollecting: "განაგრძეთ ქულების შეგროვება მომავალი საჩუქრებისთვის.",
-    account_rewardsViewAll: "ყველა ჯილდოს ნახვა;",
+    account_rewardsViewAll: "ყველა ჯილდოს ნახვა &rarr;",
     account_activityTitle: "ბოლო აქტივობა",
     account_activityLastOrder: "ბოლო შეკვეთა: #{orderNumber}",
     account_activityFavorite: "შენი საყვარელი კერძი:",
     account_activityFavoriteNone: "მონაცემები არასაკმარისია",
     account_activityNoOrders: "თქვენ ჯერ არ გაგიკეთებიათ შეკვეთა.",
-    account_activityViewHistory: "სრული ისტორიის ნახვა;",
+    account_activityViewHistory: "სრული ისტორიის ნახვა &rarr;",
     account_questsTitle: "დამატებითი მისიები",
     account_questsDesc: "შეასრულეთ სპეციალური დავალებები, როგორიცაა მიმოხილვის დატოვება, ბონუს ქულების მისაღებად.",
-    account_questsViewAll: "ყველა მისიის ნახვა;",
+    account_questsViewAll: "ყველა მისიის ნახვა &rarr;",
     account_announcementsTitle: "რა არის ახალი?",
     account_profileTitle: "პროფილი და საფულე",
     account_profileWalletBalance: "საფულის ბალანსი",
@@ -209,7 +222,19 @@ export const translations = {
     account_partnersDesc: "შეკვეთა მიტანით ჩვენი ოფიციალური პარტნიორების მეშვეობით:",
     account_partnersWolt: "ვოლტი",
     account_partnersBolt: "ბოლტი",
-    account_partnersGlovo: "გლოვო"
+    account_partnersGlovo: "გლოვო",
+
+    // --- Coupons Component ---
+    coupons_loading: "კუპონების ჩატვირთვა...",
+    coupons_title: "ჩემი კუპონები",
+    coupons_none: "თქვენ ამჟამად არ გაქვთ კუპონები.",
+    coupons_available: "ხელმისაწვდომია",
+    coupons_used: "გამოყენებული ან ვადაგასული",
+    coupons_off: "% ფასდაკლება",
+    coupons_copy_aria: "კუპონის კოდის დაკოპირება",
+    coupons_copied_title: "დაკოპირდა!",
+    coupons_copied_desc: "კუპონის კოდი \"{code}\" დაკოპირებულია ბუფერში.",
+    coupons_error_title: "შეცდომა",
+    coupons_error_desc: "კოდის დაკოპირება ვერ მოხერხდა. გთხოვთ სცადოთ თავიდან."
   }
 };
-
