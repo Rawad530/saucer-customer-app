@@ -139,7 +139,7 @@ const PrivacyPolicyPage = () => {
                 <li dangerouslySetInnerHTML={{ __html: t.privacy_li_https }} />
                 <li dangerouslySetInnerHTML={{ __html: t.privacy_li_supabase_sec }} />
                 <li dangerouslySetInnerHTML={{ __html: t.privacy_li_payment_sec }} />
-                <li dangerouslySetInnerHTML={{ __html: t.privacy_li_access }} />
+                <li dangerouslySetInnerHTML={{ __html: t.privacy_li_restrict_access }} /> 
               </ul>
               <p dangerouslySetInnerHTML={{ __html: t.privacy_p7_2 }} />
             </section>
