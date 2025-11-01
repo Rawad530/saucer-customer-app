@@ -30,6 +30,10 @@ interface CartState {
   clearCart: () => void;
   setDeliveryDetails: (details: DeliveryDetails | null) => void; // <-- ADDED ACTION
   
+  // --- FIX: ADD THE NEW ACTION TO THE INTERFACE ---
+  clearDeliveryDetails: () => void;
+  // --- END FIX ---
+
   // ADD THESE LINES
   _hasHydrated: boolean;
   setHasHydrated: (hydrated: boolean) => void;
@@ -103,6 +107,10 @@ export const useCartStore = create<CartState>()(
       clearCart: () => set({ items: [], deliveryDetails: null }), // <-- MODIFIED clearCart
 
       setDeliveryDetails: (details) => set({ deliveryDetails: details }), // <-- ADDED ACTION IMPLEMENTATION
+
+      // --- FIX: ADD THE NEW ACTION IMPLEMENTATION ---
+      clearDeliveryDetails: () => set({ deliveryDetails: null }),
+      // --- END FIX ---
 
       getSummary: () => {
         const items = get().items;
