@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { AlertCircle, CheckCircle, MapPin, Loader2 } from 'lucide-react';
 import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
 import { useCartStore } from '../store/cartStore'; // <-- IMPORT STORE
+import { supabase } from '../lib/supabaseClient'; // <-- IMPORT SUPABASE
+import { Session } from '@supabase/supabase-js'; // <-- IMPORT SESSION
 
 // --- Configuration ---
 const RESTAURANT_LAT = 41.72051;
@@ -60,6 +62,10 @@ const DeliveryLocationPage = () => {
   const [unit, setUnit] = useState('');
   const [notes, setNotes] = useState('');
 
+  // --- ADDED STATE ---
+  const [session, setSession] = useState<Session | null>(null);
+  // --- END ADDED STATE ---
+
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
@@ -72,6 +78,16 @@ const DeliveryLocationPage = () => {
       setIsMapLoading(false);
     }
   }, [isLoaded]);
+
+  // --- ADDED: Check user session ---
+  useEffect(() => {
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+    };
+    fetchSession();
+  }, []);
+  // --- END ADDED ---
 
   const checkDistanceAndGetAddress = useCallback((latLng: { lat: number; lng: number }) => {
     if (!isLoaded || !window.google || !geocoder || !latLng) {
@@ -394,9 +410,14 @@ const DeliveryLocationPage = () => {
 
           {/* Back Link */}
           <div className="text-center pt-4 border-t border-gray-700">
-            <Link to="/account" className="text-sm text-gray-400 hover:text-amber-400 transition">
-              ← Back to Account or Choose Pick-up
+            {/* --- MODIFIED: Link is now conditional --- */}
+            <Link 
+              to={session ? "/account" : "/"} 
+              className="text-sm text-gray-400 hover:text-amber-400 transition"
+            >
+              ← Back to {session ? "Account" : "Home"} or Choose Pick-up
             </Link>
+            {/* --- END MODIFICATION --- */}
           </div>
         </CardContent>
       </Card>

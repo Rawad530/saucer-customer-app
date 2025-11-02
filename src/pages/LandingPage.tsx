@@ -1,18 +1,26 @@
-// src/pages/LandingPage.tsx (Rewritten with Tailwind CSS)
+// src/pages/LandingPage.tsx (Merged)
 
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // <-- ADDED useNavigate
 import { supabase } from '../lib/supabaseClient';
+import { Session } from '@supabase/supabase-js'; // <-- ADDED Session
 import { 
   Award, Wallet, History, Truck, Bell, ArrowRight, Menu, X, 
-  Phone, Mail, MessageCircle  // <-- ADDED NEW ICONS
+  Phone, Mail, MessageCircle 
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import GuestOrderTypeDialog from '../components/GuestOrderTypeDialog'; // <-- ADDED GUEST DIALOG
 
 const LandingPage = () => {
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+
+  // --- ADDED STATE ---
+  const [session, setSession] = useState<Session | null>(null);
+  const [isGuestOrderTypeModalOpen, setIsGuestOrderTypeModalOpen] = useState(false);
+  const navigate = useNavigate();
+  // --- END ADDED STATE ---
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -25,10 +33,20 @@ const LandingPage = () => {
         setIsRestaurantOpen(false);
       }
     };
+
+    // --- ADDED: Check user session ---
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+    };
+    // --- END ADDED ---
+
     checkStatus();
+    fetchSession(); // <-- Call fetchSession
   }, []);
 
-  const StyledButton = ({ children, disabled, className = '' }: { children: React.ReactNode, disabled?: boolean, className?: string }) => (
+  // --- MODIFIED StyledButton to accept onClick ---
+  const StyledButton = ({ children, disabled, className = '', onClick }: { children: React.ReactNode, disabled?: boolean, className?: string, onClick?: () => void }) => (
     <button
       className={`px-6 py-3 rounded-lg font-semibold text-white transition-colors ${
         disabled
@@ -36,17 +54,36 @@ const LandingPage = () => {
           : 'bg-amber-600 hover:bg-amber-700 shadow-md hover:shadow-lg'
       } ${className}`}
       disabled={disabled}
+      onClick={onClick} // <-- Add onClick
     >
       {children}
     </button>
   );
+
+  // --- ADDED: This function handles the logic for the order button ---
+  const handleOrderClick = () => {
+    if (session) {
+      // If user is logged in, send them to their account page
+      navigate('/account');
+    } else {
+      // If user is a GUEST, open our new choice modal.
+      setIsGuestOrderTypeModalOpen(true);
+    }
+  };
+  // --- END ADDITION ---
 
   const OrderButton = () => {
     if (isRestaurantOpen === null) {
       return <StyledButton disabled>{t.hero_orderButton_checking}</StyledButton>;
     }
     if (isRestaurantOpen) {
-      return <Link to="/order" className="px-6 py-3 rounded-lg font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-md hover:shadow-lg transition-colors">{t.hero_orderButton_active}</Link>;
+      // --- MODIFIED: Changed from <Link> to <StyledButton> with onClick ---
+      return (
+        <StyledButton onClick={handleOrderClick}>
+          {t.hero_orderButton_active}
+        </StyledButton>
+      );
+      // --- END MODIFICATION ---
     }
     return (
       <div className="text-center">
@@ -107,6 +144,7 @@ const LandingPage = () => {
           </div>
         )}
       </header>
+
       <main>
         <section className="bg-gray-900 pt-20 lg:pt-32 pb-10 lg:pb-16">
           <div className="container mx-auto px-4 text-center">
@@ -115,6 +153,7 @@ const LandingPage = () => {
             <OrderButton />
           </div>
         </section>
+
         <div className="relative container mx-auto px-4 my-4">
           <div className="absolute inset-0 flex items-center" aria-hidden="true">
             <div className="w-full border-t border-gray-700"></div>
@@ -123,6 +162,7 @@ const LandingPage = () => {
             <span className="px-4 bg-gray-900 text-lg font-medium text-gray-400">{t.divider_or}</span>
           </div>
         </div>
+
         <section id="benefits" className="container mx-auto px-4 pt-8 lg:pt-12 pb-16 lg:pb-24">
           <h2 className="text-3xl lg:text-4xl font-bold text-center text-amber-400 mb-4">{t.benefits_title}</h2>
           <p className="text-center text-gray-300 mb-12 lg:mb-16">{t.benefits_subtitle}</p>
@@ -146,6 +186,7 @@ const LandingPage = () => {
             ))}
           </div>
         </section>
+
         <section id="story" className="bg-gray-800 py-16 lg:py-24">
           <div className="container mx-auto px-4 flex flex-col md:flex-row items-center gap-12">
             <div className="md:w-1/2">
@@ -158,6 +199,7 @@ const LandingPage = () => {
             </div>
           </div>
         </section>
+
         <section id="sauces" className="container mx-auto px-4 py-16 lg:py-24">
           <h2 className="text-3xl lg:text-4xl font-bold text-center text-amber-400 mb-12 lg:mb-16">{t.sauces_title}</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -180,6 +222,7 @@ const LandingPage = () => {
           </div>
         </section>
       </main>
+
       <footer className="bg-gray-800 py-12 mt-16 border-t border-gray-700">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center md:text-left">
@@ -231,6 +274,14 @@ const LandingPage = () => {
           </div>
         </div>
       </footer>
+
+      {/* --- ADDED: The new dialog component --- */}
+      <GuestOrderTypeDialog
+        isOpen={isGuestOrderTypeModalOpen}
+        onClose={() => setIsGuestOrderTypeModalOpen(false)}
+      />
+      {/* --- END ADDED --- */}
+
     </div>
   );
 };
