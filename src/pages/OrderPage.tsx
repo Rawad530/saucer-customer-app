@@ -128,22 +128,33 @@ const OrderPage = () => {
 
    if (!session) {
      // This is a GUEST.
-     // Our new rule is that guests can ONLY browse.
-     // We must clear their cart of any old items from previous sessions.
-     // Your clearCart() function also clears deliveryDetails, fixing everything.
+     // As you said, they should have an empty cart.
+     // This will run *after* hydration and session load,
+     // so it will not fire for a user who is logging in.
      clearCart();
    }
  }, [session, loadingMenu, hasHydrated, clearCart]); // <-- Dependency array updated
  // --- END FIX ---
 
 
+ // --- MODIFIED: This is YOUR solution ---
  const addItemToOrder = (menuItem: MenuItem) => {
+   // --- NEW: This is the "Force Login" check ---
+   if (!session) {
+     alert("Please log in or create an account to add items to your cart.");
+     navigate('/login', { state: { from: location.pathname } });
+     return; // Stop the function here.
+   }
+   // --- END NEW CHECK ---
+
+   // Original, working code. Only runs if session exists.
    if (menuItem.requires_sauce || menuItem.is_combo || ['mains', 'value'].includes(menuItem.category)) {
      setPendingItem({ menuItem, addons: [], spicy: false, discount: 0, quantity: 1 });
    } else {
      addItem({ menuItem, quantity: 1, addons: [], spicy: false, discount: 0 });
    }
  };
+ // --- END MODIFICATION ---
 
  const confirmPendingItem = () => {
    if (!pendingItem) return;
@@ -198,20 +209,16 @@ const OrderPage = () => {
 
  // const handleGuestSubmit = (details: { name: string; phone: string }) => { ... }; // <-- REMOVED
 
- // --- MODIFIED: This is the main fix ---
+ // --- This check is now just a fallback. The `addItemToOrder` check will run first. ---
  const handleProceedToPayment = async () => {
-   // --- NEW: This is the "Force Login" check you requested ---
-   // It runs *before* any other logic.
+   // --- Fallback check ---
    if (!session) {
      alert("Please log in or create an account to place an order.");
-     // Send them to the login page
      navigate('/login', { state: { from: location.pathname } });
-     return; // This stops the function immediately. Nothing below runs.
+     return;
    }
-   // --- END NEW CHECK ---
+   // --- END Fallback check ---
 
-   // Your original, working code is below.
-   // It will ONLY run if the user is logged in.
    if (selectedItems.length === 0) { 
      alert("Your cart is empty."); 
      return; 
@@ -223,10 +230,7 @@ const OrderPage = () => {
      return; 
    }
 
-   // --- THIS IS THE FIXED LINE ---
-   // It now calls placeOrder() with no arguments, as it should.
    placeOrder(); 
-   // --- END FIXED LINE ---
  };
  // --- END MODIFICATION ---
 
