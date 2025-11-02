@@ -1,54 +1,58 @@
-// src/components/OrderSummary.tsx (Corrected Title Logic)
+// src/components/OrderSummary.tsx (Simplified)
 
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { OrderItem as OrderItemType, PendingItem } from "@/types/order";
+import { OrderItem as OrderItemType } from "@/types/order"; // Removed PendingItem
 import OrderItem from "./OrderItem";
-import ItemConfigurationCard from "./ItemConfigurationCard";
-import { addOnOptions } from "@/data/menu"; // Assuming this exists and is correct
+// import ItemConfigurationCard from "./ItemConfigurationCard"; // <-- REMOVED
+import { addOnOptions } from "@/data/menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Truck, Pencil } from "lucide-react"; // Make sure Pencil is used or remove it
+import { Truck, Pencil } from "lucide-react";
 
 interface OrderSummaryProps {
   selectedItems: OrderItemType[];
-  pendingItem: PendingItem | null;
+  // pendingItem: PendingItem | null; // <-- REMOVED
   subtotal: number;
   discountAmount: number;
-  totalPrice: number; // This should be the final price including delivery fee
+  totalPrice: number;
   onUpdateItemQuantity: (index: number, newQuantity: number) => void;
-  onUpdatePendingItem: React.Dispatch<React.SetStateAction<PendingItem | null>>;
-  onConfirmPendingItem: () => void;
-  onCancelPendingItem: () => void;
+  // --- REMOVED PENDING ITEM PROPS ---
+  // onUpdatePendingItem: React.Dispatch<React.SetStateAction<PendingItem | null>>;
+  // onConfirmPendingItem: () => void;
+  // onCancelPendingItem: () => void;
+  // --- END REMOVED ---
   onProceedToPayment: () => void;
   promoCode: string;
   setPromoCode: (code: string) => void;
   handleApplyPromoCode: () => void;
   promoMessage: string;
   isCheckingPromo: boolean;
-  appliedDiscount: boolean; // True if a discount > 0 is applied
+  appliedDiscount: boolean;
   isPlacingOrder: boolean;
   onEditItem: (index: number) => void;
   walletBalance: number;
-  useWallet: boolean; // Whether the user wants to use the wallet
+  useWallet: boolean;
   onUseWalletChange: (use: boolean) => void;
-  walletCreditApplied: number; // The amount actually deducted from the wallet
-  deliveryAddress?: string | null; // The address text, passed from OrderPage
-  deliveryFee?: number; // The fee amount, passed from OrderPage
+  walletCreditApplied: number;
+  deliveryAddress?: string | null;
+  deliveryFee?: number;
 }
 
 const OrderSummary = ({
   selectedItems,
-  pendingItem,
+  // pendingItem, // <-- REMOVED
   subtotal,
   discountAmount,
   totalPrice,
   onUpdateItemQuantity,
-  onUpdatePendingItem,
-  onConfirmPendingItem,
-  onCancelPendingItem,
+  // --- REMOVED PENDING ITEM PROPS ---
+  // onUpdatePendingItem,
+  // onConfirmPendingItem,
+  // onCancelPendingItem,
+  // --- END REMOVED ---
   onProceedToPayment,
   promoCode,
   setPromoCode,
@@ -62,37 +66,29 @@ const OrderSummary = ({
   useWallet,
   onUseWalletChange,
   walletCreditApplied,
-  deliveryAddress, // Use this prop
-  deliveryFee,       // Use this prop
+  deliveryAddress,
+  deliveryFee,
 }: OrderSummaryProps) => {
 
   const isWalletDisabled = walletBalance <= 0;
-  // Determine if it's a delivery order based on the presence of the address
   const isDelivery = !!deliveryAddress;
 
   return (
     <div className="space-y-4 bg-gray-800 p-6 rounded-lg">
-       {/* --- Corrected Title --- */}
       <h3 className="text-xl font-semibold text-amber-400">
         {isDelivery ? "Delivery Order Summary" : "Pick-up Order Summary"}
       </h3>
-       {/* --- End Title --- */}
 
-
+      {/* --- PENDING ITEM CARD REMOVED ---
       {pendingItem && (
-        <ItemConfigurationCard
-          pendingItem={pendingItem}
-          onUpdatePendingItem={onUpdatePendingItem}
-          onConfirm={onConfirmPendingItem}
-          onCancel={onCancelPendingItem}
-        />
+        <ItemConfigurationCard ... />
       )}
+      --- END REMOVED --- */}
 
-      {selectedItems.length === 0 && !pendingItem ? (
+      {selectedItems.length === 0 ? (
         <p className="text-gray-400 text-center py-8">Your cart is empty</p>
       ) : (
         <>
-          {/* --- Corrected Delivery Address Box --- */}
           {isDelivery && deliveryAddress && (
             <div className="p-3 bg-blue-900/40 border border-blue-700 rounded-md">
               <div className="flex justify-between items-center">
@@ -100,18 +96,16 @@ const OrderSummary = ({
                   <Truck className="w-4 h-4 text-blue-300"/>
                   <span className="text-sm font-medium text-blue-200">Delivering To:</span>
                 </div>
-                 <Link to="/delivery-location" className="text-xs text-blue-300 hover:text-blue-100 underline flex items-center gap-1">
-                     <Pencil className="w-3 h-3"/> Change
-                 </Link>
+                <Link to="/delivery-location" className="text-xs text-blue-300 hover:text-blue-100 underline flex items-center gap-1">
+                    <Pencil className="w-3 h-3"/> Change
+                </Link>
               </div>
               <p className="text-sm text-gray-300 pl-6">{deliveryAddress}</p>
             </div>
           )}
-          {/* --- End Delivery Address Box --- */}
-
 
           {/* Item List */}
-          <div className="space-y-3 max-h-[calc(100vh-35rem)] overflow-y-auto pr-2"> {/* Adjust max-h if needed */}
+          <div className="space-y-3 max-h-[calc(100vh-35rem)] overflow-y-auto pr-2">
             {selectedItems.map((item, index) => (
               <OrderItem
                 key={index}
@@ -119,7 +113,7 @@ const OrderSummary = ({
                 index={index}
                 onUpdateQuantity={onUpdateItemQuantity}
                 onEdit={onEditItem}
-                addOnOptions={addOnOptions} // Ensure addOnOptions is available/imported
+                addOnOptions={addOnOptions}
               />
             ))}
           </div>
@@ -133,11 +127,11 @@ const OrderSummary = ({
                 className="bg-gray-700 border-gray-600 text-white"
                 value={promoCode}
                 onChange={(e) => setPromoCode(e.target.value)}
-                disabled={appliedDiscount} // Disable if discount already applied
+                disabled={appliedDiscount}
               />
               <Button
                 onClick={handleApplyPromoCode}
-                disabled={isCheckingPromo || appliedDiscount} // Disable if checking or already applied
+                disabled={isCheckingPromo || appliedDiscount}
                 className="bg-gray-600 hover:bg-gray-500"
               >
                 {isCheckingPromo ? "..." : "Apply"}
@@ -173,22 +167,19 @@ const OrderSummary = ({
               <span className="text-gray-400">₾{subtotal.toFixed(2)}</span>
             </div>
 
-            {appliedDiscount && discountAmount > 0 && ( // Also check discountAmount > 0
+            {appliedDiscount && discountAmount > 0 && (
               <div className="flex justify-between items-center text-md text-green-400">
                 <span>Discount:</span>
                 <span>- ₾{discountAmount.toFixed(2)}</span>
               </div>
             )}
 
-            {/* --- Corrected Delivery Fee Display --- */}
             {isDelivery && deliveryFee > 0 && (
               <div className="flex justify-between items-center text-md text-gray-300">
                 <span>Delivery Fee:</span>
                 <span>₾{deliveryFee.toFixed(2)}</span>
               </div>
             )}
-            {/* --- End Delivery Fee --- */}
-
 
             {useWallet && walletCreditApplied > 0 && (
               <div className="flex justify-between items-center text-md text-green-400">
