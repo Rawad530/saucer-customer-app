@@ -14,7 +14,7 @@ export const translations = {
     hero_title: "More Sauce. Less Mess.",
     hero_subtitle: "Your favorite burgers, your way. Choose a timeless Classic Bun or upgrade to the revolutionary Saucer Bun — perfectly sealed for zero drips. The future of flavor is in your hands.",
     hero_orderButton_checking: "Checking Hours...",
-    hero_orderButton_active: "View Menu & Order as a Guest",
+    hero_orderButton_active: "View Menu",
     hero_orderButton_closed: "We're currently closed for online orders.",
     divider_or: "OR",
 
@@ -272,7 +272,7 @@ export const translations = {
     hero_title: "მეტი სოუსი. ნაკლები არეულობა.",
     hero_subtitle: "შენი საყვარელი ბურგერები, შენებურად. აირჩიე კლასიკური ფუნთუშა ან სცადე რევოლუციური სოსერ ფუნთუშა — იდეალურად დალუქული წვეთების გარეშე. გემოს მომავალი შენს ხელშია.",
     hero_orderButton_checking: "სამუშაო საათების შემოწმება...",
-    hero_orderButton_active: "მენიუს ნახვა და შეკვეთა",
+    hero_orderButton_active: "მენიუს ნახვა",
     hero_orderButton_closed: "ონლაინ შეკვეთებს ამჟამად არ ვიღებთ.",
     divider_or: "ან",
 
