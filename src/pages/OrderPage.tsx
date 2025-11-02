@@ -61,13 +61,13 @@ const OrderPage = () => {
  const deliveryDetails = useCartStore((state) => state.deliveryDetails);
  const deliveryFee = deliveryDetails?.deliveryFee ?? 0;
  const hasHydrated = useCartStore((state) => state._hasHydrated); 
- const clearDeliveryDetails = useCartStore((state) => state.clearDeliveryDetails); // <-- KEPT OUR FIX
+ // const clearDeliveryDetails = useCartStore((state) => state.clearDeliveryDetails); // <-- No longer needed
  // --- END READ ---
  const selectedItems = useCartStore((state) => state.items);
  const addItem = useCartStore((state) => state.addItem);
  const updateItemQuantity = useCartStore((state) => state.updateItemQuantity);
  const updateItemDetails = useCartStore((state) => state.updateItemDetails);
- const clearCart = useCartStore((state) => state.clearCart);
+ const clearCart = useCartStore((state) => state.clearCart); // <-- We will use this
  const getSummary = useCartStore((state) => state.getSummary);
 
 
@@ -120,20 +120,21 @@ const OrderPage = () => {
    }
  }, [session, loadingMenu]);
 
- // 3. Manage Guest State (Clear "muddy boots")
+ // --- FIX: This hook now clears the ENTIRE cart for guests ---
+ // 3. Manage Guest State (Clear cart & "muddy boots")
  useEffect(() => {
    // Wait until the menu/session is loaded AND the store has hydrated
    if (loadingMenu || !hasHydrated) return;
 
-   if (!session && deliveryDetails) {
-     // This is a GUEST with leftover delivery details.
-     // Clear them to force the pickup flow.
-     clearDeliveryDetails();
+   if (!session) {
+     // This is a GUEST.
+     // Our new rule is that guests can ONLY browse.
+     // We must clear their cart of any old items from previous sessions.
+     // Your clearCart() function also clears deliveryDetails, fixing everything.
+     clearCart();
    }
-   // All guestInfo logic is removed.
- }, [session, deliveryDetails, loadingMenu, hasHydrated, clearDeliveryDetails]);
-
- // --- END RESTRUCTURED useEffect HOOKS ---
+ }, [session, loadingMenu, hasHydrated, clearCart]); // <-- Dependency array updated
+ // --- END FIX ---
 
 
  const addItemToOrder = (menuItem: MenuItem) => {
