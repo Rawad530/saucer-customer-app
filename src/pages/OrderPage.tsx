@@ -207,33 +207,6 @@ const OrderPage = () => {
     } finally { setIsCheckingPromo(false); }
  };
 
- // const handleGuestSubmit = (details: { name: string; phone: string }) => { ... }; // <-- REMOVED
-
- // --- This check is now just a fallback. The `addItemToOrder` check will run first. ---
- const handleProceedToPayment = async () => {
-   // --- Fallback check ---
-   if (!session) {
-     alert("Please log in or create an account to place an order.");
-     navigate('/login', { state: { from: location.pathname } });
-     return;
-   }
-   // --- END Fallback check ---
-
-   if (selectedItems.length === 0) { 
-     alert("Your cart is empty."); 
-     return; 
-   }
-   
-   if (deliveryDetails && !deliveryDetails.addressText) { 
-     alert("Delivery address is missing."); 
-     navigate('/delivery-location'); 
-     return; 
-   }
-
-   placeOrder(); 
- };
- // --- END MODIFICATION ---
-
  // ... (Calculations remain the same) ...
  const { subtotal } = getSummary();
  const effectiveDiscountRate = session ? appliedDiscount : 0;
@@ -243,6 +216,44 @@ const OrderPage = () => {
  const totalDueBeforeWallet = priceAfterPromo + (deliveryDetails ? deliveryFee : 0);
  const walletCreditApplied = effectiveUseWallet ? Math.min(walletBalance, totalDueBeforeWallet) : 0;
  const totalPrice = totalDueBeforeWallet - walletCreditApplied;
+
+
+ // --- MODIFIED: Added Minimum Order Check ---
+ const handleProceedToPayment = async () => {
+   // 1. Force Login Check
+   if (!session) {
+     alert("Please log in or create an account to place an order.");
+     navigate('/login', { state: { from: location.pathname } });
+     return;
+   }
+   
+   // 2. Empty Cart Check
+   if (selectedItems.length === 0) { 
+     alert("Your cart is empty."); 
+     return; 
+   }
+   
+   // 3. Delivery Address Check
+   if (deliveryDetails && !deliveryDetails.addressText) { 
+     alert("Delivery address is missing."); 
+     navigate('/delivery-location'); 
+     return; 
+   }
+
+   // --- 4. NEW CHECK: MINIMUM ORDER FOR DELIVERY ---
+   // The 'subtotal' variable is already available from the calculations above
+   const MINIMUM_ORDER_AMOUNT = 20;
+   if (deliveryDetails && subtotal < MINIMUM_ORDER_AMOUNT) {
+     alert(`The minimum order for delivery is ₾${MINIMUM_ORDER_AMOUNT}. Your current subtotal is ₾${subtotal.toFixed(2)}.`);
+     return; // Stop the payment
+   }
+   // --- END NEW CHECK ---
+
+   // 5. All checks passed. Proceed to payment.
+   placeOrder(); 
+ };
+ // --- END MODIFICATION ---
+
 
  // --- MODIFIED: Removed guestInfo logic ---
  const placeOrder = async () => { // <-- Removed "currentGuestInfo"
