@@ -1,12 +1,11 @@
-// src/components/OrderSummary.tsx (Simplified)
+// src/components/OrderSummary.tsx (Fixed)
 
 import React from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { OrderItem as OrderItemType } from "@/types/order"; // Removed PendingItem
+import { OrderItem as OrderItemType } from "@/types/order"; 
 import OrderItem from "./OrderItem";
-// import ItemConfigurationCard from "./ItemConfigurationCard"; // <-- REMOVED
 import { addOnOptions } from "@/data/menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -14,16 +13,10 @@ import { Truck, Pencil } from "lucide-react";
 
 interface OrderSummaryProps {
   selectedItems: OrderItemType[];
-  // pendingItem: PendingItem | null; // <-- REMOVED
   subtotal: number;
   discountAmount: number;
   totalPrice: number;
   onUpdateItemQuantity: (index: number, newQuantity: number) => void;
-  // --- REMOVED PENDING ITEM PROPS ---
-  // onUpdatePendingItem: React.Dispatch<React.SetStateAction<PendingItem | null>>;
-  // onConfirmPendingItem: () => void;
-  // onCancelPendingItem: () => void;
-  // --- END REMOVED ---
   onProceedToPayment: () => void;
   promoCode: string;
   setPromoCode: (code: string) => void;
@@ -43,16 +36,10 @@ interface OrderSummaryProps {
 
 const OrderSummary = ({
   selectedItems,
-  // pendingItem, // <-- REMOVED
   subtotal,
   discountAmount,
   totalPrice,
   onUpdateItemQuantity,
-  // --- REMOVED PENDING ITEM PROPS ---
-  // onUpdatePendingItem,
-  // onConfirmPendingItem,
-  // onCancelPendingItem,
-  // --- END REMOVED ---
   onProceedToPayment,
   promoCode,
   setPromoCode,
@@ -79,12 +66,6 @@ const OrderSummary = ({
         {isDelivery ? "Delivery Order Summary" : "Pick-up Order Summary"}
       </h3>
 
-      {/* --- PENDING ITEM CARD REMOVED ---
-      {pendingItem && (
-        <ItemConfigurationCard ... />
-      )}
-      --- END REMOVED --- */}
-
       {selectedItems.length === 0 ? (
         <p className="text-gray-400 text-center py-8">Your cart is empty</p>
       ) : (
@@ -104,8 +85,8 @@ const OrderSummary = ({
             </div>
           )}
 
-          {/* Item List */}
-          <div className="space-y-3 max-h-[calc(100vh-35rem)] overflow-y-auto pr-2">
+          {/* --- FIX: I have REMOVED the max-h[...] and overflow-y-auto from this div --- */}
+          <div className="space-y-3 pr-2">
             {selectedItems.map((item, index) => (
               <OrderItem
                 key={index}
@@ -117,6 +98,7 @@ const OrderSummary = ({
               />
             ))}
           </div>
+          {/* --- END FIX --- */}
 
           {/* Promo Code */}
           <div className="border-t border-b border-gray-700 py-4 space-y-2">
