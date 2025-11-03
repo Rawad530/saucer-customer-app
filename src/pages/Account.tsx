@@ -1,15 +1,15 @@
 // src/pages/Account.tsx
 
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // <-- 1. Import useNavigate
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
-// Import MapPin and ShoppingBag icons
 import { User, Wallet, Star, History, Truck, Megaphone, QrCode, Gift, MapPin, ShoppingBag } from 'lucide-react';
 import QRCode from "react-qr-code";
 import { Order, OrderItem } from '../types/order';
 import MyCoupons from '../components/MyCoupons';
-import { useLanguage } from '../contexts/LanguageContext'; // <-- 1. IMPORT LANGUAGE HOOK
+import { useLanguage } from '../contexts/LanguageContext';
+import { useCartStore } from '../store/cartStore'; // <-- 2. Import your cart store
 
 interface ProfileData {
   full_name: string;
@@ -35,7 +35,12 @@ const Account = ({ session }: { session: Session }) => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
   const [rewardsAvailable, setRewardsAvailable] = useState(false);
-  const { t } = useLanguage(); // <-- 2. USE THE HOOK
+  const { t } = useLanguage(); 
+
+  // --- 3. Add hooks for navigation and cart ---
+  const navigate = useNavigate();
+  const clearDeliveryDetails = useCartStore((state) => state.clearDeliveryDetails);
+  // --- END ---
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -88,7 +93,6 @@ const Account = ({ session }: { session: Session }) => {
         console.error("Error checking restaurant status:", statusRes.error);
         setIsRestaurantOpen(false);
       } else {
-        // Added nullish coalescing for safety
         setIsRestaurantOpen(statusRes.data?.isOpen ?? false);
       }
 
@@ -96,7 +100,16 @@ const Account = ({ session }: { session: Session }) => {
     };
 
     fetchDashboardData();
-  }, [session, t]); // <-- Added 't' as dependency, though useEffect doesn't use it directly, it's good practice if it did.
+  }, [session, t]);
+
+  // --- 4. Add the handler function for the button ---
+  const handlePickUpClick = () => {
+    // This is the fix: clear the state *first*
+    clearDeliveryDetails();
+    // Then navigate to the order page
+    navigate('/order');
+  };
+  // --- END ---
 
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">{t.account_loading}</div>;
@@ -143,19 +156,21 @@ const Account = ({ session }: { session: Session }) => {
 
                   {/* Pick-up Button + Note */}
                   <div className="flex-1 md:flex-none flex flex-col items-center">
-                    <Link
-                      to="/order"
+                    {/* --- 5. Changed from <Link> to <button> and added onClick --- */}
+                    <button
+                      onClick={handlePickUpClick}
                       className="w-full inline-flex items-center justify-center px-8 py-4 text-lg font-bold bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
                     >
                       <ShoppingBag className="w-5 h-5 mr-2" /> {t.account_pickup}
-                    </Link>
+                    </button>
+                    {/* --- END FIX --- */}
                     <p className="text-sm text-amber-100 mt-2">{t.account_pickupNote}</p>
                   </div>
                   
                 </div>
               ) : (
                 // CLOSED STATE: Hide buttons, show message ONLY
-                <div className="text-center py-4"> {/* Added padding */}
+                <div className="text-center py-4"> 
                   <p className="text-lg font-semibold text-red-100 bg-black/75 px-4 py-2 rounded-md inline-block">
                     {t.account_closed}
                   </p>
@@ -209,7 +224,6 @@ const Account = ({ session }: { session: Session }) => {
               {lastOrder ? (
                 <div>
                   <p className="text-sm text-gray-400">{t.account_activityLastOrder.replace('{orderNumber}', lastOrder.order_number)}</p>
-                  {/* Added optional chaining and filtering for safety */}
                   <p className="font-semibold truncate">{(lastOrder.items || []).map(i => i.menuItem?.name).filter(Boolean).join(', ')}</p>
                   <hr className="border-gray-700 my-3" />
                   <p className="text-sm text-gray-400">{t.account_activityFavorite}</p>
@@ -231,7 +245,7 @@ const Account = ({ session }: { session: Session }) => {
               </Link>
             </div>
 
-             {/* Announcements Card */}
+              {/* Announcements Card */}
             {announcements.length > 0 && (
               <div className="bg-gray-800 p-6 rounded-lg">
                 <h3 className="flex items-center text-xl font-bold mb-4"><Megaphone className="w-6 h-6 mr-2 text-blue-400" /> {t.account_announcementsTitle}</h3>
@@ -254,13 +268,11 @@ const Account = ({ session }: { session: Session }) => {
               <h3 className="flex items-center text-xl font-bold mb-4"><User className="w-6 h-6 mr-2 text-gray-300" /> {t.account_profileTitle}</h3>
               <div className="text-center bg-gray-700/50 p-4 rounded-md mb-4">
                 <p className="text-gray-400">{t.account_profileWalletBalance}</p>
-                {/* Ensure balance exists before calling toFixed */}
                 <p className="text-3xl font-bold text-green-400">
                   ₾{profileData?.wallet_balance ? profileData.wallet_balance.toFixed(2) : '0.00'}
                 </p>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
-                {/* --- FIX: Changed text-sm to text-xs to prevent overflow in Georgian --- */}
                 <Link to="/wallet" className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 text-xs">{t.account_profileAddFunds}</Link>
                 <Link to="/profile" className="w-full px-4 py-2 font-bold text-white bg-gray-600 rounded-md hover:bg-gray-700 text-xs">{t.account_profileEdit}</Link>
                 <Link to="/invite" className="w-full px-4 py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 text-xs flex items-center justify-center gap-1">
