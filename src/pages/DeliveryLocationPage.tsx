@@ -8,9 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertCircle, CheckCircle, MapPin, Loader2 } from 'lucide-react';
 import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
-import { useCartStore } from '../store/cartStore'; // <-- IMPORT STORE
-import { supabase } from '../lib/supabaseClient'; // <-- ADDED
-import { Session } from '@supabase/supabase-js'; // <-- ADDED
+import { useCartStore } from '../store/cartStore'; 
+import { supabase } from '../lib/supabaseClient'; 
+import { Session } from '@supabase/supabase-js'; 
 
 // --- Configuration ---
 const RESTAURANT_LAT = 41.72051;
@@ -30,7 +30,6 @@ const MAP_CONTAINER_STYLE = {
 const libraries: ('places' | 'geometry' | 'geocoding' | 'routes')[] = ['places', 'geometry', 'geocoding', 'routes'];
 // --- End Configuration ---
 
-// Interface for delivery details (can be imported if defined elsewhere)
 interface DeliveryDetails {
   addressText: string;
   gmapsLink: string;
@@ -45,7 +44,7 @@ interface DeliveryDetails {
 
 const DeliveryLocationPage = () => {
   const navigate = useNavigate();
-  const setDeliveryDetailsStore = useCartStore((state) => state.setDeliveryDetails); // <-- GET ACTION FROM STORE
+  const setDeliveryDetailsStore = useCartStore((state) => state.setDeliveryDetails); 
   const [userAddress, setUserAddress] = useState('');
   const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [distanceText, setDistanceText] = useState<string | null>(null);
@@ -61,10 +60,7 @@ const DeliveryLocationPage = () => {
   const [level, setLevel] = useState('');
   const [unit, setUnit] = useState('');
   const [notes, setNotes] = useState('');
-
-  // --- ADDED: session state ---
   const [session, setSession] = useState<Session | null>(null);
-  // --- END ADDED ---
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'google-map-script',
@@ -77,13 +73,11 @@ const DeliveryLocationPage = () => {
       setGeocoder(new google.maps.Geocoder());
       setIsMapLoading(false);
     }
-    // --- ADDED: Fetch session ---
     const fetchSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
     };
     fetchSession();
-    // --- END ADDED ---
   }, [isLoaded]);
 
   const checkDistanceAndGetAddress = useCallback((latLng: { lat: number; lng: number }) => {
@@ -102,7 +96,7 @@ const DeliveryLocationPage = () => {
     setUserAddress('');
     setGmapsLink('');
 
-    // --- KEPT YOUR WORKING LINK (from screenshot) ---
+    // --- YOUR CORRECT LINK ---
     const link = `https://www.google.com/maps/?q=${latLng.lat},${latLng.lng}&z=18`;
     setGmapsLink(link);
 
@@ -207,12 +201,12 @@ const DeliveryLocationPage = () => {
   const handleProceedToOrder = () => {
     if (isWithinRadius && markerPosition) {
       
-      // --- ADDED VALIDATION ---
+      // --- VALIDATION ---
       if (!building.trim() || !level.trim() || !unit.trim()) {
         setErrorMessage("Please fill in all required fields: Building, Level, and Unit.");
-        return; // Stop the function here
+        return; 
       }
-      setErrorMessage(''); // Clear any previous errors if validation passes
+      setErrorMessage(''); 
       // --- END VALIDATION ---
 
       const finalAddress = userAddress || `Location (${markerPosition.lat.toFixed(4)}, ${markerPosition.lng.toFixed(4)})`;
@@ -229,13 +223,8 @@ const DeliveryLocationPage = () => {
         deliveryFee: deliveryFee
       };
 
-      // --- SAVE TO ZUSTAND STORE ---
       setDeliveryDetailsStore(deliveryData);
-      // --- END SAVE ---
-
-      // --- REMOVE location.state ---
-      navigate('/order'); // Navigate without state
-      // --- END REMOVE ---
+      navigate('/order'); 
 
     } else {
         alert("Please select a valid delivery location within the radius first.");
@@ -326,14 +315,12 @@ const DeliveryLocationPage = () => {
           {/* Detailed Address Fields */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-700">
             <div>
-              {/* --- MODIFIED: Added required asterisk --- */}
               <Label htmlFor="building" className="text-sm font-medium text-gray-300">
                 Building / Villa / Compound <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="building"
                 value={building}
-                // --- MODIFIED: Clear error on change ---
                 onChange={(e) => {
                   setBuilding(e.target.value);
                   if (errorMessage) setErrorMessage('');
@@ -344,14 +331,12 @@ const DeliveryLocationPage = () => {
               />
             </div>
             <div>
-              {/* --- MODIFIED: Added required asterisk --- */}
               <Label htmlFor="level" className="text-sm font-medium text-gray-300">
                 Level / Floor <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="level"
                 value={level}
-                // --- MODIFIED: Clear error on change ---
                 onChange={(e) => {
                   setLevel(e.target.value);
                   if (errorMessage) setErrorMessage('');
@@ -362,14 +347,12 @@ const DeliveryLocationPage = () => {
               />
             </div>
             <div>
-              {/* --- MODIFIED: Added required asterisk --- */}
               <Label htmlFor="unit" className="text-sm font-medium text-gray-300">
                 Unit / Apt / Office No. <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="unit"
                 value={unit}
-                // --- MODIFIED: Clear error on change ---
                 onChange={(e) => {
                   setUnit(e.target.value);
                   if (errorMessage) setErrorMessage('');
@@ -400,7 +383,8 @@ const DeliveryLocationPage = () => {
                  <Loader2 className="animate-spin h-5 w-5 inline mr-2" />Calculating distance...
             </div>
           )}
-          {!isLoading && isWithinRadius === true && distanceText !== null && (
+          {/* This is the SUCCESS box */}
+          {!isLoading && isWithinRadius === true && distanceText !== null && !errorMessage && (
             <div className="bg-green-900/50 border border-green-700 text-green-300 p-4 rounded-md text-center space-y-3">
               <p className="font-semibold flex items-center justify-center gap-2">
                 <CheckCircle className="w-5 h-5" /> Great! You're within the delivery radius.
@@ -419,6 +403,7 @@ const DeliveryLocationPage = () => {
               </Button>
             </div>
           )}
+          {/* This is the OUT OF ZONE error box */}
           {!isLoading && isWithinRadius === false && errorMessage && (
             <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-md text-center">
               <p className="font-semibold flex items-center justify-center gap-2">
@@ -427,8 +412,9 @@ const DeliveryLocationPage = () => {
               <p className="text-sm mt-1">{errorMessage}</p>
             </div>
           )}
-          {/* This box now handles map errors AND validation errors */}
-          {!isLoading && isWithinRadius === null && errorMessage && (
+          {/* --- THIS IS THE FIX --- */}
+          {/* This box now handles MAP errors and VALIDATION errors */}
+          {!isLoading && errorMessage && isWithinRadius !== false && (
              <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-md text-center">
                <p className="font-semibold flex items-center justify-center gap-2">
                  <AlertCircle className="w-5 h-5" /> Error
@@ -436,14 +422,13 @@ const DeliveryLocationPage = () => {
                <p className="text-sm mt-1">{errorMessage}</p>
              </div>
           )}
+          {/* --- END FIX --- */}
 
           {/* Back Link */}
           <div className="text-center pt-4 border-t border-gray-700">
-            {/* --- MODIFIED: "Back" link is now conditional --- */}
             <Link to={session ? "/account" : "/"} className="text-sm text-gray-400 hover:text-amber-400 transition">
               ← Back to {session ? "Account" : "Home"} or Choose Pick-up
             </Link>
-            {/* --- END MODIFICATION --- */}
           </div>
         </CardContent>
       </Card>
