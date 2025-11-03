@@ -1,5 +1,3 @@
-// src/pages/OrderPage.tsx
-
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { OrderItem, MenuItem, PaymentMode } from "../types/order";
@@ -49,7 +47,7 @@ const OrderPage = () => {
  const navigate = useNavigate();
  const [session, setSession] = useState<Session | null>(null);
  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
- const [loadingMenu, setLoadingMenu] = useState(true); // <--- This is the problem
+ const [loadingMenu, setLoadingMenu] = useState(true);
  const [orderPlaced, setOrderPlaced] = useState(false);
  const [promoCode, setPromoCode] = useState("");
  const [appliedDiscount, setAppliedDiscount] = useState(0);
@@ -255,8 +253,8 @@ const OrderPage = () => {
     try {
      const { data, error } = await supabase.functions.invoke('validate-promo-code', { body: { promoCode: promoCode.trim() } });
      if (error) { 
-          const errMsg = error.message || "Validation failed."; 
-          throw new Error(errMsg); 
+         const errMsg = error.message || "Validation failed."; 
+         throw new Error(errMsg); 
       }
      if (data?.error) throw new Error(data.error);
      if (data?.discount > 0) { setAppliedDiscount(data.discount); setPromoMessage(`Success! ${data.discount}% discount applied.`); }
@@ -330,27 +328,27 @@ const OrderPage = () => {
        }
 
        const transactionData = {
-          transaction_id: orderId,
-          user_id: userId,
-          guest_name: guestName,
-          guest_phone: guestPhone,
-          order_number: orderNumber,
-          items: selectedItems as any,
-          total_price: totalPrice,
-          wallet_credit_applied: walletCreditApplied,
-          payment_mode: paymentMode,
-          status: 'pending_payment',
-          created_at: new Date().toISOString(),
-          promo_code_used: effectiveDiscountRate > 0 ? promoCode.toUpperCase() : null,
-          discount_applied_percent: effectiveDiscountRate > 0 ? effectiveDiscountRate : null,
-          order_type: orderType,
-          delivery_address: deliveryDetails?.addressText || null,
-          delivery_fee: deliveryDetails ? deliveryFee : null,
-          delivery_gmaps_link: deliveryDetails?.gmapsLink || null,
-          delivery_building: deliveryDetails?.building || null,
-          delivery_level: deliveryDetails?.level || null,
-          delivery_unit: deliveryDetails?.unit || null,
-          delivery_address_notes: deliveryDetails?.notes || null,
+         transaction_id: orderId,
+         user_id: userId,
+         guest_name: guestName,
+         guest_phone: guestPhone,
+         order_number: orderNumber,
+         items: selectedItems as any,
+         total_price: totalPrice,
+         wallet_credit_applied: walletCreditApplied,
+         payment_mode: paymentMode,
+         status: 'pending_payment',
+         created_at: new Date().toISOString(),
+         promo_code_used: effectiveDiscountRate > 0 ? promoCode.toUpperCase() : null,
+         discount_applied_percent: effectiveDiscountRate > 0 ? effectiveDiscountRate : null,
+         order_type: orderType,
+         delivery_address: deliveryDetails?.addressText || null,
+         delivery_fee: deliveryDetails ? deliveryFee : null,
+         delivery_gmaps_link: deliveryDetails?.gmapsLink || null,
+         delivery_building: deliveryDetails?.building || null,
+         delivery_level: deliveryDetails?.level || null,
+         delivery_unit: deliveryDetails?.unit || null,
+         delivery_address_notes: deliveryDetails?.notes || null,
        };
 
        const { error: insertError } = await supabase.from('transactions').insert([transactionData]);
@@ -407,15 +405,17 @@ const OrderPage = () => {
          <div className="flex justify-center items-center gap-4">
            {session && (<Link to="/history" className="px-6 py-2 font-bold text-amber-500 border border-amber-500 rounded-md hover:bg-amber-500 hover:text-white transition-colors">Track Order</Link>)}
            {session ? (<Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">Back to Account</Link>)
-                   : (<Link to="/" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">Back to Home</Link>)}
+                     : (<Link to="/" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">Back to Home</Link>)}
          </div>
        </div>
    );
  }
 
- if (loadingMenu || !hasHydrated) {
+ // --- MODIFICATION: Simplified loading check ---
+ if (loadingMenu) {
    return (<div className="flex justify-center items-center h-64 text-white">Loading...</div>);
  }
+ // --- END MODIFICATION ---
 
  return (
    <>
@@ -526,6 +526,9 @@ const OrderPage = () => {
              onUpdatePendingItem={setConfiguringItem}
              onConfirm={confirmConfiguredItem}
              onCancel={handleCancelConfiguringItem}
+             // --- MODIFICATION: Passing the isEditing prop ---
+             isEditing={editingItemIndex !== null}
+             // --- END MODIFICATION ---
            />
          )}
        </DialogContent>
