@@ -9,9 +9,7 @@ import OrderSummary from "../components/OrderSummary";
 import { Session } from "@supabase/supabase-js";
 import { useCartStore } from "../store/cartStore";
 import { Truck, MapPin } from "lucide-react";
-// --- Uses your existing hook ---
 import { useIsMobile } from "../hooks/use-mobile"; 
-// ---
 import {
   Dialog,
   DialogContent,
@@ -19,7 +17,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"; 
 import ItemConfigurationCard from "../components/ItemConfigurationCard";
-// --- Import the new component ---
 import SimpleItemDialog from "../components/SimpleItemDialog"; 
 
 // ... (Interfaces PendingItem and DeliveryDetails are the same) ...
@@ -52,7 +49,7 @@ const OrderPage = () => {
  const navigate = useNavigate();
  const [session, setSession] = useState<Session | null>(null);
  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
- const [loadingMenu, setLoadingMenu] = useState(true);
+ const [loadingMenu, setLoadingMenu] = useState(true); // <--- This is the problem
  const [orderPlaced, setOrderPlaced] = useState(false);
  const [promoCode, setPromoCode] = useState("");
  const [appliedDiscount, setAppliedDiscount] = useState(0);
@@ -65,12 +62,8 @@ const OrderPage = () => {
  const [configuringItem, setConfiguringItem] = useState<PendingItem | null>(null);
  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
  const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
-
- // --- Add new state for the simple popup ---
  const [simpleAddItem, setSimpleAddItem] = useState<MenuItem | null>(null);
- // --- END ---
 
- // ... (Smart scroll logic is the same) ...
  const summaryRef = useRef<HTMLDivElement>(null);
  const isMobile = useIsMobile(); 
 
@@ -81,9 +74,7 @@ const OrderPage = () => {
      }, 100);
    }
  };
- // ---
 
- // ... (useCartStore hooks are the same) ...
  const deliveryDetails = useCartStore((state) => state.deliveryDetails);
  const deliveryFee = deliveryDetails?.deliveryFee ?? 0;
  const hasHydrated = useCartStore((state) => state._hasHydrated);
@@ -95,20 +86,82 @@ const OrderPage = () => {
  const getSummary = useCartStore((state) => state.getSummary);
 
 
- // ... (useEffect hooks 1, 2, and 3 are the same) ...
- useEffect(() => {
-   // ... (fetch session and menu) ...
- }, []);
+ // --- RESTRUCTURED useEffect HOOKS ---
 
+ // --- FIX: Added try/catch/finally to prevent infinite loading ---
  useEffect(() => {
-   // ... (fetch wallet) ...
+   const fetchSessionAndMenu = async () => {
+     try {
+       setLoadingMenu(true); // Start loading
+       // Get Session
+       const { data: { session: currentSession } } = await supabase.auth.getSession();
+       setSession(currentSession);
+
+       // Fetch menu
+       const menuResult = await supabase.from('menu_items').select('*').eq('is_available', true).order('id');
+       
+       if (menuResult.error) {
+         console.error("Error fetching menu:", menuResult.error);
+         throw menuResult.error;
+       }
+       
+       if (menuResult.data) {
+         setMenuItems(menuResult.data as MenuItem[]); // Cast to MenuItem[]
+       }
+       
+     } catch (error) {
+       console.error("Failed to load page data:", error);
+       // You could show an error message here
+     } finally {
+       // This is the most important part
+       // This will run NO MATTER WHAT, even if Supabase fails
+       setLoadingMenu(false); // Stop loading
+     }
+   };
+   
+   fetchSessionAndMenu();
+   // --- END FIX ---
+
+   // Check if returning from a failed payment
+   const paymentFailedFlag = sessionStorage.getItem('paymentFailed');
+   if (paymentFailedFlag) {
+       console.log("Detected return from failed payment.");
+       sessionStorage.removeItem('paymentFailed');
+   }
+    // Set up auth listener for session changes (login/logout during the session)
+   const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+       setSession(session);
+   });
+
+   return () => {
+       authListener.subscription.unsubscribe();
+   };
+ }, []); // Empty dependency array: runs once on mount
+
+ // 2. Fetch Wallet Balance (Depends on session and loadingMenu completion)
+ useEffect(() => {
+   const fetchWallet = async () => {
+     if (session?.user) {
+       const walletResult = await supabase.from('customer_profiles').select('wallet_balance').eq('id', session.user.id).single();
+       if (walletResult?.data) setWalletBalance(walletResult.data.wallet_balance || 0);
+     } else {
+       setWalletBalance(0); // Reset balance if logged out
+     }
+   };
+   // Only run if loadingMenu is false to ensure session is settled
+   if (!loadingMenu) {
+       fetchWallet();
+   }
  }, [session, loadingMenu]);
 
+ // 3. Manage Guest State (Clear cart & "muddy boots")
  useEffect(() => {
-   // ... (clearCart for guests) ...
+   // Wait until the menu/session is loaded AND the store has hydrated
    if (loadingMenu || !hasHydrated) return;
 
    if (!session) {
+     // This is a GUEST.
+     // As you said, they should have an empty cart.
      clearCart();
    }
  }, [session, loadingMenu, hasHydrated, clearCart]); 
