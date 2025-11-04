@@ -73,4 +73,5 @@ export interface Order {
   wallet_credit_applied: number;
   order_type: string;
   rejection_reason?: string; // This was missing
+  delivery_fee: number | null;
 }

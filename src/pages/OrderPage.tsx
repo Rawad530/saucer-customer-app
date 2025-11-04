@@ -62,6 +62,10 @@ const OrderPage = () => {
  const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
  const [simpleAddItem, setSimpleAddItem] = useState<MenuItem | null>(null);
 
+ // --- FIX: Add state to remember the order type after cart is cleared ---
+ const [completedOrderType, setCompletedOrderType] = useState<'delivery' | 'app_pickup' | null>(null);
+ // --- END FIX ---
+
  const summaryRef = useRef<HTMLDivElement>(null);
  const isMobile = useIsMobile(); 
 
@@ -363,10 +367,16 @@ const OrderPage = () => {
        if (functionData?.error) throw new Error(`Payment Init Error: ${functionData.error}`);
 
        if (functionData?.paymentComplete) { // Wallet only case
+         // --- FIX: Remember the order type BEFORE clearing the cart ---
+         setCompletedOrderType(orderType);
+         // --- END FIX ---
          clearCart(); 
          setOrderPlaced(true);
          if (session) setWalletBalance(prev => prev - walletCreditApplied);
        } else if (functionData?.redirectUrl) { // Card payment needed
+         // --- FIX: Remember the order type BEFORE navigating away ---
+         setCompletedOrderType(orderType);
+         // --- END FIX ---
          window.location.href = functionData.redirectUrl;
        } else { throw new Error("Invalid response from payment function."); }
 
@@ -398,7 +408,9 @@ const OrderPage = () => {
              <p className="text-sm text-gray-400">Your Order Number is:</p>
              <p className="text-2xl md:text-3xl font-bold tracking-wider break-all px-2">{completedOrderNumber}</p>
              <p className="text-xs text-gray-400 mt-2">
-                 {deliveryDetails ? "Your order will be delivered soon." : "Please use this number for pickup."}
+                 {/* --- FIX: This now checks the 'completedOrderType' state variable --- */}
+                 {completedOrderType === 'delivery' ? "Your order will be delivered soon." : "Please use this number for pickup."}
+                 {/* --- END FIX --- */}
              </p>
            </div>
          )}
@@ -526,9 +538,9 @@ const OrderPage = () => {
              onUpdatePendingItem={setConfiguringItem}
              onConfirm={confirmConfiguredItem}
              onCancel={handleCancelConfiguringItem}
-             // --- MODIFICATION: Passing the isEditing prop ---
+             // --- THIS IS THE FIX ---
              isEditing={editingItemIndex !== null}
-             // --- END MODIFICATION ---
+             // --- END FIX ---
            />
          )}
        </DialogContent>
@@ -564,3 +576,4 @@ const OrderPage = () => {
 };
 
 export default OrderPage;
+
