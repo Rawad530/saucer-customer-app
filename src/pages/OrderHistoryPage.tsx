@@ -1,12 +1,39 @@
-// src/pages/OrderHistoryPage.tsx
-
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { Order, PaymentMode } from '../types/order';
+import { Order, OrderItem, PaymentMode } from '../types/order';
 import { Link } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, Tag, CreditCard, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+// --- 1. IMPORT YOUR ADD-ON DATA ---
+import { addOnOptions } from '@/data/menu'; 
+
+// --- 2. ADD THE SAME PRICE CALCULATION LOGIC ---
+const calculateItemPrice = (item: OrderItem) => {
+  let price = item.menuItem.price;
+  if (item.addons) {
+    item.addons.forEach(addonName => {
+      const addon = addOnOptions.find(opt => opt.name === addonName);
+      if (addon) {
+        price += addon.price;
+      }
+    });
+  }
+  if (item.discount) {
+    price -= price * (item.discount / 100);
+  }
+  return price * item.quantity;
+};
+
+// This function will re-calculate the *true* subtotal from the items
+const calculateOrderSubtotal = (items: OrderItem[]) => {
+  if (!items) return 0;
+  return items.reduce((total, item) => {
+    return total + calculateItemPrice(item);
+  }, 0);
+};
+// --- END FIX ---
+
 
 const OrderHistoryPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -68,10 +95,19 @@ const OrderHistoryPage = () => {
         ) : (
           <div className="space-y-4">
             {orders.map(order => {
-              const subtotal = order.promo_code_used 
-                ? order.total_price / (1 - (order.discount_applied_percent || 0) / 100) 
-                : order.total_price;
-              const discountAmount = subtotal - order.total_price;
+              
+              // --- 3. FIX THE TOTALS CALCULATION ---
+              // We now calculate the subtotal ourselves, ignoring the broken one from the DB
+              const subtotal = calculateOrderSubtotal(order.items);
+              // The delivery fee is correct
+              const totalWithDelivery = subtotal + (order.delivery_fee || 0);
+              // The promo discount is calculated from the *real* subtotal
+              const discountAmount = order.discount_applied_percent 
+                ? (totalWithDelivery * (order.discount_applied_percent / 100))
+                : 0;
+              // The final total is what the DB *should* have had
+              const finalTotal = totalWithDelivery - discountAmount - (order.wallet_credit_applied || 0);
+              // --- END FIX ---
 
               return (
                   <Collapsible key={order.transaction_id} className="bg-gray-800 rounded-lg border border-gray-700">
@@ -82,8 +118,8 @@ const OrderHistoryPage = () => {
                               <p className="text-sm mt-2">Status: <span className="capitalize font-medium text-amber-400">{order.status.replace('_', ' ')}</span></p>
                           </div>
                           <div className="flex items-center gap-4">
-                              {/* --- FIX: Corrected Currency Symbol --- */}
-                              <p className="font-semibold text-xl">₾{order.total_price.toFixed(2)}</p>
+                              {/* --- FIX: Show the *real* total price --- */}
+                              <p className="font-semibold text-xl">₾{finalTotal.toFixed(2)}</p>
                               <ChevronDown className="h-5 w-5 transition-transform duration-300" />
                           </div>
                       </CollapsibleTrigger>
@@ -96,13 +132,21 @@ const OrderHistoryPage = () => {
                                           <div key={index} className="bg-gray-700/50 p-3 rounded-md text-sm">
                                               <div className="flex justify-between font-medium">
                                                   <span>{item.quantity} x {item.menuItem.name}</span>
-                                                  {/* --- FIX: Corrected Currency Symbol --- */}
+                                                  {/* Show base price */}
                                                   <span>₾{(item.menuItem.price * item.quantity).toFixed(2)}</span>
                                               </div>
                                               <div className="text-xs text-gray-400 pl-4">
                                                   {item.sauce && item.sauce !== 'None' && <div>- Sauce: {item.sauce}</div>}
                                                   {item.drink && <div>- Drink: {item.drink}</div>}
-                                                  {item.addons && item.addons.length > 0 && <div>- Add-ons: {item.addons.join(', ')}</div>}
+                                                  {/* --- 4. FIX ADDON DISPLAY AND PRICE --- */}
+                                                  {item.addons && item.addons.length > 0 && (
+                                                  <div>
+                                                      - Add-ons: {item.addons.map(addonName => {
+                                                        const addon = addOnOptions.find(opt => opt.name === addonName);
+                                                        return addon ? `${addonName} (+₾${(addon.price * item.quantity).toFixed(2)})` : addonName;
+                                                      }).join(', ')}
+                                                  </div>
+                                                  )}
                                                   {item.spicy && <div>- Spicy</div>}
                                               </div>
                                           </div>
@@ -110,24 +154,32 @@ const OrderHistoryPage = () => {
                                   </div>
                               </div>
                               <div className="border-t border-gray-700 pt-3 space-y-2">
-                                  {order.promo_code_used && (
-                                      <div className="flex justify-between items-center text-green-400">
-                                          <span>Subtotal</span>
-                                           {/* --- FIX: Corrected Currency Symbol --- */}
-                                          <span>₾{subtotal.toFixed(2)}</span>
-                                      </div>
+                                  {/* --- 5. FIX SUBTOTALS AND TOTALS --- */}
+                                  <div className="flex justify-between items-center text-gray-300">
+                                      <span>Subtotal</span>
+                                      <span>₾{subtotal.toFixed(2)}</span>
+                                  </div>
+                                  {order.delivery_fee && order.delivery_fee > 0 && (
+                                    <div className="flex justify-between items-center text-gray-300">
+                                      <span>Delivery Fee</span>
+                                      <span>₾{order.delivery_fee.toFixed(2)}</span>
+                                    </div>
                                   )}
                                   {order.promo_code_used && (
                                       <div className="flex justify-between items-center text-green-400">
                                           <span>Discount ({order.promo_code_used})</span>
-                                          {/* --- FIX: Corrected Currency Symbol --- */}
                                           <span>- ₾{discountAmount.toFixed(2)}</span>
+                                      </div>
+                                  )}
+                                  {order.wallet_credit_applied && order.wallet_credit_applied > 0 && (
+                                      <div className="flex justify-between items-center text-green-400">
+                                          <span>Wallet Credit Used</span>
+                                          <span>- ₾{order.wallet_credit_applied.toFixed(2)}</span>
                                       </div>
                                   )}
                                   <div className="flex justify-between items-center font-bold text-lg">
                                       <span>Total</span>
-                                      {/* --- FIX: Corrected Currency Symbol --- */}
-                                      <span>₾{order.total_price.toFixed(2)}</span>
+                                      <span>₾{finalTotal.toFixed(2)}</span>
                                   </div>
                               </div>
                               <div className="flex justify-between items-center text-sm text-gray-400 border-t border-gray-700 pt-3">
