@@ -83,20 +83,20 @@ const ItemConfigurationCard = ({
   // Build the lists directly from the database response
   const availableSauces = useMemo(() => {
     const sauces = availableOptions
-      .filter(opt => opt.option_type === 'sauce')
+      .filter(opt => opt.option_type.toLowerCase() === 'sauce') // <-- FIX: Added .toLowerCase()
       .map(opt => opt.option_name);
     return ['None', ...sauces]; // Add 'None' to the start
   }, [availableOptions]);
 
   const availableSauceCups = useMemo(() => {
     let cups = availableOptions
-      .filter(opt => opt.option_type === 'sauce_cup')
+      .filter(opt => opt.option_type.toLowerCase() === 'sauce_cup') // <-- FIX: Added .toLowerCase()
       .map(opt => opt.option_name);
     
     // Fallback: If no specific "sauce_cup" items are defined, use the main "sauce" list
     if (cups.length === 0) {
       cups = availableOptions
-        .filter(opt => opt.option_type === 'sauce')
+        .filter(opt => opt.option_type.toLowerCase() === 'sauce') // <-- FIX: Added .toLowerCase()
         .map(opt => opt.option_name);
     }
     return ['None', ...cups];
@@ -104,7 +104,7 @@ const ItemConfigurationCard = ({
 
   const availableDrinks = useMemo(() => {
     return availableOptions
-      .filter(opt => opt.option_type === 'drink')
+      .filter(opt => opt.option_type.toLowerCase() === 'drink') // <-- FIX: Added .toLowerCase()
       .map(opt => opt.option_name);
   }, [availableOptions]);
 
@@ -112,7 +112,7 @@ const ItemConfigurationCard = ({
   const availableAddons = useMemo(() => {
     const liveNames = new Set(
       availableOptions
-        .filter(opt => opt.option_type === 'addon')
+        .filter(opt => opt.option_type.toLowerCase() === 'addon') // <-- FIX: Added .toLowerCase()
         .map(opt => opt.option_name)
     );
     return masterAddOnOptions.filter(item => liveNames.has(item.name));
@@ -121,14 +121,14 @@ const ItemConfigurationCard = ({
   const availableBuns = useMemo(() => {
     const liveNames = new Set(
       availableOptions
-        .filter(opt => opt.option_type === 'bun')
+        .filter(opt => opt.option_type.toLowerCase() === 'bun') // <-- FIX: Added .toLowerCase()
         .map(opt => opt.option_name)
     );
     return masterBunOptions.filter(item => liveNames.has(item.name));
   }, [availableOptions]);
   
   const isSpicyAvailable = useMemo(() => {
-    return availableOptions.some(opt => opt.option_type === 'other' && opt.option_name === 'Spicy (Free)');
+    return availableOptions.some(opt => opt.option_type.toLowerCase() === 'other' && opt.option_name === 'Spicy (Free)'); // <-- FIX: Added .toLowerCase()
   }, [availableOptions]);
 
   // --- END NEW DYNAMIC LOGIC ---
