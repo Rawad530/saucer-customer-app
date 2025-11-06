@@ -13,7 +13,7 @@ export type PaymentMode =
 
 // Represents an item in the menu database
 export interface MenuItem {
-  id: number;
+  id: string
   name: string;
   price: number;
   category: string;

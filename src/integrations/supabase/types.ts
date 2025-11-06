@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       announcements: {
@@ -60,6 +35,24 @@ export type Database = {
           id?: number
           is_active?: boolean
           title?: string
+        }
+        Relationships: []
+      }
+      app_settings: {
+        Row: {
+          id: number
+          is_enabled: boolean | null
+          setting_name: string
+        }
+        Insert: {
+          id?: number
+          is_enabled?: boolean | null
+          setting_name: string
+        }
+        Update: {
+          id?: number
+          is_enabled?: boolean | null
+          setting_name?: string
         }
         Relationships: []
       }
@@ -296,6 +289,30 @@ export type Database = {
         }
         Relationships: []
       }
+      option_availability: {
+        Row: {
+          created_at: string | null
+          id: number
+          is_available: boolean
+          option_name: string
+          option_type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          is_available?: boolean
+          option_name: string
+          option_type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          is_available?: boolean
+          option_name?: string
+          option_type?: string
+        }
+        Relationships: []
+      }
       pending_wallet_topups: {
         Row: {
           amount: number
@@ -514,7 +531,15 @@ export type Database = {
         Row: {
           cashback_awarded: boolean
           created_at: string | null
+          delivery_address: string | null
+          delivery_address_notes: string | null
+          delivery_building: string | null
+          delivery_fee: number | null
+          delivery_gmaps_link: string | null
+          delivery_level: string | null
+          delivery_unit: string | null
           discount_applied_percent: number | null
+          estimated_delivery_minutes: number | null
           guest_name: string | null
           guest_phone: string | null
           is_hidden_from_pos: boolean | null
@@ -535,7 +560,15 @@ export type Database = {
         Insert: {
           cashback_awarded?: boolean
           created_at?: string | null
+          delivery_address?: string | null
+          delivery_address_notes?: string | null
+          delivery_building?: string | null
+          delivery_fee?: number | null
+          delivery_gmaps_link?: string | null
+          delivery_level?: string | null
+          delivery_unit?: string | null
           discount_applied_percent?: number | null
+          estimated_delivery_minutes?: number | null
           guest_name?: string | null
           guest_phone?: string | null
           is_hidden_from_pos?: boolean | null
@@ -556,7 +589,15 @@ export type Database = {
         Update: {
           cashback_awarded?: boolean
           created_at?: string | null
+          delivery_address?: string | null
+          delivery_address_notes?: string | null
+          delivery_building?: string | null
+          delivery_fee?: number | null
+          delivery_gmaps_link?: string | null
+          delivery_level?: string | null
+          delivery_unit?: string | null
           discount_applied_percent?: number | null
+          estimated_delivery_minutes?: number | null
           guest_name?: string | null
           guest_phone?: string | null
           is_hidden_from_pos?: boolean | null
@@ -687,10 +728,7 @@ export type Database = {
         Args: { topup_id_to_finalize: string }
         Returns: boolean
       }
-      get_invite_details: {
-        Args: { p_invite_code: string }
-        Returns: string
-      }
+      get_invite_details: { Args: { p_invite_code: string }; Returns: string }
       redeem_reward: {
         Args: { customer_id_to_redeem: string; reward_id_to_redeem: number }
         Returns: string
@@ -701,7 +739,7 @@ export type Database = {
       }
     }
     Enums: {
-      order_type_enum: "app_pickup" | "shop_pickup" | "dine_in"
+      order_type_enum: "app_pickup" | "shop_pickup" | "dine_in" | "delivery"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -827,12 +865,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
-      order_type_enum: ["app_pickup", "shop_pickup", "dine_in"],
+      order_type_enum: ["app_pickup", "shop_pickup", "dine_in", "delivery"],
     },
   },
 } as const
