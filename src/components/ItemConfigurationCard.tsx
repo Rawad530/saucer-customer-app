@@ -1,19 +1,18 @@
-import React, { useState, useEffect, useMemo } from "react"; // <-- ADDED useEffect, useMemo
+import React, { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"; // <-- IMPORTED
-import { Label } from "@/components/ui/label"; // <-- IMPORTED
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { MenuItem } from "@/types/order";
-import { supabase } from "@/integrations/supabase/client"; // <-- IMPORTED (YOUR PATH)
+import { supabase } from "@/integrations/supabase/client";
 import { 
-  sauceOptions as masterSauceOptions, 
-  drinkOptions as masterDrinkOptions, 
+  // We no longer need the hard-coded sauce/drink lists
   addOnOptions as masterAddOnOptions,
-  bunOptions as masterBunOptions // <-- IMPORTED NEW BUNS
-} from "@/data/menu"; // <-- YOUR ORIGINAL, CORRECT PATH
+  bunOptions as masterBunOptions 
+} from "@/data/menu";
 
 // Interface for the data we fetch from Supabase
 interface OptionAvailability {
@@ -25,7 +24,7 @@ interface OptionAvailability {
 interface PendingItem {
   menuItem: MenuItem;
   quantity: number; 
-  bunType?: string; // <-- ADDED
+  bunType?: string; 
   sauce?: string;
   sauceCup?: string;
   drink?: string;
@@ -52,17 +51,13 @@ const ItemConfigurationCard = ({
 }: ItemConfigurationCardProps) => {
   const [showRemarks, setShowRemarks] = useState(!!pendingItem.remarks);
   
-  // YOUR EXISTING LOGIC
   const isMainItem = pendingItem.menuItem.category === 'mains';
-  
-  // --- NEW LOGIC FOR BUNS (AS REQUESTED) ---
   const isBurgerItem = pendingItem.menuItem.name.toLowerCase().includes('burger');
   
-  // --- NEW STATE TO HOLD LIVE AVAILABILITY DATA ---
   const [availableOptions, setAvailableOptions] = useState<OptionAvailability[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
 
-  // --- NEW: FETCH LIVE AVAILABILITY FROM SUPABASE ---
+  // Fetch ALL available options from the database
   useEffect(() => {
     const fetchAvailability = async () => {
       setLoadingOptions(true);
@@ -73,16 +68,7 @@ const ItemConfigurationCard = ({
 
       if (error) {
         console.error("Failed to fetch option availability:", error);
-        // Fallback: In case of error, just use the master lists
-        const allOptions = [
-          ...masterSauceOptions.map(name => ({ option_name: name, option_type: 'sauce', is_available: true })),
-          ...masterSauceOptions.map(name => ({ option_name: name, option_type: 'sauce_cup', is_available: true })),
-          ...masterDrinkOptions.map(name => ({ option_name: name, option_type: 'drink', is_available: true })),
-          ...masterAddOnOptions.map(item => ({ option_name: item.name, option_type: 'addon', is_available: true })),
-          ...masterBunOptions.map(item => ({ option_name: item.name, option_type: 'bun', is_available: true })),
-          { option_name: 'Spicy (Free)', option_type: 'other', is_available: true }
-        ];
-        setAvailableOptions(allOptions as OptionAvailability[]);
+        setAvailableOptions([]); // Set to empty on error
       } else {
         setAvailableOptions(data as OptionAvailability[]);
       }
@@ -92,58 +78,63 @@ const ItemConfigurationCard = ({
     fetchAvailability();
   }, []); // Runs once when the popup opens
 
-  // --- NEW: CREATE FILTERED LISTS USING useMemo ---
-  const getFilteredList = (type: string, masterList: any[]) => {
-    // We wait for loading to finish
-    if (loadingOptions) return []; 
+  // --- THIS IS THE NEW, FULLY DYNAMIC LOGIC ---
+
+  // Build the lists directly from the database response
+  const availableSauces = useMemo(() => {
+    const sauces = availableOptions
+      .filter(opt => opt.option_type === 'sauce')
+      .map(opt => opt.option_name);
+    return ['None', ...sauces]; // Add 'None' to the start
+  }, [availableOptions]);
+
+  const availableSauceCups = useMemo(() => {
+    let cups = availableOptions
+      .filter(opt => opt.option_type === 'sauce_cup')
+      .map(opt => opt.option_name);
     
-    // Get all items from the db that match this type
+    // Fallback: If no specific "sauce_cup" items are defined, use the main "sauce" list
+    if (cups.length === 0) {
+      cups = availableOptions
+        .filter(opt => opt.option_type === 'sauce')
+        .map(opt => opt.option_name);
+    }
+    return ['None', ...cups];
+  }, [availableOptions]);
+
+  const availableDrinks = useMemo(() => {
+    return availableOptions
+      .filter(opt => opt.option_type === 'drink')
+      .map(opt => opt.option_name);
+  }, [availableOptions]);
+
+  // Addons and Buns still use the master list because they have prices
+  const availableAddons = useMemo(() => {
     const liveNames = new Set(
       availableOptions
-        .filter(opt => opt.option_type === type)
+        .filter(opt => opt.option_type === 'addon')
         .map(opt => opt.option_name)
     );
+    return masterAddOnOptions.filter(item => liveNames.has(item.name));
+  }, [availableOptions]);
 
-    // If masterList is simple string array (like sauces)
-    if (masterList.length === 0) return [];
-    if (typeof masterList[0] === 'string') {
-      return masterList.filter(name => liveNames.has(name) || name === 'None'); // Always include 'None'
-    }
-    // If masterList is object array (like addons/buns)
-    return masterList.filter(item => liveNames.has(item.name));
-  };
-
-  const availableBuns = useMemo(() => getFilteredList('bun', masterBunOptions), [availableOptions, loadingOptions]);
-  const availableSauces = useMemo(() => getFilteredList('sauce', masterSauceOptions), [availableOptions, loadingOptions]);
-  
-  // Use 'sauce_cup' type for sauce cups, but fallback to 'sauce' list if empty
-  const availableSauceCups = useMemo(() => {
-    let cups = getFilteredList('sauce_cup', masterSauceOptions);
-    // <= 1 because 'None' is included in the string list
-    if (cups.length <= 1 && availableOptions.some(opt => opt.option_type === 'sauce_cup')) { 
-      // User has defined 'sauce_cup' items, so respect the (empty) list
-      return cups;
-    } else {
-      // User has not defined any 'sauce_cup' items, so fall back to the main 'sauce' list
-      return getFilteredList('sauce', masterSauceOptions);
-    }
-  }, [availableOptions, loadingOptions]);
-
-  const availableDrinks = useMemo(() => getFilteredList('drink', masterDrinkOptions), [availableOptions, loadingOptions]);
-  const availableAddons = useMemo(() => getFilteredList('addon', masterAddOnOptions), [availableOptions, loadingOptions]);
+  const availableBuns = useMemo(() => {
+    const liveNames = new Set(
+      availableOptions
+        .filter(opt => opt.option_type === 'bun')
+        .map(opt => opt.option_name)
+    );
+    return masterBunOptions.filter(item => liveNames.has(item.name));
+  }, [availableOptions]);
   
   const isSpicyAvailable = useMemo(() => {
-    if (loadingOptions) return false;
-    // Check if 'Spicy (Free)' exists in the db list
-    const spicyOption = availableOptions.find(opt => opt.option_type === 'other' && opt.option_name === 'Spicy (Free)');
-    // If it's not in the db at all, default to showing it (legacy behavior)
-    if (!spicyOption) return true;
-    // Otherwise, respect the toggle
-    return spicyOption.is_available;
-  }, [availableOptions, loadingOptions]);
+    return availableOptions.some(opt => opt.option_type === 'other' && opt.option_name === 'Spicy (Free)');
+  }, [availableOptions]);
 
+  // --- END NEW DYNAMIC LOGIC ---
 
-  // --- YOUR EXISTING HANDLERS (UNTOUCHED) ---
+  
+  // Your original handlers (UNTOUCHED)
   const handleAddonChange = (addonName: string, checked: boolean) => {
     onUpdatePendingItem(prev => {
       if (!prev) return null;
@@ -163,29 +154,23 @@ const ItemConfigurationCard = ({
   };
 
   const handleQuantityChange = (newQuantity: number) => {
-    if (newQuantity < 1) return;
+    if (newQuantity < 1) return; // Don't allow less than 1
     onUpdatePendingItem(prev => prev ? { ...prev, quantity: newQuantity } : null);
   };
-  
+
   // --- UPDATED PRICE CALCULATION ---
   const calculateOptionsPrice = () => {
-    // 1. Get bun price
-    // We check the MASTER list for the price, not the available list
     const bunPrice = masterBunOptions.find(b => b.name === pendingItem.bunType)?.price || 0;
-
-    // 2. Get addons price (Your existing logic, renamed)
     const addonsPrice = pendingItem.addons.reduce((total, addon) => {
       const addonOption = masterAddOnOptions.find(option => option.name === addon);
       return total + (addonOption?.price || 0);
     }, 0);
-
-    return bunPrice + addonsPrice; // Return combined price
+    return bunPrice + addonsPrice;
   };
 
-  // --- UPDATED TOTAL PRICE (uses new function name) ---
   const totalPrice = (pendingItem.menuItem.price + calculateOptionsPrice()) * pendingItem.quantity;
   
-  // --- YOUR EXISTING VALIDATION LOGIC ---
+  // Your original validation logic
   const isMainSauceRequired = pendingItem.menuItem.requires_sauce && pendingItem.menuItem.category !== 'value' && !pendingItem.sauce;
   const isSauceCupSectionVisible = pendingItem.menuItem.is_combo || (pendingItem.menuItem.requires_sauce && pendingItem.menuItem.category === 'value');
   const isSauceCupRequired = isSauceCupSectionVisible && !pendingItem.sauceCup;
@@ -193,13 +178,12 @@ const ItemConfigurationCard = ({
 
   // --- UPDATED VALIDATION LOGIC ---
   const isBunRequired = isBurgerItem && availableBuns.length > 0 && !pendingItem.bunType;
-  // User cannot confirm while options are loading
   const isConfirmDisabled = isMainSauceRequired || isSauceCupRequired || isDrinkRequired || isBunRequired || loadingOptions;
 
   return (
     <Card className="border-none shadow-none bg-gray-800 text-white">
       <CardContent className="p-4 space-y-4">
-        {/* --- YOUR HEADER (UNTOUCHED) --- */}
+        {/* Your header (UNTOUCHED) */}
         <div className="flex items-center justify-between">
           <h4 className="font-medium text-lg text-white">
             {pendingItem.menuItem.name}
@@ -207,7 +191,7 @@ const ItemConfigurationCard = ({
           <span className="text-amber-400 font-bold text-lg">₾{totalPrice.toFixed(2)}</span>
         </div>
         
-        {/* --- NEW BUN SELECTION SECTION (FOR BURGERS ONLY) --- */}
+        {/* ADDED: BUN SELECTION */}
         {isBurgerItem && availableBuns.length > 0 && (
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -232,7 +216,7 @@ const ItemConfigurationCard = ({
           </div>
         )}
         
-        {/* --- Main Sauce (NOW USES FILTERED LIST) --- */}
+        {/* Main Sauce (NOW FULLY DYNAMIC) */}
         {pendingItem.menuItem.requires_sauce && pendingItem.menuItem.category !== 'value' && (
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -256,7 +240,7 @@ const ItemConfigurationCard = ({
           </div>
         )}
 
-        {/* --- Sauce Cup (NOW USES FILTERED LIST) --- */}
+        {/* Sauce Cup (NOW FULLY DYNAMIC) */}
         {isSauceCupSectionVisible && (
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -280,7 +264,7 @@ const ItemConfigurationCard = ({
           </div>
         )}
         
-        {/* --- Drink (NOW USES FILTERED LIST) --- */}
+        {/* Drink (NOW FULLY DYNAMIC) */}
         {pendingItem.menuItem.is_combo && (
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -304,7 +288,7 @@ const ItemConfigurationCard = ({
           </div>
         )}
 
-        {/* --- Add-ons (NOW USES FILTERED LIST) --- */}
+        {/* Add-ons (FILTERED) */}
         {isMainItem && (
           <div className="mb-3">
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -324,7 +308,6 @@ const ItemConfigurationCard = ({
                   </label>
                 </div>
               ))}
-              {/* --- Spicy (NOW CONDITIONAL) --- */}
               {isSpicyAvailable && (
                 <div className="flex items-center space-x-2">
                   <Checkbox
@@ -342,7 +325,7 @@ const ItemConfigurationCard = ({
           </div>
         )}
 
-        {/* --- YOUR QUANTITY SELECTOR (UNTOUCHED) --- */}
+        {/* Your Quantity Selector (UNTOUCHED) */}
         <div className="flex items-center justify-between mb-4 pt-4 border-t border-gray-700">
           <label className="text-sm font-medium text-gray-300">Quantity</label>
           <div className="flex items-center space-x-2">
@@ -367,7 +350,7 @@ const ItemConfigurationCard = ({
           </div>
         </div>
 
-        {/* --- YOUR REMARKS (UNTOUCHED) --- */}
+        {/* Your Remarks (UNTOUCHED) */}
         <div className="mb-3">
           {!showRemarks ? (
             <Button
@@ -400,13 +383,13 @@ const ItemConfigurationCard = ({
                 placeholder="Enter any special customer requests..."
                 value={pendingItem.remarks || ''}
                 onChange={(e) => handleRemarksChange(e.target.value)}
-                className="min-h-[80px] bg-gray-700 border-gray-60Good0 text-white"
+                className="min-h-[80px] bg-gray-700 border-gray-600 text-white"
               />
             </div>
           )}
         </div>
 
-        {/* --- YOUR ACTION BUTTONS (UNTOUCHED) --- */}
+        {/* Your Action Buttons (UNTOUCHED) */}
         <div className="flex space-x-2">
           <Button onClick={onConfirm} className="bg-green-600 hover:bg-green-700 flex-1" disabled={isConfirmDisabled}>
             {isEditing ? 'Update Item' : 'Add to Order'}
