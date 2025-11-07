@@ -2,10 +2,10 @@
 
 export const sauceOptions = [
   'None',
-  'Special Sauce',
+  'Saucer',
   'Hot Chili',
-  'BBQ',
-  'Garlic'
+  'Smokey BBQ',
+  'Creamy Garlic'
 ];
 
 export const drinkOptions = [
