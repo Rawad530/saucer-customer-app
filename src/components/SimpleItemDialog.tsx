@@ -70,7 +70,7 @@ const SimpleItemDialog = ({ item, onConfirm, onCancel }: SimpleItemDialogProps) 
         <Button onClick={() => onConfirm(quantity)} className="w-full bg-green-500 hover:bg-green-600">
           Add to Order
         </Button>
-        <Button onClick={onCancel} variant="outline" className="w-full">
+        <Button onClick={onCancel} variant="outline" className="w-full text-black hover:text-red-600">
           Cancel
         </Button>
       </div>
