@@ -21,6 +21,7 @@ import SimpleItemDialog from "../components/SimpleItemDialog";
 interface PendingItem {
  menuItem: MenuItem;
  quantity: number;
+ bunType?: string;
  sauce?: string;
  sauceCup?: string;
  drink?: string;
@@ -197,7 +198,8 @@ const OrderPage = () => {
     }
 
    const finalItem: OrderItem = {
-     menuItem: configuringItem.menuItem, 
+     menuItem: configuringItem.menuItem,
+     bunType: configuringItem.bunType,
      quantity: configuringItem.quantity, 
      sauce: configuringItem.sauce, 
      sauceCup: configuringItem.sauceCup, 
