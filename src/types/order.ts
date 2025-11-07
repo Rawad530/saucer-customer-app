@@ -28,6 +28,7 @@ export interface MenuItem {
 export interface OrderItem {
   menuItem: MenuItem;
   quantity: number;
+  bunType?: string;
   sauce?: string;
   sauceCup?: string;
   drink?: string;

@@ -136,6 +136,7 @@ const OrderHistoryPage = () => {
                                                   <span>₾{(item.menuItem.price * item.quantity).toFixed(2)}</span>
                                               </div>
                                               <div className="text-xs text-gray-400 pl-4">
+                                                  {item.bunType && <div>- Bun: {item.bunType}</div>}
                                                   {item.sauce && item.sauce !== 'None' && <div>- Sauce: {item.sauce}</div>}
                                                   {item.drink && <div>- Drink: {item.drink}</div>}
                                                   {/* --- 4. FIX ADDON DISPLAY AND PRICE --- */}

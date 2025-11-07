@@ -60,6 +60,7 @@ export const useCartStore = create<CartState>()(
         // Logic to merge quantities if the exact same item configuration exists
         const existingIndex = state.items.findIndex(existing =>
             existing.menuItem.id === item.menuItem.id &&
+            existing.bunType === item.bunType &&
             existing.sauce === item.sauce &&
             existing.sauceCup === item.sauceCup &&
             existing.drink === item.drink &&

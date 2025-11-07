@@ -8,12 +8,10 @@ interface OrderItemProps {
   index: number;
   onUpdateQuantity: (index: number, newQuantity: number) => void;
   onEdit: (index: number) => void;
-  // ADDED THIS PROP
-  addOnOptions: { name: string; price: number; }[];
+  addOnOptions: { name: string; price: number }[];
 }
 
 const OrderItem = ({ item, index, onUpdateQuantity, onEdit, addOnOptions }: OrderItemProps) => {
-  // This function now correctly uses the addOnOptions passed from the parent
   const calculateItemTotal = () => {
     let itemPrice = item.menuItem.price;
     item.addons.forEach(addonName => {
@@ -25,7 +23,6 @@ const OrderItem = ({ item, index, onUpdateQuantity, onEdit, addOnOptions }: Orde
 
   const itemTotalPrice = calculateItemTotal();
 
-  // The rest of your component's design remains, but with corrected types
   return (
     <Card className="bg-white">
       <CardContent className="p-3">
@@ -35,6 +32,11 @@ const OrderItem = ({ item, index, onUpdateQuantity, onEdit, addOnOptions }: Orde
               {item.menuItem.name}
             </h5>
             <div className="text-xs text-gray-600 space-y-0.5 mt-1">
+              
+              {/* THIS IS THE NEW LINE YOU ARE ADDING */}
+              {item.bunType && <p>Bun: {item.bunType}</p>}
+
+              {/* The rest of the code is the same */}
               {item.sauce && item.sauce !== 'None' && <p>Sauce: {item.sauce}</p>}
               {item.sauceCup && <p>Sauce Cup: {item.sauceCup}</p>}
               {item.drink && <p>Drink: {item.drink}</p>}
