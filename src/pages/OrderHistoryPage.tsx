@@ -1,3 +1,5 @@
+// src/pages/OrderHistoryPage.tsx
+
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Order, OrderItem, PaymentMode } from '../types/order';
@@ -5,12 +7,22 @@ import { Link } from 'react-router-dom';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, Tag, CreditCard, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-// --- 1. IMPORT YOUR ADD-ON DATA ---
-import { addOnOptions } from '@/data/menu'; 
+// We need both of these for the price calculations
+import { addOnOptions, bunOptions } from '@/data/menu'; 
 
-// --- 2. ADD THE SAME PRICE CALCULATION LOGIC ---
+// --- THIS IS THE NEW, CORRECT PRICE LOGIC ---
 const calculateItemPrice = (item: OrderItem) => {
   let price = item.menuItem.price;
+  
+  // 1. Add bun price (if it exists)
+  if (item.bunType) {
+    const bun = bunOptions.find(opt => opt.name === item.bunType);
+    if (bun) {
+      price += bun.price;
+    }
+  }
+
+  // 2. Add addons price
   if (item.addons) {
     item.addons.forEach(addonName => {
       const addon = addOnOptions.find(opt => opt.name === addonName);
@@ -19,9 +31,12 @@ const calculateItemPrice = (item: OrderItem) => {
       }
     });
   }
+  
+  // 3. Apply item-level discount (if any)
   if (item.discount) {
     price -= price * (item.discount / 100);
   }
+  
   return price * item.quantity;
 };
 
@@ -29,10 +44,19 @@ const calculateItemPrice = (item: OrderItem) => {
 const calculateOrderSubtotal = (items: OrderItem[]) => {
   if (!items) return 0;
   return items.reduce((total, item) => {
+    // We use the item's base price *without* addons or buns for subtotal
+    // (This matches your screenshot: 9.50 + 15.50 = 25.50... wait...
+    // No, your screenshot `image_abe76d.png` has a subtotal of 30.00.
+    // Let's re-check the math.
+    // Item 1: 9.50 (base) + 2.00 (cheese) + 1.00 (jalapeno) = 12.50
+    // Item 2: 15.50 (base) + 2.00 (cheese) = 17.50
+    // 12.50 + 17.50 = 30.00.
+    // OK. The subtotal *includes* addons. My mistake.
+    // The `calculateItemPrice` function is correct.
     return total + calculateItemPrice(item);
   }, 0);
 };
-// --- END FIX ---
+// --- END NEW PRICE LOGIC ---
 
 
 const OrderHistoryPage = () => {
@@ -96,18 +120,22 @@ const OrderHistoryPage = () => {
           <div className="space-y-4">
             {orders.map(order => {
               
-              // --- 3. FIX THE TOTALS CALCULATION ---
-              // We now calculate the subtotal ourselves, ignoring the broken one from the DB
+              // --- THIS IS THE NEW, CORRECT MATH FROM YOUR EXAMPLE ---
               const subtotal = calculateOrderSubtotal(order.items);
-              // The delivery fee is correct
-              const totalWithDelivery = subtotal + (order.delivery_fee || 0);
-              // The promo discount is calculated from the *real* subtotal
+              const deliveryFee = order.delivery_fee || 0;
+              const totalBeforeDiscount = subtotal + deliveryFee;
+              
+              // BUG FIX: Discount is based on SUBTOTAL, not totalBeforeDiscount
               const discountAmount = order.discount_applied_percent 
-                ? (totalWithDelivery * (order.discount_applied_percent / 100))
+                ? (subtotal * (order.discount_applied_percent / 100))
                 : 0;
-              // The final total is what the DB *should* have had
-              const finalTotal = totalWithDelivery - discountAmount - (order.wallet_credit_applied || 0);
-              // --- END FIX ---
+              
+              const totalAfterDiscount = totalBeforeDiscount - discountAmount;
+              const walletCreditUsed = order.wallet_credit_applied || 0;
+              
+              // This is the final amount the customer actually paid
+              const finalAmountPaid = totalAfterDiscount - walletCreditUsed;
+              // --- END NEW MATH ---
 
               return (
                   <Collapsible key={order.transaction_id} className="bg-gray-800 rounded-lg border border-gray-700">
@@ -118,8 +146,8 @@ const OrderHistoryPage = () => {
                               <p className="text-sm mt-2">Status: <span className="capitalize font-medium text-amber-400">{order.status.replace('_', ' ')}</span></p>
                           </div>
                           <div className="flex items-center gap-4">
-                              {/* --- FIX: Show the *real* total price --- */}
-                              <p className="font-semibold text-xl">₾{finalTotal.toFixed(2)}</p>
+                              {/* BUG FIX: Show the correct final total (Amount Paid) */}
+                              <p className="font-semibold text-xl">₾{finalAmountPaid.toFixed(2)}</p>
                               <ChevronDown className="h-5 w-5 transition-transform duration-300" />
                           </div>
                       </CollapsibleTrigger>
@@ -136,53 +164,71 @@ const OrderHistoryPage = () => {
                                                   <span>₾{(item.menuItem.price * item.quantity).toFixed(2)}</span>
                                               </div>
                                               <div className="text-xs text-gray-400 pl-4">
-                                                  {item.bunType && <div>- Bun: {item.bunType}</div>}
-                                                  {item.sauce && item.sauce !== 'None' && <div>- Sauce: {item.sauce}</div>}
-                                                  {item.drink && <div>- Drink: {item.drink}</div>}
-                                                  {/* --- 4. FIX ADDON DISPLAY AND PRICE --- */}
-                                                  {item.addons && item.addons.length > 0 && (
-                                                  <div>
-                                                      - Add-ons: {item.addons.map(addonName => {
-                                                        const addon = addOnOptions.find(opt => opt.name === addonName);
-                                                        return addon ? `${addonName} (+₾${(addon.price * item.quantity).toFixed(2)})` : addonName;
-                                                      }).join(', ')}
-                                                  </div>
-                                                  )}
-                                                  {item.spicy && <div>- Spicy</div>}
+                                                {/* This is the bun display fix */}
+                                                {item.bunType && <div>- Bun: {item.bunType}</div>}
+                                                {item.sauce && item.sauce !== 'None' && <div>- Sauce: {item.sauce}</div>}
+                                                {item.sauceCup && item.sauceCup !== 'None' && <div>- Sauce Cup: {item.sauceCup}</div>}
+                                                {item.drink && <div>- Drink: {item.drink}</div>}
+                                                {item.addons && item.addons.length > 0 && (
+                                                <div>
+                                                    - Add-ons: {item.addons.map(addonName => {
+                                                      const addon = addOnOptions.find(opt => opt.name === addonName);
+                                                      return addon ? `${addonName} (+₾${(addon.price * item.quantity).toFixed(2)})` : addonName;
+                                                    }).join(', ')}
+                                                </div>
+                                                )}
+                                                {item.spicy && <div>- Spicy</div>}
                                               </div>
                                           </div>
                                       ))}
                                   </div>
                               </div>
+                              
+                              {/* --- THIS IS THE NEW TOTALS BLOCK --- */}
                               <div className="border-t border-gray-700 pt-3 space-y-2">
-                                  {/* --- 5. FIX SUBTOTALS AND TOTALS --- */}
                                   <div className="flex justify-between items-center text-gray-300">
                                       <span>Subtotal</span>
                                       <span>₾{subtotal.toFixed(2)}</span>
                                   </div>
-                                  {order.delivery_fee && order.delivery_fee > 0 && (
+                                  
+                                  {deliveryFee > 0 && (
                                     <div className="flex justify-between items-center text-gray-300">
                                       <span>Delivery Fee</span>
-                                      <span>₾{order.delivery_fee.toFixed(2)}</span>
+                                      <span>₾{deliveryFee.toFixed(2)}</span>
                                     </div>
                                   )}
+
+                                  <div className="flex justify-between items-center text-gray-300 font-medium">
+                                      <span>Total (Before Discount)</span>
+                                      <span>₾{totalBeforeDiscount.toFixed(2)}</span>
+                                  </div>
+
                                   {order.promo_code_used && (
                                       <div className="flex justify-between items-center text-green-400">
                                           <span>Discount ({order.promo_code_used})</span>
                                           <span>- ₾{discountAmount.toFixed(2)}</span>
                                       </div>
                                   )}
-                                  {order.wallet_credit_applied && order.wallet_credit_applied > 0 && (
-                                      <div className="flex justify-between items-center text-green-400">
-                                          <span>Wallet Credit Used</span>
-                                          <span>- ₾{order.wallet_credit_applied.toFixed(2)}</span>
-                                      </div>
-                                  )}
+                                  
                                   <div className="flex justify-between items-center font-bold text-lg">
                                       <span>Total</span>
-                                      <span>₾{finalTotal.toFixed(2)}</span>
+                                      <span>₾{totalAfterDiscount.toFixed(2)}</span>
+                                  </div>
+
+                                  {walletCreditUsed > 0 && (
+                                      <div className="flex justify-between items-center text-green-400">
+                                          <span>Wallet Credit Used</span>
+                                          <span>- ₾{walletCreditUsed.toFixed(2)}</span>
+                                      </div>
+                                  )}
+
+                                  <div className="flex justify-between items-center font-bold text-xl text-amber-400 pt-2 border-t border-gray-700/50 mt-2">
+                                      <span>Amount Paid</span>
+                                      <span>₾{finalAmountPaid.toFixed(2)}</span>
                                   </div>
                               </div>
+                              {/* --- END NEW TOTALS BLOCK --- */}
+                              
                               <div className="flex justify-between items-center text-sm text-gray-400 border-t border-gray-700 pt-3">
                                   <Badge variant="outline" className={getPaymentBadgeClass(order.payment_mode)}>
                                       <CreditCard className="w-4 h-4 mr-2" />
