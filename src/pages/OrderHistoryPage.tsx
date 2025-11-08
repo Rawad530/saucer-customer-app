@@ -144,6 +144,11 @@ const OrderHistoryPage = () => {
                               <h2 className="font-bold text-lg break-all">Order #{order.order_number}</h2>
                               <p className="text-sm text-gray-400">{new Date(order.created_at).toLocaleString()}</p>
                               <p className="text-sm mt-2">Status: <span className="capitalize font-medium text-amber-400">{order.status.replace('_', ' ')}</span></p>
+                              {order.status === 'out_for_delivery' && order.estimated_delivery_minutes && (
+                              <p className="text-sm mt-1 text-blue-300 font-medium animate-pulse">
+                                Estimated Arrival: ~{order.estimated_delivery_minutes} minutes
+                              </p>
+                            )}
                           </div>
                           <div className="flex items-center gap-4">
                               {/* BUG FIX: Show the correct final total (Amount Paid) */}

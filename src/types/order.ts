@@ -75,4 +75,5 @@ export interface Order {
   order_type: string;
   rejection_reason?: string; // This was missing
   delivery_fee: number | null;
+  estimated_delivery_minutes?: number | null;
 }
