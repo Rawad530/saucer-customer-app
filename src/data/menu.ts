@@ -22,5 +22,5 @@ export const addOnOptions = [
 // This is the new array we need for the bun feature.
 export const bunOptions = [
   { name: 'Classic Bun', price: 0.00 },
-  { name: 'Saucer Bun', price: 0.00 }
+  { name: 'Saucer Bun', price: 1.00 }
 ];
