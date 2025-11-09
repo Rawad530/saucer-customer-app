@@ -167,7 +167,7 @@ const OrderHistoryPage = () => {
                           
                           </div>
                           <div className="flex items-center gap-4">
-                              {/* BUG FIX: Show the correct final total (Amount Paid) */}
+                              {/* BUG FIX: Show the correct final total (Total Amount) */}
                               <p className="font-semibold text-xl">₾{finalAmountPaid.toFixed(2)}</p>
                               <ChevronDown className="h-5 w-5 transition-transform duration-300" />
                           </div>
@@ -244,7 +244,7 @@ const OrderHistoryPage = () => {
                                   )}
 
                                   <div className="flex justify-between items-center font-bold text-xl text-amber-400 pt-2 border-t border-gray-700/50 mt-2">
-                                      <span>Amount Paid</span>
+                                      <span>Total Amount</span>
                                       <span>₾{finalAmountPaid.toFixed(2)}</span>
                                   </div>
                               </div>
