@@ -8,7 +8,19 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { ChevronDown, Tag, CreditCard, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 // We need both of these for the price calculations
-import { addOnOptions, bunOptions } from '@/data/menu'; 
+import { addOnOptions, bunOptions } from '@/data/menu';
+
+// --- ADD THIS NEW FUNCTION ---
+const getEtaTime = (startTime: Date, etaMinutes: number): string => {
+  const etaTime = new Date(startTime.getTime() + etaMinutes * 60000); // 60,000 ms in a minute
+  // Formats to 01:20 PM
+  return etaTime.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+};
+// --- END ---
 
 // --- THIS IS THE NEW, CORRECT PRICE LOGIC ---
 const calculateItemPrice = (item: OrderItem) => {
@@ -69,7 +81,7 @@ const OrderHistoryPage = () => {
       if (user) {
         const { data, error } = await supabase
           .from('transactions')
-          .select('*, rejection_reason')
+          .select('*, rejection_reason, delivery_started_at') // Added delivery_started_at
           .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
@@ -144,11 +156,15 @@ const OrderHistoryPage = () => {
                               <h2 className="font-bold text-lg break-all">Order #{order.order_number}</h2>
                               <p className="text-sm text-gray-400">{new Date(order.created_at).toLocaleString()}</p>
                               <p className="text-sm mt-2">Status: <span className="capitalize font-medium text-amber-400">{order.status.replace('_', ' ')}</span></p>
-                              {order.status === 'out_for_delivery' && order.estimated_delivery_minutes && (
-                              <p className="text-sm mt-1 text-blue-300 font-medium animate-pulse">
-                                Estimated Arrival: ~{order.estimated_delivery_minutes} minutes
-                              </p>
-                            )}
+                              
+                              {/* --- THIS IS THE NEW CALCULATED ETA --- */}
+                              {order.status === 'out_for_delivery' && order.estimated_delivery_minutes && order.delivery_started_at && (
+                                <p className="text-sm mt-1 text-blue-300 font-medium animate-pulse">
+                                  Estimated Arrival: {getEtaTime(new Date(order.delivery_started_at), order.estimated_delivery_minutes)}
+                                </p>
+                              )}
+                              {/* --- END NEW CODE --- */}
+                          
                           </div>
                           <div className="flex items-center gap-4">
                               {/* BUG FIX: Show the correct final total (Amount Paid) */}
