@@ -232,7 +232,7 @@ const OrderHistoryPage = () => {
                                   )}
                                   
                                   <div className="flex justify-between items-center font-bold text-lg">
-                                      <span>Total</span>
+                                      <span>Total Value</span>
                                       <span>₾{totalAfterDiscount.toFixed(2)}</span>
                                   </div>
 
@@ -244,7 +244,7 @@ const OrderHistoryPage = () => {
                                   )}
 
                                   <div className="flex justify-between items-center font-bold text-xl text-amber-400 pt-2 border-t border-gray-700/50 mt-2">
-                                      <span>Total Amount</span>
+                                      <span>Final Amount</span>
                                       <span>₾{finalAmountPaid.toFixed(2)}</span>
                                   </div>
                               </div>
