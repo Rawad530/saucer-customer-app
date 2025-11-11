@@ -4,17 +4,20 @@ import { Link } from 'react-router-dom';
 import {
   MapPin, Clock, Phone,
   Mail, MessageCircle,
-  Instagram, Facebook // <-- ADDED ICONS
+  Instagram, Facebook,
+  Tiktok // <-- 1. IMPORTED TIKTOK ICON
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const Footer = () => {
   const { t } = useLanguage();
 
-  // --- ADDED SOCIAL LINKS CONSTANT ---
+  // --- UPDATED SOCIAL LINKS CONSTANT ---
   const socialLinks = [
     { name: 'Instagram', href: 'https://www.instagram.com/saucerburger.ge/', icon: Instagram },
     { name: 'Facebook', href: 'https://www.facebook.com/saucerburger.ge/', icon: Facebook },
+    // -- 2. ADDED TIKTOK OBJECT --
+    { name: 'Tiktok', href: 'https://www.tiktok.com/@saucer.burger?_r=1&_t=ZS-91Jrci8GKLk', icon: Tiktok },
   ];
   // ------------------------------------
 
