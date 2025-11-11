@@ -13,8 +13,8 @@ const Footer = () => {
 
   // --- ADDED SOCIAL LINKS CONSTANT ---
   const socialLinks = [
-    { name: 'Instagram', href: 'https://www.instagram.com/saucerburger.ge/', icon: Instagram },
-    { name: 'Facebook', href: 'https://www.facebook.com/saucerburger.ge/', icon: Facebook },
+    { name: 'Instagram', href: 'https://www.instagram.com/saucerburger/', icon: Instagram },
+    { name: 'Facebook', href: 'https://www.facebook.com/saucer.burger', icon: Facebook },
   ];
   // ------------------------------------
 
