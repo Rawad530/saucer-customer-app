@@ -13,12 +13,12 @@ export const TikTokIcon = (props: SVGProps<SVGSVGElement>) => {
     strokeWidth: "2",
     strokeLinecap: "round",
     strokeLinejoin: "round",
-  } as const; // <-- This 'as const' fixes the TypeScript type error
+  } as const; 
 
   return (
     <svg {...defaultProps} {...props}>
-      <path d="M16 4.99a6.5 6.5 0 1 1-13 0a6.5 6.5 0 0 1 13 0z" />
-      <path d="M16 4.99v-1.5h-5.5a2.5 2.5 0 1 0 0 5h5.5v-1.5" />
+      {/* --- CORRECTED TIKTOK SVG PATH --- */}
+      <path d="M9 12a4 4 0 1 0 4 4v-12a5 5 0 0 0 5 5" />
     </svg>
   );
 };
