@@ -1,28 +1,34 @@
 // src/components/Footer.tsx
 
 import { Link } from 'react-router-dom';
-import { 
-  MapPin, Clock, Phone, 
-  Mail, MessageCircle 
+import {
+  MapPin, Clock, Phone,
+  Mail, MessageCircle,
+  Instagram, Facebook // <-- ADDED ICONS
 } from 'lucide-react';
-import { useLanguage } from '../contexts/LanguageContext'; // <-- 1. IMPORT THE HOOK
+import { useLanguage } from '../contexts/LanguageContext';
 
 const Footer = () => {
-  const { t } = useLanguage(); // <-- 2. USE THE HOOK (removed language and setLanguage)
+  const { t } = useLanguage();
 
-  // 3. REMOVED THE LANGUAGE BUTTON COMPONENT
+  // --- ADDED SOCIAL LINKS CONSTANT ---
+  const socialLinks = [
+    { name: 'Instagram', href: 'https://www.instagram.com/saucerburger.ge/', icon: Instagram },
+    { name: 'Facebook', href: 'https://www.facebook.com/saucerburger.ge/', icon: Facebook },
+  ];
+  // ------------------------------------
 
   return (
     <footer className="bg-gray-800 mt-auto border-t border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
+
           {/* --- COLUMN 1: CONTACT (NOW TRANSLATED) --- */}
           <div>
             <h4 className="text-lg font-semibold text-amber-400 mb-4">{t.footer_contactLocation}</h4>
             <div className="space-y-2 text-gray-400 text-sm">
               <a
-                href="https://maps.google.com/?cid=11266092328424134394&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ" // Corrected link
+                href="https://maps.google.com/?cid=11266092328424134394&g_mp=Cidnb29nbGUubWFwcy5wbGFjZXMudjEuUGxhY2VzLlNlYXJjaFRleHQ"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 hover:text-white transition-colors"
@@ -30,8 +36,7 @@ const Footer = () => {
                 <MapPin className="w-4 h-4" /> {t.footer_address_line1}, {t.footer_address_line2}
               </a>
               <p className="flex items-center gap-2"><Clock className="w-4 h-4" /> {t.footer_hours} 02:00 PM - 12:00 AM</p>
-              
-              {/* ===== START: UPDATED CONTACT LINKS (NOW TRANSLATED) ===== */}
+
               <a href="tel:+995591229658" className="flex items-center gap-2 hover:text-white transition-colors pt-1">
                 <Phone className="w-4 h-4" />
                 <span>{t.footer_callUs}</span>
@@ -40,15 +45,13 @@ const Footer = () => {
                 <Mail className="w-4 h-4" />
                 <span>{t.footer_mailUs}</span>
               </a>
-              <a href="https://wa.me/995591229658" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
+              <a href="httpsInd://wa.me/995591229658" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
                 <MessageCircle className="w-4 h-4" />
                 <span>{t.footer_chatUs}</span>
               </a>
-              {/* ===== END: UPDATED CONTACT LINKS ===== */}
-              
             </div>
           </div>
-          
+
           {/* --- COLUMN 2: QUICK LINKS (NOW TRANSLATED) --- */}
           <div>
             <h4 className="text-lg font-semibold text-amber-400 mb-4">{t.footer_quickLinks}</h4>
@@ -61,15 +64,33 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* --- COLUMN 3: BRAND (NOW TRANSLATED) --- */}
+          {/* --- COLUMN 3: BRAND (NOW TRANSLATED & WITH SOCIALS) --- */}
           <div>
             <h4 className="text-lg font-semibold text-amber-400 mb-4">{t.footer_saucerBurger}</h4>
             <p className="text-gray-400 text-sm">{t.footer_tagline}</p>
-            
-            {/* 4. REMOVED THE LANGUAGE BUTTONS */}
+
+            {/* ===== NEW SOCIAL MEDIA SECTION (FIXED) ===== */}
+            <h4 className="text-lg font-semibold text-amber-400 mb-4 mt-6">
+              {t.footer_followUs}
+            </h4>
+            <div className="flex gap-4">
+              {socialLinks.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-white transition-colors"
+                  aria-label={`Follow us on ${item.name}`}
+                >
+                  <item.icon className="h-6 w-6" />
+                </a>
+              ))}
+            </div>
+            {/* ===== END OF NEW SECTION ===== */}
           </div>
         </div>
-        
+
         <div className="mt-8 text-center text-gray-500 text-xs border-t border-gray-700 pt-6">
           © {new Date().getFullYear()} Saucer Burger. All rights reserved.
         </div>

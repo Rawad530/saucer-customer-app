@@ -63,6 +63,7 @@ export const translations = {
     footer_callUs: "Call us",
     footer_mailUs: "Mail us",
     footer_chatUs: "Chat with us",
+    footer_followUs: "Follow Us",
 
     // --- Account Page ---
     account_loading: "Loading Dashboard...",
@@ -321,6 +322,8 @@ export const translations = {
     footer_callUs: "დაგვირეკეთ",
     footer_mailUs: "მოგვწერეთ",
     footer_chatUs: "მოგვწერეთ ჩატში",
+    footer_followUs: "გამოგვყევით",
+    
 
     // --- Account Page ---
     account_loading: "დაფის ჩატვირთვა...",

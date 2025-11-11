@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
-import { 
-  Award, Wallet, History, Truck, Bell, ArrowRight, Menu, X, 
-  Phone, Mail, MessageCircle  // <-- ADDED NEW ICONS
+import {
+  Award, Wallet, History, Truck, Bell, ArrowRight, Menu, X,
+  Phone, Mail, MessageCircle,
+  Instagram, Facebook // <-- ADDED ICONS
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -13,6 +14,13 @@ const LandingPage = () => {
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
+
+  // --- ADDED SOCIAL LINKS CONSTANT ---
+  const socialLinks = [
+    { name: 'Instagram', href: 'https://www.instagram.com/saucerburger/', icon: Instagram },
+    { name: 'Facebook', href: 'https://www.facebook.com/saucer.burger', icon: Facebook },
+  ];
+  // ------------------------------------
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -108,6 +116,7 @@ const LandingPage = () => {
         )}
       </header>
       <main>
+        {/* ... (Hero, Benefits, Story, Sauces sections remain unchanged) ... */}
         <section className="bg-gray-900 pt-20 lg:pt-32 pb-10 lg:pb-16">
           <div className="container mx-auto px-4 text-center">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-amber-400 mb-6">{t.hero_title}</h1>
@@ -196,7 +205,6 @@ const LandingPage = () => {
               <div className="flex flex-col space-y-2">
                 <a href="#" className="text-gray-400 hover:text-white hover:underline">{t.footer_home}</a>
                 <Link to="/order" className="text-gray-400 hover:text-white hover:underline">{t.footer_fullMenu}</Link>
-                {/* --- ADDED POLICY LINKS FOR BOG COMPLIANCE --- */}
                 <Link to="/terms-of-use" className="text-gray-400 hover:text-white hover:underline">
                   {t.footer_terms}
                 </Link>
@@ -206,10 +214,8 @@ const LandingPage = () => {
                 <Link to="/privacy-policy" className="text-gray-400 hover:text-white hover:underline">
                   {t.footer_privacy}
                 </Link>
-                {/* ------------------------------------------------ */}
               </div>
             </div>
-            {/* ===== UPDATED CONTACT SECTION ===== */}
             <div>
               <h4 className="text-xl font-bold text-amber-400 mb-4">{t.footer_contactUs}</h4>
               <div className="flex flex-col space-y-2 items-center md:items-start">
@@ -227,8 +233,30 @@ const LandingPage = () => {
                 </a>
               </div>
             </div>
-            {/* ===== END OF UPDATED SECTION ===== */}
           </div>
+
+          {/* ===== NEW SOCIAL MEDIA SECTION ===== */}
+          <div className="mt-10 pt-8 border-t border-gray-700 text-center">
+            <h4 className="text-xl font-bold text-amber-400 mb-4">
+              {t.footer_followUs || 'Follow Us'}
+            </h4>
+            <div className="flex justify-center gap-6">
+              {socialLinks.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gray-400 hover:text-white transition-colors"
+                  aria-label={`Follow us on ${item.name}`}
+                >
+                  <item.icon className="h-6 w-6" />
+                </a>
+              ))}
+            </div>
+          </div>
+          {/* ===== END OF NEW SECTION ===== */}
+
         </div>
       </footer>
     </div>
