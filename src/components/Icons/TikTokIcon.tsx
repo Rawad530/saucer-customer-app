@@ -1,8 +1,6 @@
 import { SVGProps } from 'react';
 
-// This component mimics the props of a lucide-react icon
 export const TikTokIcon = (props: SVGProps<SVGSVGElement>) => {
-  // Default Lucide props that can be overridden by `props`
   const defaultProps = {
     xmlns: "http://www.w3.org/2000/svg",
     width: "24",
@@ -13,12 +11,12 @@ export const TikTokIcon = (props: SVGProps<SVGSVGElement>) => {
     strokeWidth: "2",
     strokeLinecap: "round",
     strokeLinejoin: "round",
-  } as const; 
+  } as const;
 
   return (
     <svg {...defaultProps} {...props}>
-      {/* --- CORRECTED TIKTOK SVG PATH --- */}
-      <path d="M9 12a4 4 0 1 0 4 4v-12a5 5 0 0 0 5 5" />
+      {/* Official TikTok “note” – scaled to fill the 24×24 box */}
+      <path d="M12 3.5v8a3.5 3.5 0 1 0 3.5 3.5V8.5a5.5 5.5 0 0 0 5.5-5.5h-2a3.5 3.5 0 0 1-3.5 3.5V3.5" />
     </svg>
   );
 };
