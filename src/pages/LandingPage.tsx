@@ -6,19 +6,21 @@ import { supabase } from '../lib/supabaseClient';
 import {
   Award, Wallet, History, Truck, Bell, ArrowRight, Menu, X,
   Phone, Mail, MessageCircle,
-  Instagram, Facebook // <-- ADDED ICONS
+  Instagram, Facebook
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { TikTokIcon } from '../components/Icons/TikTokIcon'; // <-- 1. IMPORTED TIKTOK ICON
 
 const LandingPage = () => {
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { language, setLanguage, t } = useLanguage();
 
-  // --- ADDED SOCIAL LINKS CONSTANT ---
+  // --- UPDATED SOCIAL LINKS CONSTANT ---
   const socialLinks = [
     { name: 'Instagram', href: 'https://www.instagram.com/saucerburger/', icon: Instagram },
     { name: 'Facebook', href: 'https://www.facebook.com/saucer.burger', icon: Facebook },
+    { name: 'Tiktok', href: 'https://www.tiktok.com/@saucer.burger?_r=1&_t=ZS-91Jrci8GKLk', icon: TikTokIcon }, // <-- 2. ADDED TIKTOK
   ];
   // ------------------------------------
 

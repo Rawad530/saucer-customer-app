@@ -1,23 +1,20 @@
-// src/components/Footer.tsx
-
 import { Link } from 'react-router-dom';
 import {
   MapPin, Clock, Phone,
   Mail, MessageCircle,
-  Instagram, Facebook,
-  Tiktok // <-- 1. IMPORTED TIKTOK ICON
+  Instagram, Facebook
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { TikTokIcon } from './Icons/TikTokIcon'; // <-- 1. IMPORTED TIKTOK ICON
 
 const Footer = () => {
   const { t } = useLanguage();
 
   // --- UPDATED SOCIAL LINKS CONSTANT ---
   const socialLinks = [
-    { name: 'Instagram', href: 'https://www.instagram.com/saucerburger.ge/', icon: Instagram },
-    { name: 'Facebook', href: 'https://www.facebook.com/saucerburger.ge/', icon: Facebook },
-    // -- 2. ADDED TIKTOK OBJECT --
-    { name: 'Tiktok', href: 'https://www.tiktok.com/@saucer.burger?_r=1&_t=ZS-91Jrci8GKLk', icon: Tiktok },
+    { name: 'Instagram', href: 'https://www.instagram.com/saucerburger/', icon: Instagram },
+    { name: 'Facebook', href: 'https://www.facebook.com/saucer.burger', icon: Facebook },
+    { name: 'Tiktok', href: 'https://www.tiktok.com/@saucer.burger?_r=1&_t=ZS-91Jrci8GKLk', icon: TikTokIcon }, // <-- 2. ADDED TIKTOK
   ];
   // ------------------------------------
 
