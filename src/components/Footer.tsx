@@ -13,8 +13,8 @@ const Footer = () => {
 
   // --- ADDED SOCIAL LINKS CONSTANT ---
   const socialLinks = [
-    { name: 'Instagram', href: 'https://www.instagram.com/saucerburger/', icon: Instagram },
-    { name: 'Facebook', href: 'https://www.facebook.com/saucer.burger', icon: Facebook },
+    { name: 'Instagram', href: 'https://www.instagram.com/saucerburger.ge/', icon: Instagram },
+    { name: 'Facebook', href: 'https://www.facebook.com/saucerburger.ge/', icon: Facebook },
   ];
   // ------------------------------------
 
@@ -45,7 +45,7 @@ const Footer = () => {
                 <Mail className="w-4 h-4" />
                 <span>{t.footer_mailUs}</span>
               </a>
-              <a href="httpsInd://wa.me/995591229658" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
+              <a href="https://wa.me/995591229658" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
                 <MessageCircle className="w-4 h-4" />
                 <span>{t.footer_chatUs}</span>
               </a>
