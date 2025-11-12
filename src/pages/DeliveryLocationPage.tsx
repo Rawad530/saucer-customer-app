@@ -22,418 +22,441 @@ const TIER_2_FEE = 5;
 const MAP_CENTER = { lat: RESTAURANT_LAT, lng: RESTAURANT_LNG };
 const MAP_ZOOM = 14;
 const MAP_CONTAINER_STYLE = {
-  width: '100%',
-  height: '350px',
-  borderRadius: '0.375rem',
-  border: '1px solid #4B5563',
+  width: '100%',
+  height: '350px',
+  borderRadius: '0.375rem',
+  border: '1px solid #4B5563',
 };
 const libraries: ('places' | 'geometry' | 'geocoding' | 'routes')[] = ['places', 'geometry', 'geocoding', 'routes'];
 // --- End Configuration ---
 
 interface DeliveryDetails {
-  addressText: string;
-  gmapsLink: string;
-  lat: number;
-  lng: number;
-  building?: string;
-  level?: string;
-  unit?: string;
-  notes?: string;
-  deliveryFee: number;
+  addressText: string;
+  gmapsLink: string;
+  lat: number;
+  lng: number;
+  building?: string;
+  level?: string;
+  unit?: string;
+  notes?: string;
+  deliveryFee: number;
+  contactPhone: string; // --- ADDED ---
 }
 
 const DeliveryLocationPage = () => {
-  const navigate = useNavigate();
-  const setDeliveryDetailsStore = useCartStore((state) => state.setDeliveryDetails); 
-  const [userAddress, setUserAddress] = useState('');
-  const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
-  const [distanceText, setDistanceText] = useState<string | null>(null);
-  const [isWithinRadius, setIsWithinRadius] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isMapLoading, setIsMapLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const [deliveryFee, setDeliveryFee] = useState(0);
-  const [gmapsLink, setGmapsLink] = useState('');
-  const [building, setBuilding] = useState('');
-  const [level, setLevel] = useState('');
-  const [unit, setUnit] = useState('');
-  const [notes, setNotes] = useState('');
-  const [session, setSession] = useState<Session | null>(null);
+  const navigate = useNavigate();
+  const setDeliveryDetailsStore = useCartStore((state) => state.setDeliveryDetails); 
+  const [userAddress, setUserAddress] = useState('');
+  const [markerPosition, setMarkerPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [distanceText, setDistanceText] = useState<string | null>(null);
+  const [isWithinRadius, setIsWithinRadius] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isMapLoading, setIsMapLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [geocoder, setGeocoder] = useState<google.maps.Geocoder | null>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const [deliveryFee, setDeliveryFee] = useState(0);
+  const [gmapsLink, setGmapsLink] = useState('');
+  const [building, setBuilding] = useState('');
+  const [level, setLevel] = useState('');
+  const [unit, setUnit] = useState('');
+  const [notes, setNotes] = useState('');
+  const [session, setSession] = useState<Session | null>(null);
+  const [contactPhone, setContactPhone] = useState(''); // --- ADDED ---
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
-    libraries: libraries,
-  });
+  const { isLoaded, loadError } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    libraries: libraries,
+  });
 
-  useEffect(() => {
-    if (isLoaded && window.google) {
-      setGeocoder(new google.maps.Geocoder());
-      setIsMapLoading(false);
-    }
-    const fetchSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-    };
-    fetchSession();
-  }, [isLoaded]);
+  useEffect(() => {
+    if (isLoaded && window.google) {
+      setGeocoder(new google.maps.Geocoder());
+      setIsMapLoading(false);
+    }
+    const fetchSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+    };
+    fetchSession();
+  }, [isLoaded]);
 
-  const checkDistanceAndGetAddress = useCallback((latLng: { lat: number; lng: number }) => {
-    if (!isLoaded || !window.google || !geocoder || !latLng) {
-      console.warn("Google Maps script or geocoder not ready or LatLng missing.");
-      setErrorMessage("Map service not ready. Please wait or try again.");
-      setIsLoading(false);
-      return;
-    }
+  const checkDistanceAndGetAddress = useCallback((latLng: { lat: number; lng: number }) => {
+    if (!isLoaded || !window.google || !geocoder || !latLng) {
+      console.warn("Google Maps script or geocoder not ready or LatLng missing.");
+      setErrorMessage("Map service not ready. Please wait or try again.");
+      setIsLoading(false);
+      return;
+    }
 
-    setIsLoading(true);
-    setErrorMessage('');
-    setIsWithinRadius(null);
-    setDistanceText(null);
-    setDeliveryFee(0);
-    setUserAddress('');
-    setGmapsLink('');
+    setIsLoading(true);
+    setErrorMessage('');
+    setIsWithinRadius(null);
+    setDistanceText(null);
+    setDeliveryFee(0);
+    setUserAddress('');
+    setGmapsLink('');
 
-    // --- YOUR CORRECT LINK ---
-    const link = `https://www.google.com/maps/?q=${latLng.lat},${latLng.lng}&z=18`;
-    setGmapsLink(link);
+    // --- YOUR CORRECT LINK ---
+    const link = `https://www.google.com/maps/?q=${latLng.lat},${latLng.lng}&z=18`;
+    setGmapsLink(link);
 
-    geocoder.geocode({ location: latLng }, (results, status) => {
-      let formattedAddress = `Lat: ${latLng.lat.toFixed(4)}, Lng: ${latLng.lng.toFixed(4)}`;
-      if (status === 'OK' && results?.[0]) {
-        formattedAddress = results[0].formatted_address;
-        setUserAddress(formattedAddress);
-      } else {
-        setUserAddress(formattedAddress);
-        console.warn('Reverse geocode failed:', status);
-      }
+    geocoder.geocode({ location: latLng }, (results, status) => {
+      let formattedAddress = `Lat: ${latLng.lat.toFixed(4)}, Lng: ${latLng.lng.toFixed(4)}`;
+      if (status === 'OK' && results?.[0]) {
+        formattedAddress = results[0].formatted_address;
+        setUserAddress(formattedAddress);
+      } else {
+        setUserAddress(formattedAddress);
+        console.warn('Reverse geocode failed:', status);
+      }
 
-      const service = new google.maps.DistanceMatrixService();
-      service.getDistanceMatrix(
-        {
-          origins: [MAP_CENTER],
-          destinations: [latLng],
-          travelMode: google.maps.TravelMode.DRIVING,
-        },
-        (response, matrixStatus) => {
-          setIsLoading(false);
-          if (matrixStatus === 'OK' && response?.rows[0]?.elements[0]?.status === 'OK') {
-            const element = response.rows[0].elements[0];
-            const distanceInMeters = element.distance.value;
-            const distanceKm = (distanceInMeters / 1000).toFixed(1);
+      const service = new google.maps.DistanceMatrixService();
+      service.getDistanceMatrix(
+        {
+          origins: [MAP_CENTER],
+          destinations: [latLng],
+          travelMode: google.maps.TravelMode.DRIVING,
+        },
+        (response, matrixStatus) => {
+          setIsLoading(false);
+          if (matrixStatus === 'OK' && response?.rows[0]?.elements[0]?.status === 'OK') {
+            const element = response.rows[0].elements[0];
+            const distanceInMeters = element.distance.value;
+            const distanceKm = (distanceInMeters / 1000).toFixed(1);
 
-            setDistanceText(`${distanceKm} km`);
-            const within = distanceInMeters <= DELIVERY_RADIUS_METERS;
-            setIsWithinRadius(within);
+            setDistanceText(`${distanceKm} km`);
+            const within = distanceInMeters <= DELIVERY_RADIUS_METERS;
+            setIsWithinRadius(within);
 
-            if (within) {
-              if (distanceInMeters <= TIER_1_BOUNDARY_METERS) {
-                setDeliveryFee(TIER_1_FEE);
-              } else {
-                setDeliveryFee(TIER_2_FEE);
-              }
-            } else {
-              setDeliveryFee(0);
-              setErrorMessage(`Sorry, that location is approximately ${distanceKm}km driving distance away, outside our ${DELIVERY_RADIUS_METERS / 1000}km radius.`);
-            }
-          } else {
-            setErrorMessage('Could not calculate driving distance. Please check the location or try again.');
-            console.error('Distance Matrix failed:', matrixStatus, response);
-            setIsWithinRadius(null);
-          }
-        }
-      );
-    });
-  }, [isLoaded, geocoder]);
-
-
-  const onLoad = useCallback((map: google.maps.Map) => { mapRef.current = map; }, []);
-  const onUnmount = useCallback(() => { mapRef.current = null; }, []);
-
-  const onMapClick = useCallback((event: google.maps.MapMouseEvent) => {
-    if (event.latLng) {
-      const lat = event.latLng.lat();
-      const lng = event.latLng.lng();
-      const newPosition = { lat, lng };
-      setMarkerPosition(newPosition);
-      checkDistanceAndGetAddress(newPosition);
-    }
-  }, [checkDistanceAndGetAddress]);
-
-  const onMarkerDragEnd = useCallback((event: google.maps.MapMouseEvent) => {
-     if (event.latLng) {
-      const lat = event.latLng.lat();
-      const lng = event.latLng.lng();
-      const newPosition = { lat, lng };
-      checkDistanceAndGetAddress(newPosition);
-    }
-  }, [checkDistanceAndGetAddress]);
+            if (within) {
+              if (distanceInMeters <= TIER_1_BOUNDARY_METERS) {
+                setDeliveryFee(TIER_1_FEE);
+              } else {
+                setDeliveryFee(TIER_2_FEE);
+              }
+            } else {
+              setDeliveryFee(0);
+              setErrorMessage(`Sorry, that location is approximately ${distanceKm}km driving distance away, outside our ${DELIVERY_RADIUS_METERS / 1000}km radius.`);
+            }
+          } else {
+            setErrorMessage('Could not calculate driving distance. Please check the location or try again.');
+            console.error('Distance Matrix failed:', matrixStatus, response);
+            setIsWithinRadius(null);
+          }
+        }
+      );
+    });
+  }, [isLoaded, geocoder]);
 
 
-  const handleCheckAddress = useCallback(() => {
-    if (!userAddress || !geocoder) return;
-    setIsLoading(true);
-    setErrorMessage('');
-    geocoder.geocode({ address: userAddress }, (results, status) => {
-      if (status === 'OK' && results?.[0]?.geometry?.location) {
-        const location = results[0].geometry.location;
-        const lat = location.lat();
-        const lng = location.lng();
-        const newPosition = { lat, lng };
-        setMarkerPosition(newPosition);
-        mapRef.current?.panTo(newPosition);
-        mapRef.current?.setZoom(16);
-        checkDistanceAndGetAddress(newPosition);
-      } else {
-        setErrorMessage('Could not find location for the address entered. Please try again or place a pin on the map.');
-        setIsLoading(false);
-        setMarkerPosition(null);
-        setIsWithinRadius(null);
-        setDistanceText(null);
-        setGmapsLink('');
-      }
-    });
-  }, [userAddress, geocoder, checkDistanceAndGetAddress]);
+  const onLoad = useCallback((map: google.maps.Map) => { mapRef.current = map; }, []);
+  const onUnmount = useCallback(() => { mapRef.current = null; }, []);
+
+  const onMapClick = useCallback((event: google.maps.MapMouseEvent) => {
+    if (event.latLng) {
+      const lat = event.latLng.lat();
+      const lng = event.latLng.lng();
+      const newPosition = { lat, lng };
+      setMarkerPosition(newPosition);
+      checkDistanceAndGetAddress(newPosition);
+    }
+  }, [checkDistanceAndGetAddress]);
+
+  const onMarkerDragEnd = useCallback((event: google.maps.MapMouseEvent) => {
+     if (event.latLng) {
+      const lat = event.latLng.lat();
+      const lng = event.latLng.lng();
+      const newPosition = { lat, lng };
+      checkDistanceAndGetAddress(newPosition);
+    }
+  }, [checkDistanceAndGetAddress]);
 
 
-  const handleProceedToOrder = () => {
-    if (isWithinRadius && markerPosition) {
-      
-      // --- VALIDATION ---
-      if (!building.trim() || !level.trim() || !unit.trim()) {
-        setErrorMessage("Please fill in all required fields: Building, Level, and Unit.");
-        return; 
-      }
-      setErrorMessage(''); 
-      // --- END VALIDATION ---
-
-      const finalAddress = userAddress || `Location (${markerPosition.lat.toFixed(4)}, ${markerPosition.lng.toFixed(4)})`;
-
-      const deliveryData: DeliveryDetails = {
-        addressText: finalAddress,
-        gmapsLink: gmapsLink,
-        lat: markerPosition.lat,
-        lng: markerPosition.lng,
-        building: building.trim(),
-        level: level.trim(),
-        unit: unit.trim(),
-        notes: notes.trim(),
-        deliveryFee: deliveryFee
-      };
-
-      setDeliveryDetailsStore(deliveryData);
-      navigate('/order'); 
-
-    } else {
-        alert("Please select a valid delivery location within the radius first.");
-    }
-  };
+  const handleCheckAddress = useCallback(() => {
+    if (!userAddress || !geocoder) return;
+    setIsLoading(true);
+    setErrorMessage('');
+    geocoder.geocode({ address: userAddress }, (results, status) => {
+      if (status === 'OK' && results?.[0]?.geometry?.location) {
+        const location = results[0].geometry.location;
+        const lat = location.lat();
+        const lng = location.lng();
+        const newPosition = { lat, lng };
+        setMarkerPosition(newPosition);
+        mapRef.current?.panTo(newPosition);
+        mapRef.current?.setZoom(16);
+        checkDistanceAndGetAddress(newPosition);
+      } else {
+        setErrorMessage('Could not find location for the address entered. Please try again or place a pin on the map.');
+        setIsLoading(false);
+        setMarkerPosition(null);
+        setIsWithinRadius(null);
+        setDistanceText(null);
+        setGmapsLink('');
+      }
+    });
+  }, [userAddress, geocoder, checkDistanceAndGetAddress]);
 
 
-  if (loadError) {
-    return <div className="text-red-500 text-center p-8">Error loading Google Maps script. Please check your API key setup and internet connection.</div>;
-  }
-  if (!isLoaded || isMapLoading) {
-    return <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white"><Loader2 className="animate-spin h-8 w-8 mr-2" /> Loading Map...</div>;
-  }
+  const handleProceedToOrder = () => {
+    if (isWithinRadius && markerPosition) {
+      
+      // --- VALIDATION (MODIFIED) ---
+      if (!contactPhone.trim() || !building.trim() || !level.trim() || !unit.trim()) {
+        setErrorMessage("Please fill in all required fields: Contact Phone, Building, Level, and Unit.");
+        return; 
+      }
+      setErrorMessage(''); 
+      // --- END MODIFICATION ---
+
+      const finalAddress = userAddress || `Location (${markerPosition.lat.toFixed(4)}, ${markerPosition.lng.toFixed(4)})`;
+
+      const deliveryData: DeliveryDetails = {
+        addressText: finalAddress,
+        gmapsLink: gmapsLink,
+        lat: markerPosition.lat,
+        lng: markerPosition.lng,
+        building: building.trim(),
+        level: level.trim(),
+        unit: unit.trim(),
+        notes: notes.trim(),
+        deliveryFee: deliveryFee,
+        contactPhone: contactPhone.trim() // --- ADDED ---
+      };
+
+      setDeliveryDetailsStore(deliveryData);
+      navigate('/order'); 
+
+    } else {
+        alert("Please select a valid delivery location within the radius first.");
+    }
+  };
 
 
-  return (
-    <div className="flex justify-center items-start py-12 min-h-screen bg-gray-900">
-      <Card className="w-full max-w-2xl bg-gray-800 border-gray-700 text-white">
-        <CardHeader>
-          <CardTitle className="text-2xl text-amber-400 flex items-center gap-2">
-            <MapPin className="w-6 h-6" /> Delivery Location
-          </CardTitle>
-          <CardDescription className="text-gray-300">
-            Enter your address or click/drag the pin on the map to check if you're within our 5km driving distance radius.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+  if (loadError) {
+    return <div className="text-red-500 text-center p-8">Error loading Google Maps script. Please check your API key setup and internet connection.</div>;
+  }
+  if (!isLoaded || isMapLoading) {
+    return <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white"><Loader2 className="animate-spin h-8 w-8 mr-2" /> Loading Map...</div>;
+  }
 
-          {/* Map */}
-          <div style={MAP_CONTAINER_STYLE} className="bg-gray-700 flex items-center justify-center">
-              <GoogleMap
-                mapContainerStyle={MAP_CONTAINER_STYLE}
-                center={MAP_CENTER}
-                zoom={MAP_ZOOM}
-                onLoad={onLoad}
-                onUnmount={onUnmount}
-                onClick={onMapClick}
-                options={{
-                  streetViewControl: false,
-                  mapTypeControl: false,
-                  fullscreenControl: false,
-                  zoomControl: true,
-                }}
-              >
-                <MarkerF position={MAP_CENTER} title="Saucer Burger" />
-                {markerPosition && (
-                  <MarkerF
-                    position={markerPosition}
-                    draggable={true}
-                    onDragEnd={onMarkerDragEnd}
-                  />
-                )}
-              </GoogleMap>
-          </div>
 
-          {/* Address Input */}
-          <div>
-            <label htmlFor="address" className="block text-sm font-medium text-gray-300 mb-1">
-              Enter Delivery Address or Place Pin
-            </label>
-            <div className="flex gap-2">
-              <Input
-                id="address"
-                type="text"
-                placeholder="e.g., 123 Petre Kavtaradze St, Tbilisi"
-                value={userAddress}
-                onChange={(e) => {
-                  setUserAddress(e.target.value);
-                  setIsWithinRadius(null);
-                  setDistanceText(null);
-                  setErrorMessage('');
-                  setGmapsLink('');
-                }}
-                className="flex-grow bg-gray-700 border-gray-600 text-white"
-                disabled={isLoading}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleCheckAddress(); }}
-              />
-              <Button
-                onClick={handleCheckAddress}
-                disabled={!userAddress || isLoading || !geocoder}
-                className="bg-amber-600 hover:bg-amber-700 shrink-0 w-[80px]"
-              >
-                {isLoading ? <Loader2 className="animate-spin h-4 w-4 mx-auto" /> : 'Check'}
-              </Button>
-            </div>
-          </div>
+  return (
+    <div className="flex justify-center items-start py-12 min-h-screen bg-gray-900">
+      <Card className="w-full max-w-2xl bg-gray-800 border-gray-700 text-white">
+        <CardHeader>
+          <CardTitle className="text-2xl text-amber-400 flex items-center gap-2">
+            <MapPin className="w-6 h-6" /> Delivery Location
+          </CardTitle>
+          <CardDescription className="text-gray-300">
+            Enter your address or click/drag the pin on the map to check if you're within our 5km driving distance radius.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
 
-          {/* Detailed Address Fields */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-700">
-            <div>
-              <Label htmlFor="building" className="text-sm font-medium text-gray-300">
-                Building / Villa / Compound <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="building"
-                value={building}
-                onChange={(e) => {
-                  setBuilding(e.target.value);
-                  if (errorMessage) setErrorMessage('');
-                }}
-                placeholder="e.g., Tower A, Villa 12"
-                className="mt-1 bg-gray-700 border-gray-600 text-white"
-                disabled={isLoading}
-              />
-            </div>
-            <div>
-              <Label htmlFor="level" className="text-sm font-medium text-gray-300">
-                Level / Floor <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="level"
-                value={level}
-                onChange={(e) => {
-                  setLevel(e.target.value);
-                  if (errorMessage) setErrorMessage('');
-                }}
-                placeholder="e.g., 3rd Floor"
-                className="mt-1 bg-gray-700 border-gray-600 text-white"
-                disabled={isLoading}
-              />
-            </div>
-            <div>
-              <Label htmlFor="unit" className="text-sm font-medium text-gray-300">
-                Unit / Apt / Office No. <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="unit"
-                value={unit}
-                onChange={(e) => {
-                  setUnit(e.target.value);
-                  if (errorMessage) setErrorMessage('');
-                }}
-                placeholder="e.g., Apt 305, Office 12B"
-                className="mt-1 bg-gray-700 border-gray-600 text-white"
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-          {/* Optional Notes Field */}
+          {/* Map */}
+          <div style={MAP_CONTAINER_STYLE} className="bg-gray-700 flex items-center justify-center">
+              <GoogleMap
+                mapContainerStyle={MAP_CONTAINER_STYLE}
+                center={MAP_CENTER}
+                zoom={MAP_ZOOM}
+                onLoad={onLoad}
+                onUnmount={onUnmount}
+                onClick={onMapClick}
+                options={{
+                  streetViewControl: false,
+                  mapTypeControl: false,
+                  fullscreenControl: false,
+                  zoomControl: true,
+                }}
+              >
+                <MarkerF position={MAP_CENTER} title="Saucer Burger" />
+                {markerPosition && (
+                  <MarkerF
+                    position={markerPosition}
+                    draggable={true}
+                    onDragEnd={onMarkerDragEnd}
+                  />
+                )}
+              </GoogleMap>
+          </div>
+
+          {/* Address Input */}
+          <div>
+            <label htmlFor="address" className="block text-sm font-medium text-gray-300 mb-1">
+              Enter Delivery Address or Place Pin
+            </label>
+            <div className="flex gap-2">
+              <Input
+                id="address"
+                type="text"
+                placeholder="e.g., 123 Petre Kavtaradze St, Tbilisi"
+                value={userAddress}
+                onChange={(e) => {
+                  setUserAddress(e.target.value);
+                  setIsWithinRadius(null);
+                  setDistanceText(null);
+                  setErrorMessage('');
+                  setGmapsLink('');
+                }}
+                className="flex-grow bg-gray-700 border-gray-600 text-white"
+                disabled={isLoading}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleCheckAddress(); }}
+              />
+              <Button
+                onClick={handleCheckAddress}
+                disabled={!userAddress || isLoading || !geocoder}
+                className="bg-amber-600 hover:bg-amber-700 shrink-0 w-[80px]"
+              >
+                {isLoading ? <Loader2 className="animate-spin h-4 w-4 mx-auto" /> : 'Check'}
+              </Button>
+            </div>
+          </div>
+          
+          {/* --- NEW FIELD START --- */}
           <div className="pt-4 border-t border-gray-700">
-              <Label htmlFor="notes" className="text-sm font-medium text-gray-300">Delivery Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="e.g., Gate code is 1234, leave at reception"
-                className="mt-1 bg-gray-700 border-gray-600 text-white"
-                disabled={isLoading}
-              />
-          </div>
+               <Label htmlFor="contactPhone" className="text-sm font-medium text-gray-300">
+                 Contact Phone Number <span className="text-red-500">*</span>
+               </Label>
+               <Input
+                 id="contactPhone"
+                 type="tel"
+                 value={contactPhone}
+                 onChange={(e) => {
+                   setContactPhone(e.target.value);
+                   if (errorMessage) setErrorMessage('');
+                 }}
+                 placeholder="e.g., +995 555 123 456"
+                 className="mt-1 bg-gray-700 border-gray-600 text-white"
+                 disabled={isLoading}
+               />
+             </div>
+          {/* --- NEW FIELD END --- */}
+
+          {/* Detailed Address Fields */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-700">
+            <div>
+              <Label htmlFor="building" className="text-sm font-medium text-gray-300">
+                Building / Villa / Compound <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="building"
+                value={building}
+                onChange={(e) => {
+                  setBuilding(e.target.value);
+                  if (errorMessage) setErrorMessage('');
+                }}
+                placeholder="e.g., Tower A, Villa 12"
+                className="mt-1 bg-gray-700 border-gray-600 text-white"
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <Label htmlFor="level" className="text-sm font-medium text-gray-300">
+                Level / Floor <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="level"
+                value={level}
+                onChange={(e) => {
+                  setLevel(e.target.value);
+                  if (errorMessage) setErrorMessage('');
+                }}
+                placeholder="e.g., 3rd Floor"
+                className="mt-1 bg-gray-700 border-gray-600 text-white"
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <Label htmlFor="unit" className="text-sm font-medium text-gray-300">
+                Unit / Apt / Office No. <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="unit"
+                value={unit}
+                onChange={(e) => {
+                  setUnit(e.target.value);
+                  if (errorMessage) setErrorMessage('');
+                }}
+                placeholder="e.g., Apt 305, Office 12B"
+                className="mt-1 bg-gray-700 border-gray-600 text-white"
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+          {/* Optional Notes Field */}
+          <div className="pt-4 border-t border-gray-700">
+              <Label htmlFor="notes" className="text-sm font-medium text-gray-300">Delivery Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="e.g., Gate code is 1234, leave at reception"
+                className="mt-1 bg-gray-700 border-gray-600 text-white"
+                disabled={isLoading}
+              />
+          </div>
 
 
-          {/* Results Display Area */}
-          {isLoading && !errorMessage && (
-            <div className="text-center text-amber-400">
-                 <Loader2 className="animate-spin h-5 w-5 inline mr-2" />Calculating distance...
-            </div>
-          )}
-          {/* This is the SUCCESS box */}
-          {!isLoading && isWithinRadius === true && distanceText !== null && !errorMessage && (
-            <div className="bg-green-900/50 border border-green-700 text-green-300 p-4 rounded-md text-center space-y-3">
-              <p className="font-semibold flex items-center justify-center gap-2">
-                <CheckCircle className="w-5 h-5" /> Great! You're within the delivery radius.
-              </p>
-              <p className="text-sm">(Approximately {distanceText} driving distance)</p>
-              {gmapsLink && (
-                 <a href={gmapsLink} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-xs block">
-                   View on Google Maps (Opens new tab)
-                 </a>
-              )}
-              <Button
-                onClick={handleProceedToOrder}
-                className="bg-green-600 hover:bg-green-700 text-white w-full md:w-auto"
-              >
-                Confirm Address & Add ₾{deliveryFee.toFixed(2)} Delivery Fee
-              </Button>
-            </div>
-          )}
-          {/* This is the OUT OF ZONE error box */}
-          {!isLoading && isWithinRadius === false && errorMessage && (
-            <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-md text-center">
-              <p className="font-semibold flex items-center justify-center gap-2">
-                <AlertCircle className="w-5 h-5" /> Outside Delivery Zone
-              </p>
-              <p className="text-sm mt-1">{errorMessage}</p>
-            </div>
-          )}
-          {/* --- THIS IS THE FIX --- */}
-          {/* This box now handles MAP errors and VALIDATION errors */}
-          {!isLoading && errorMessage && isWithinRadius !== false && (
-             <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-md text-center">
-               <p className="font-semibold flex items-center justify-center gap-2">
-                 <AlertCircle className="w-5 h-5" /> Error
-               </p>
-               <p className="text-sm mt-1">{errorMessage}</p>
-             </div>
-          )}
-          {/* --- END FIX --- */}
+          {/* Results Display Area */}
+          {isLoading && !errorMessage && (
+            <div className="text-center text-amber-400">
+                 <Loader2 className="animate-spin h-5 w-5 inline mr-2" />Calculating distance...
+            </div>
+          )}
+          {/* This is the SUCCESS box */}
+          {!isLoading && isWithinRadius === true && distanceText !== null && !errorMessage && (
+            <div className="bg-green-900/50 border border-green-700 text-green-300 p-4 rounded-md text-center space-y-3">
+              <p className="font-semibold flex items-center justify-center gap-2">
+                <CheckCircle className="w-5 h-5" /> Great! You're within the delivery radius.
+              </p>
+              <p className="text-sm">(Approximately {distanceText} driving distance)</p>
+              {gmapsLink && (
+                 <a href={gmapsLink} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-xs block">
+                   View on Google Maps (Opens new tab)
+                 </a>
+              )}
+              <Button
+                onClick={handleProceedToOrder}
+                className="bg-green-600 hover:bg-green-700 text-white w-full md:w-auto"
+              >
+                Confirm Address & Add ₾{deliveryFee.toFixed(2)} Delivery Fee
+              </Button>
+            </div>
+          )}
+          {/* This is the OUT OF ZONE error box */}
+          {!isLoading && isWithinRadius === false && errorMessage && (
+            <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-md text-center">
+              <p className="font-semibold flex items-center justify-center gap-2">
+                <AlertCircle className="w-5 h-5" /> Outside Delivery Zone
+              </p>
+              <p className="text-sm mt-1">{errorMessage}</p>
+            </div>
+          )}
+          {/* --- THIS IS THE FIX --- */}
+          {/* This box now handles MAP errors and VALIDATION errors */}
+          {!isLoading && errorMessage && isWithinRadius !== false && (
+             <div className="bg-red-900/50 border border-red-700 text-red-300 p-4 rounded-md text-center">
+               <p className="font-semibold flex items-center justify-center gap-2">
+                 <AlertCircle className="w-5 h-5" /> Error
+               </p>
+               <p className="text-sm mt-1">{errorMessage}</p>
+             </div>
+  )}
+          {/* --- END FIX --- */}
 
-          {/* Back Link */}
-          <div className="text-center pt-4 border-t border-gray-700">
-            <Link to={session ? "/account" : "/"} className="text-sm text-gray-400 hover:text-amber-400 transition">
-              ← Back to {session ? "Account" : "Home"} or Choose Pick-up
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+          {/* Back Link */}
+          <div className="text-center pt-4 border-t border-gray-700">
+            <Link to={session ? "/account" : "/"} className="text-sm text-gray-400 hover:text-amber-400 transition">
+              ← Back to {session ? "Account" : "Home"} or Choose Pick-up
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 };
 
 export default DeliveryLocationPage;
