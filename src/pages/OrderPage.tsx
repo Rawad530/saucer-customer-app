@@ -41,6 +41,7 @@ interface DeliveryDetails {
  unit?: string;
  notes?: string;
  deliveryFee: number;
+ contactPhone: string;
 }
 
 const OrderPage = () => {
@@ -348,6 +349,7 @@ const OrderPage = () => {
          promo_code_used: effectiveDiscountRate > 0 ? promoCode.toUpperCase() : null,
          discount_applied_percent: effectiveDiscountRate > 0 ? effectiveDiscountRate : null,
          order_type: orderType,
+         contact_phone: deliveryDetails?.contactPhone || null,
          delivery_address: deliveryDetails?.addressText || null,
          delivery_fee: deliveryDetails ? deliveryFee : null,
          delivery_gmaps_link: deliveryDetails?.gmapsLink || null,
@@ -355,6 +357,8 @@ const OrderPage = () => {
          delivery_level: deliveryDetails?.level || null,
          delivery_unit: deliveryDetails?.unit || null,
          delivery_address_notes: deliveryDetails?.notes || null,
+         delivery_lat: deliveryDetails?.lat || null,
+         delivery_lng: deliveryDetails?.lng || null,
        };
 
        const { error: insertError } = await supabase.from('transactions').insert([transactionData]);

@@ -17,6 +17,7 @@ interface DeliveryDetails {
   unit?: string;
   notes?: string;
   deliveryFee: number;
+  contactPhone: string;
 }
 // --- END ADDED INTERFACE ---
 
