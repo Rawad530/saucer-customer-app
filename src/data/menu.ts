@@ -10,6 +10,7 @@ export const sauceOptions = [
 
 export const drinkOptions = [
   'Coca-Cola',
+  'Coca-Cola Zero'
   'Fanta',
   'Sprite'
 ];
