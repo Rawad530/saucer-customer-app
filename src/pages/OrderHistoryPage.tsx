@@ -177,31 +177,60 @@ const OrderHistoryPage = () => {
                               <div>
                                   <h3 className="font-semibold mb-2 text-gray-300">Items Ordered:</h3>
                                   <div className="space-y-3">
-                                      {order.items.map((item, index) => (
+                                      
+                                      {/* --- THIS IS THE START OF THE FIX --- */}
+                                      {order.items.map((item, index) => {
+                                        // 1. Get the calculated prices (using your functions)
+                                        const itemTotal = calculateItemPrice(item);
+                                        const bunPrice = bunOptions.find(opt => opt.name === item.bunType)?.price || 0;
+                                        
+                                        return (
                                           <div key={index} className="bg-gray-700/50 p-3 rounded-md text-sm">
-                                              <div className="flex justify-between font-medium">
-                                                  <span>{item.quantity} x {item.menuItem.name}</span>
-                                                  {/* Show base price */}
-                                                  <span>₾{(item.menuItem.price * item.quantity).toFixed(2)}</span>
-                                              </div>
-                                              <div className="text-xs text-gray-400 pl-4">
-                                                {/* This is the bun display fix */}
-                                                {item.bunType && <div>- Bun: {item.bunType}</div>}
-                                                {item.sauce && item.sauce !== 'None' && <div>- Sauce: {item.sauce}</div>}
-                                                {item.sauceCup && item.sauceCup !== 'None' && <div>- Sauce Cup: {item.sauceCup}</div>}
-                                                {item.drink && <div>- Drink: {item.drink}</div>}
-                                                {item.addons && item.addons.length > 0 && (
-                                                <div>
-                                                    - Add-ons: {item.addons.map(addonName => {
-                                                      const addon = addOnOptions.find(opt => opt.name === addonName);
-                                                      return addon ? `${addonName} (+₾${(addon.price * item.quantity).toFixed(2)})` : addonName;
-                                                    }).join(', ')}
+                                            
+                                            {/* 2. Top line: Show base price */}
+                                            <div className="flex justify-between font-medium">
+                                                <span>{item.quantity} x {item.menuItem.name}</span>
+                                                <span>₾{(item.menuItem.price * item.quantity).toFixed(2)}</span>
+                                            </div>
+
+                                            {/* 3. Details: Show bun/addon prices */}
+                                            <div className="text-xs text-gray-400 pl-4">
+                                              {item.bunType && (
+                                                <div className="flex justify-between">
+                                                  <span>- Bun: {item.bunType}</span>
+                                                  {bunPrice > 0 && <span>(+₾{(bunPrice * item.quantity).toFixed(2)})</span>}
                                                 </div>
-                                                )}
-                                                {item.spicy && <div>- Spicy</div>}
-                                              </div>
+                                              )}
+                                              {item.sauce && item.sauce !== 'None' && <div>- Sauce: {item.sauce}</div>}
+                                              {item.sauceCup && item.sauceCup !== 'None' && <div>- Sauce Cup: {item.sauceCup}</div>}
+                                              {item.drink && <div>- Drink: {item.drink}</div>}
+                                              {item.addons && item.addons.length > 0 && (
+                                                <div>
+                                                  - Add-ons:
+                                                  {item.addons.map(addonName => {
+                                                    const addon = addOnOptions.find(opt => opt.name === addonName);
+                                                    return (
+                                                      <div key={addonName} className="flex justify-between pl-2">
+                                                        <span>{addonName}</span>
+                                                        {addon && addon.price > 0 && <span>(+₾{(addon.price * item.quantity).toFixed(2)})</span>}
+                                                      </div>
+                                                    )
+                                                  })}
+                                                </div>
+                                              )}
+                                              {item.spicy && <div>- Spicy</div>}
+                                            </div>
+
+                                            {/* 4. Item Total: Show the final calculated price */}
+                                            <div className="flex justify-between font-semibold text-white border-t border-gray-700/50 mt-2 pt-2">
+                                              <span>Item Total</span>
+                                              <span>₾{itemTotal.toFixed(2)}</span>
+                                            </div>
                                           </div>
-                                      ))}
+                                        );
+                                      })}
+                                      {/* --- THIS IS THE END OF THE FIX --- */}
+
                                   </div>
                               </div>
                               
@@ -251,7 +280,7 @@ const OrderHistoryPage = () => {
                               {/* --- END NEW TOTALS BLOCK --- */}
                               
                               <div className="flex justify-between items-center text-sm text-gray-400 border-t border-gray-700 pt-3">
-                                  <Badge variant="outline" className={getPaymentBadgeClass(order.payment_mode)}>
+                                  <Badge variant="outline" className={getPaymentBadgeClass(order.payment_mode as PaymentMode)}>
                                       <CreditCard className="w-4 h-4 mr-2" />
                                       Paid with: {order.payment_mode}
                                   </Badge>
