@@ -9,11 +9,17 @@ interface OrderItemProps {
   onUpdateQuantity: (index: number, newQuantity: number) => void;
   onEdit: (index: number) => void;
   addOnOptions: { name: string; price: number }[];
+  bunOptions: { name: string; price: number }[];
 }
 
-const OrderItem = ({ item, index, onUpdateQuantity, onEdit, addOnOptions }: OrderItemProps) => {
+const OrderItem = ({ item, index, onUpdateQuantity, onEdit, addOnOptions, bunOptions }: OrderItemProps) => {
   const calculateItemTotal = () => {
     let itemPrice = item.menuItem.price;
+    // Add bun price if applicable
+    if (item.bunType) {
+      const bun = bunOptions.find(opt => opt.name === item.bunType);
+      if (bun) itemPrice += bun.price;
+    }
     item.addons.forEach(addonName => {
       const addon = addOnOptions.find(opt => opt.name === addonName);
       if (addon) itemPrice += addon.price;
