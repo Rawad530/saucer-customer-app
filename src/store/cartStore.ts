@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { OrderItem, MenuItem } from '../types/order'; // Ensure MenuItem is imported if needed, adjust path
-import { addOnOptions } from '../data/menu'; // Used for calculations
+import { addOnOptions, bunOptions } from '../data/menu';
 
 // --- ADDED: DeliveryDetails Interface (ensure path is correct or define here) ---
 // If this interface exists elsewhere (e.g., types/order.ts), import it instead.
@@ -117,6 +117,12 @@ export const useCartStore = create<CartState>()(
         const items = get().items;
         const subtotal = items.reduce((sum, item) => {
             let itemPrice = item.menuItem.price;
+
+            // Add bun price if applicable
+            if (item.bunType) {
+                const bun = bunOptions.find(opt => opt.name === item.bunType);
+                if (bun) itemPrice += bun.price;
+            }
             // Ensure addons array exists before iterating
             item.addons?.forEach(addonName => {
                 const addon = addOnOptions.find(opt => opt.name === addonName);
