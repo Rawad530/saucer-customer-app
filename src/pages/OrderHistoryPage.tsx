@@ -173,6 +173,23 @@ const OrderHistoryPage = () => {
                           </div>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="p-4 border-t border-gray-700">
+                      {/* --- ADD THIS BLOCK TO DISPLAY THE ADDRESS --- */}
+                      {order.delivery_address && (
+                        <div className="mb-4 p-3 bg-gray-700/50 rounded-md">
+                          <h4 className="font-semibold text-gray-300 flex items-center gap-2">
+                            {/* You may need to import MapPin from lucide-react at the top */}
+                            {/* <MapPin className="w-4 h-4 text-blue-300" /> */}
+                            Delivery Address
+                          </h4>
+                          <p className="text-sm text-gray-400 pl-6">{order.delivery_address}</p>
+                          {(order.delivery_building || order.delivery_level || order.delivery_unit) && (
+                            <p className="text-sm text-gray-400 pl-6">
+                              {`Bldg: ${order.delivery_building || 'N/A'}, Lvl: ${order.delivery_level || 'N/A'}, Unit: ${order.delivery_unit || 'N/A'}`}
+                            </p>
+                         )}
+                       </div>
+                      )}
+                      {/* --- END OF NEW BLOCK --- */}
                           <div className="space-y-4">
                               <div>
                                   <h3 className="font-semibold mb-2 text-gray-300">Items Ordered:</h3>

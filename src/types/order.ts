@@ -77,4 +77,13 @@ export interface Order {
   delivery_fee: number | null;
   estimated_delivery_minutes?: number | null;
   delivery_started_at?: string | null; //
+  delivery_address: string | null;
+  delivery_gmaps_link: string | null;
+  delivery_lat: number | null;
+  delivery_lng: number | null;
+  delivery_building?: string | null;
+  delivery_level?: string | null;
+  delivery_unit?: string | null;
+  delivery_notes: string | null;
+  delivery_contact_phone: string
 }
