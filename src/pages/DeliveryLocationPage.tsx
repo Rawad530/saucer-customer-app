@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { AlertCircle, CheckCircle, MapPin, Loader2, Home, Briefcase } from 'lucide-react'; // --- MODIFIED (Removed unused icons) ---
+import { AlertCircle, CheckCircle, MapPin, Loader2, Home, Briefcase, Trash2 }  from 'lucide-react'; // --- MODIFIED (Removed unused icons) ---
 import { GoogleMap, useJsApiLoader, MarkerF } from '@react-google-maps/api';
 import { useCartStore } from '../store/cartStore'; 
 import { supabase } from '../lib/supabaseClient'; 
@@ -370,6 +370,34 @@ const DeliveryLocationPage = () => {
     }
   };
   // --- End Modification ---
+
+  // --- NEW: Function to handle deleting a saved address ---
+  const handleDeleteAddress = async (labelToDelete: string) => {
+    if (!session) {
+      console.warn("User not logged in, cannot delete address.");
+      return;
+    }
+
+    // Filter out the address to be deleted
+    const updatedAddresses = savedAddresses.filter(addr => addr.label !== labelToDelete);
+
+    // Optimistic UI update
+    setSavedAddresses(updatedAddresses);
+
+    // Update Supabase
+    const { error } = await supabase
+      .from('customer_profiles')
+      .update({ saved_addresses: updatedAddresses })
+      .eq('id', session.user.id);
+
+    if (error) {
+      console.error("Error deleting address:", error);
+      // Revert UI or show an error message
+      alert("Failed to delete address. Please try again.");
+      // Optional: revert `setSavedAddresses(savedAddresses)` here if deletion failed
+    }
+  };
+  // --- End New Function ---
 
 
   if (loadError) {
