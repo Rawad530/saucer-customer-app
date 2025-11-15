@@ -4,6 +4,13 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 // Using lucide-react icons (ensure it's installed: npm install lucide-react)
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 
+// ADD THIS SO TYPESCRIPT DOESN'T COMPLAIN
+declare global {
+  interface Window {
+    fbq: (...args: any[]) => void;
+  }
+}
+
 const PaymentStatusPage = () => {
   const location = useLocation();
   const navigate = useNavigate(); // This line has been restored.
@@ -17,6 +24,16 @@ const PaymentStatusPage = () => {
 
     if (paymentStatus === 'success') {
       setStatus('success');
+
+      // --- FIRE THE PURCHASE EVENT FOR CARD PAYMENTS ---
+      if (paymentType === 'order' && window.fbq) {
+        window.fbq('track', 'Purchase', {
+          value: 0.00,  // We set this to 0 for simplicity
+          currency: 'USD' // Must match your ad account (USD)
+        });
+      }
+      // --- END OF META CODE ---
+      
     } else {
       // Default to fail if status is missing, invalid, or 'fail'
       setStatus('fail');
