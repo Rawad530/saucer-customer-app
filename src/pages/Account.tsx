@@ -1,15 +1,15 @@
 // src/pages/Account.tsx
 
-import { Link, useNavigate } from 'react-router-dom'; // <-- 1. Import useNavigate
+import { Link, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
-import { User, Wallet, Star, History, Truck, Megaphone, QrCode, Gift, MapPin, ShoppingBag } from 'lucide-react';
+import { User, Wallet, Star, History, Truck, Megaphone, QrCode, Gift, MapPin, ShoppingBag, Phone } from 'lucide-react';
 import QRCode from "react-qr-code";
 import { Order, OrderItem } from '../types/order';
 import MyCoupons from '../components/MyCoupons';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useCartStore } from '../store/cartStore'; // <-- 2. Import your cart store
+import { useCartStore } from '../store/cartStore';
 
 interface ProfileData {
   full_name: string;
@@ -36,23 +36,26 @@ const Account = ({ session }: { session: Session }) => {
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
   const [rewardsAvailable, setRewardsAvailable] = useState(false);
   const { t } = useLanguage(); 
-
-  // --- 3. Add hooks for navigation and cart ---
   const navigate = useNavigate();
   const clearDeliveryDetails = useCartStore((state) => state.clearDeliveryDetails);
-  // --- END ---
+
+  // --- NEW STATE FOR BONUS ---
+  const [isBonusClaimed, setIsBonusClaimed] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
       const { user } = session;
 
-      const [profileRes, rewardsRes, ordersRes, announcementRes, statusRes] = await Promise.all([
+      // --- ADDED 'phoneRes' TO THE PROMISE ARRAY ---
+      const [profileRes, rewardsRes, ordersRes, announcementRes, statusRes, phoneRes] = await Promise.all([
         supabase.from('customer_profiles').select('full_name, points, wallet_balance').eq('id', user.id).single(),
         supabase.from('rewards').select('title, points_required').order('points_required', { ascending: true }),
         supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
         supabase.from('announcements').select('id, title, content').eq('is_active', true).order('created_at', { ascending: false }),
-        supabase.functions.invoke('check-restaurant-status')
+        supabase.functions.invoke('check-restaurant-status'),
+        // --- ADDED THE NEW QUERY ---
+        supabase.from('verified_phones').select('user_id').eq('user_id', user.id).maybeSingle()
       ]);
 
       if (profileRes.data) setProfileData(profileRes.data);
@@ -96,20 +99,23 @@ const Account = ({ session }: { session: Session }) => {
         setIsRestaurantOpen(statusRes.data?.isOpen ?? false);
       }
 
+      // --- ADDED LOGIC TO CHECK THE PHONE VERIFICATION RESULT ---
+      if (phoneRes.error) {
+        console.error("Error checking phone verification:", phoneRes.error.message);
+      } else if (!phoneRes.data) {
+        setIsBonusClaimed(false); // User has NOT claimed the bonus
+      }
+
       setLoading(false);
     };
 
     fetchDashboardData();
   }, [session, t]);
 
-  // --- 4. Add the handler function for the button ---
   const handlePickUpClick = () => {
-    // This is the fix: clear the state *first*
     clearDeliveryDetails();
-    // Then navigate to the order page
     navigate('/order');
   };
-  // --- END ---
 
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">{t.account_loading}</div>;
@@ -131,19 +137,35 @@ const Account = ({ session }: { session: Session }) => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
 
-            {/* --- CORRECTED ORDERING SECTION --- */}
+            {/* --- "CLAIM BONUS" CARD ADDED (Using DIVs and t. syntax) --- */}
+            {!isBonusClaimed && profileData && profileData.wallet_balance < 5 && (
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg">
+                <h3 className="flex items-center text-xl font-bold mb-2">
+                  <Gift className="w-6 h-6 mr-2" />
+                  {/* THIS IS NOW FIXED */}
+                  {t.account_claim_title}
+                </h3>
+                <p className="text-blue-100 mb-4">
+                  {/* THIS IS NOW FIXED */}
+                  {t.account_claim_desc}
+                </p>
+                <Link to="/verify-phone" className="inline-flex items-center justify-center px-4 py-2 font-bold bg-white text-blue-700 rounded-md hover:bg-gray-200">
+                  <Phone className="w-4 h-4 mr-2" />
+                  {/* THIS IS NOW FIXED */}
+                  {t.account_claim_button}
+                </Link>
+              </div>
+            )}
+            
+            {/* Ordering Section */}
             <div className="bg-amber-600 p-8 rounded-lg text-center">
               <h2 className="text-3xl font-bold mb-6">{t.account_readyForRound}</h2>
               {isRestaurantOpen === null ? (
-                // Loading state
                 <button className="w-full md:w-auto px-12 py-4 text-lg font-bold bg-gray-500 text-white rounded-md cursor-not-allowed mb-2">
                   {t.account_checkingHours}
                 </button>
               ) : isRestaurantOpen ? (
-                // OPEN STATE: Show BOTH buttons
                 <div className="flex flex-col md:flex-row justify-center gap-4">
-                  
-                  {/* Delivery Button + Note */}
                   <div className="flex-1 md:flex-none flex flex-col items-center">
                     <Link
                       to="/delivery-location"
@@ -153,23 +175,17 @@ const Account = ({ session }: { session: Session }) => {
                     </Link>
                     <p className="text-sm text-amber-100 mt-2">{t.account_deliveryNote}</p>
                   </div>
-
-                  {/* Pick-up Button + Note */}
                   <div className="flex-1 md:flex-none flex flex-col items-center">
-                    {/* --- 5. Changed from <Link> to <button> and added onClick --- */}
                     <button
                       onClick={handlePickUpClick}
                       className="w-full inline-flex items-center justify-center px-8 py-4 text-lg font-bold bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
                     >
                       <ShoppingBag className="w-5 h-5 mr-2" /> {t.account_pickup}
                     </button>
-                    {/* --- END FIX --- */}
                     <p className="text-sm text-amber-100 mt-2">{t.account_pickupNote}</p>
                   </div>
-                  
                 </div>
               ) : (
-                // CLOSED STATE: Hide buttons, show message ONLY
                 <div className="text-center py-4"> 
                   <p className="text-lg font-semibold text-red-100 bg-black/75 px-4 py-2 rounded-md inline-block">
                     {t.account_closed}
@@ -177,9 +193,8 @@ const Account = ({ session }: { session: Session }) => {
                 </div>
               )}
             </div>
-            {/* --- END OF CORRECTED SECTION --- */}
 
-            {/* Rewards Card */}
+            {/* Rewards Card (Your original DIV structure) */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><Star className="w-6 h-6 mr-2 text-amber-400" /> {t.account_rewardsTitle}</h3>
               {profileData && (
@@ -218,7 +233,7 @@ const Account = ({ session }: { session: Session }) => {
 
             <MyCoupons />
 
-            {/* Recent Activity Card */}
+            {/* Recent Activity Card (Your original DIV structure) */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><History className="w-6 h-6 mr-2 text-gray-300" /> {t.account_activityTitle}</h3>
               {lastOrder ? (
@@ -233,7 +248,7 @@ const Account = ({ session }: { session: Session }) => {
               <Link to="/history" className="text-sm text-amber-400 hover:underline mt-4 inline-block">{t.account_activityViewHistory}</Link>
             </div>
 
-            {/* Side Quests Card */}
+            {/* Side Quests Card (Your original DIV structure) */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4">
                 <Gift className="w-6 h-6 mr-2 text-purple-400" />
@@ -245,7 +260,7 @@ const Account = ({ session }: { session: Session }) => {
               </Link>
             </div>
 
-              {/* Announcements Card */}
+            {/* Announcements Card (Your original DIV structure) */}
             {announcements.length > 0 && (
               <div className="bg-gray-800 p-6 rounded-lg">
                 <h3 className="flex items-center text-xl font-bold mb-4"><Megaphone className="w-6 h-6 mr-2 text-blue-400" /> {t.account_announcementsTitle}</h3>
@@ -263,7 +278,7 @@ const Account = ({ session }: { session: Session }) => {
 
           {/* Right Column */}
           <div className="space-y-6">
-            {/* Profile & Wallet Card */}
+            {/* Profile & Wallet Card (Your original DIV structure) */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><User className="w-6 h-6 mr-2 text-gray-300" /> {t.account_profileTitle}</h3>
               <div className="text-center bg-gray-700/50 p-4 rounded-md mb-4">
@@ -281,7 +296,7 @@ const Account = ({ session }: { session: Session }) => {
               </div>
             </div>
 
-            {/* Loyalty Code Card */}
+            {/* Loyalty Code Card (Your original DIV structure) */}
             <div className="bg-gray-800 p-6 rounded-lg text-center">
               <h3 className="flex items-center justify-center text-xl font-bold mb-4"><QrCode className="w-6 h-6 mr-2 text-gray-300" /> {t.account_loyaltyTitle}</h3>
               <div className="bg-white p-4 rounded-md inline-block">
@@ -290,7 +305,7 @@ const Account = ({ session }: { session: Session }) => {
               <p className="text-xs text-gray-400 mt-2">{t.account_loyaltyDesc}</p>
             </div>
 
-            {/* Delivery Partners Card */}
+            {/* Delivery Partners Card (Your original DIV structure) */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><Truck className="w-6 h-6 mr-2 text-gray-300" /> {t.account_partnersTitle}</h3>
               <p className="text-gray-400 mb-4 text-sm">{t.account_partnersDesc}</p>

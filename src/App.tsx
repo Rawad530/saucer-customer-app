@@ -33,6 +33,9 @@ import DeliveryLocationPage from './pages/DeliveryLocationPage';
 import ShippingReturnPolicyPage from './pages/ShippingReturnPolicyPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 
+// --- 1. IMPORT THE NEW PAGE ---
+import VerifyPhonePage from './pages/VerifyPhonePage';
+
 function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,17 +72,17 @@ function App() {
           <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
           <Route path="/terms-of-use" element={<TermsOfUsePage />} />
-          <Route path="/shipping-return-policy" element={<ShippingReturnPolicyPage />} /> {/* <-- Add this line */}
-          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} /> {/* <-- Add this line */}
-          {/* REMOVED Delivery Location Route from Standalone section */}
+          <Route path="/shipping-return-policy" element={<ShippingReturnPolicyPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+          
+          {/* --- 2. ADD THE NEW PROTECTED ROUTE --- */}
+          <Route path="/verify-phone" element={session ? <VerifyPhonePage /> : <Navigate to="/login" replace />} />
 
           {/* Application Routes (Wrapped in the standard Layout) */}
           <Route element={<Layout />}>
             <Route path="/payment-status" element={<PaymentStatusPage />} />
             <Route path="/order" element={<OrderPage />} />
-            {/* --- MOVED DELIVERY LOCATION ROUTE HERE --- */}
             <Route path="/delivery-location" element={<DeliveryLocationPage />} />
-            {/* -------------------------------------- */}
 
             {/* Protected Routes */}
             <Route path="/account" element={session ? <Account session={session} /> : <Navigate to="/login" replace />} />
