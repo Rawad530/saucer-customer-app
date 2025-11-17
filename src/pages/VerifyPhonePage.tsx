@@ -8,13 +8,28 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 
+// This helper function will find the real error message
+const getErrorMessage = (error: any): string => {
+  if (error.context && error.context.body) {
+    try {
+      // Try to parse the JSON error from the function
+      const body = JSON.parse(error.context.body);
+      return body.error || "An unknown error occurred.";
+    } catch (e) {
+      // Fallback if it's not JSON
+      return error.message;
+    }
+  }
+  return error.message;
+}
+
 const VerifyPhonePage = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [phone, setPhone] = useState('+995') // Default to Georgia country code
-  const [token, setToken] = useState('')
-  const [step, setStep] = useState(1) // 1 = Enter Phone, 2 = Enter Code
-  const [requestId, setRequestId] = useState('') // To store the ID from Vonage
+  const [phone, setPhone] = useState('+995')
+  const [code, setCode] = useState('') 
+  const [step, setStep] = useState(1) 
+  const [requestId, setRequestId] = useState('') 
   const navigate = useNavigate()
   const { toast } = useToast()
 
@@ -30,15 +45,16 @@ const VerifyPhonePage = () => {
         { body: { phone } }
       )
       
-      if (error) throw new Error(error.message)
-      if (data.error) throw new Error(data.error)
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
-      setRequestId(data.request_id) // Save the request_id from Vonage
-      setStep(2) // Move to the code entry step
+      setRequestId(data.request_id) 
+      setStep(2) 
       toast({ title: 'Code Sent!', description: 'Check your phone for the verification code.' })
 
     } catch (err: any) {
-      setError(err.message)
+      // Use the new error helper
+      setError(getErrorMessage(err))
     }
     setLoading(false)
   }
@@ -55,24 +71,26 @@ const VerifyPhonePage = () => {
         { 
           body: { 
             phone: phone, 
-            token: token, 
-            request_id: requestId // Send all 3 pieces of info
+            code: code,
+            request_id: requestId
           } 
         }
       )
 
-      if (error) throw new Error(error.message)
-      if (data.error) throw new Error(data.error)
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
 
       // SUCCESS!
       toast({ title: 'Success!', description: data.message, className: "bg-green-600 text-white" })
-      navigate('/account') // Send them to their account
+      navigate('/account') 
 
     } catch (err: any) {
-      setError(err.message)
-      // Check for the specific fraud error
-      if (err.message.includes("already been used")) {
-         toast({ title: 'Bonus Already Claimed', description: err.message, variant: 'destructive' })
+      // Use the new error helper
+      const errorMessage = getErrorMessage(err);
+      setError(errorMessage)
+      
+      if (errorMessage.includes("already been used")) {
+         toast({ title: 'Bonus Already Claimed', description: errorMessage, variant: 'destructive' })
          navigate('/account')
       }
     }
@@ -114,18 +132,18 @@ const VerifyPhonePage = () => {
             </form>
           )}
 
-          {/* Step 2: Enter 6-Digit Code */}
+          {/* Step 2: Enter Verification Code */}
           {step === 2 && (
             <form onSubmit={handleVerifyAndClaim} className="space-y-4">
               {error && <p className="text-red-500 text-sm bg-red-900/50 p-3 rounded">{error}</p>}
               <div>
-                <label htmlFor="token" className="block text-sm font-medium text-gray-300">Verification Code</label>
+                <label htmlFor="code" className="block text-sm font-medium text-gray-300">Verification Code</label>
                 <Input
-                  id="token"
+                  id="code"
                   type="text"
                   placeholder="Enter the code"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)} 
                   required
                   className="mt-1 bg-gray-700 border-gray-600 text-white"
                 />
