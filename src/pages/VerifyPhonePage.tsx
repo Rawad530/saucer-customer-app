@@ -1,6 +1,6 @@
 // src/pages/VerifyPhonePage.tsx
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -30,35 +30,8 @@ const VerifyPhonePage = () => {
   const [code, setCode] = useState('') 
   const [step, setStep] = useState(1) 
   const [requestId, setRequestId] = useState('') 
-  const [isClaimStatusChecked, setIsClaimStatusChecked] = useState(false); // <--- THIS LINE WAS MISSING
   const navigate = useNavigate()
   const { toast } = useToast()
-
-  // ADD THIS HOOK
-  useEffect(() => {
-    const checkClaimStatus = async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (user) {
-            // Check if this user already has a record in the phone verification table
-            const { data: verified, error } = await supabase
-                .from('verified_phones')
-                .select('id') // We only need to check if the record exists
-                .eq('user_id', user.id)
-                .maybeSingle();
-
-            if (verified) {
-                // User has already claimed the bonus. Redirect them away.
-                navigate('/account', { replace: true });
-                return;
-            }
-        }
-        // Only set the check flag to true if no redirect occurred
-        setIsClaimStatusChecked(true);
-    };
-
-    checkClaimStatus();
-}, [navigate]); // The dependency array ensures this runs once on load
 
   // Step 1: Call our 'send-verification-sms' Edge Function
   const handleSendCode = async (e: React.FormEvent) => {

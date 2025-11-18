@@ -1,6 +1,6 @@
 // src/pages/Account.tsx
 
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
@@ -37,7 +37,6 @@ const Account = ({ session }: { session: Session }) => {
   const [rewardsAvailable, setRewardsAvailable] = useState(false);
   const { t } = useLanguage(); 
   const navigate = useNavigate();
-  const location = useLocation(); 
   const clearDeliveryDetails = useCartStore((state) => state.clearDeliveryDetails);
 
   // --- NEW STATE FOR BONUS ---
@@ -59,25 +58,8 @@ const Account = ({ session }: { session: Session }) => {
         supabase.from('verified_phones').select('user_id').eq('user_id', user.id).maybeSingle()
       ]);
 
-      // --- THIS IS THE FIX ---
-      // Check if the profile query returned data
-      if (profileRes.data) {
-        setProfileData(profileRes.data);
-      } else {
-        // If profileRes.data is null, it means the user exists in auth
-        // but not in our profiles table (a "ghost session").
-        // We must sign them out immediately.
-        console.error("Ghost session detected: No profile found for auth user. Signing out.");
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-          console.error("Error signing out:", error);
-        }
-        // Force navigation to the home page (which will redirect to login)
-        // This ensures the user is kicked out even if the auth listener is slow.
-        navigate('/'); 
-        return; // Stop further execution
-      }
-      // --- END OF FIX ---
+      if (profileRes.data) setProfileData(profileRes.data);
+
       if (rewardsRes.data && rewardsRes.data.length > 0) {
         setRewardsAvailable(true);
         if (profileRes.data) {
@@ -128,7 +110,7 @@ const Account = ({ session }: { session: Session }) => {
     };
 
     fetchDashboardData();
-  }, [session, t, location.hash]); //**CHANGE 2: ADD location.hash TO DEPENDENCY ARRAY**
+  }, [session, t]);
 
   const handlePickUpClick = () => {
     clearDeliveryDetails();
