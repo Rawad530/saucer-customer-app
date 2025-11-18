@@ -9,6 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import GoogleIcon from '@/components/GoogleIcon';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import Turnstile from 'react-turnstile'; // 1. IMPORT TURNSTILE
+
+// 2. ADD YOUR CLOUDFLARE SITE KEY HERE
+const TURNSTILE_SITE_KEY = "0x4AAAAAACBiMAW6qlrsdMxj"; // <-- THIS IS YOUR KEY
 
 const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
@@ -19,6 +23,7 @@ const RegisterPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null); // 3. ADD STATE FOR THE TOKEN
 
   const [isEmailLocked, setIsEmailLocked] = useState(false);
   const [checkingInvite, setCheckingInvite] = useState(true);
@@ -80,6 +85,13 @@ const RegisterPage = () => {
       setError("You must accept the terms of use to register.");
       return;
     }
+
+    // 4. ADD CAPTCHA CHECK
+    if (!captchaToken) {
+      setError("Bot detection is still in progress. Please wait a moment and try again.");
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -87,6 +99,7 @@ const RegisterPage = () => {
       email,
       password,
       options: {
+        captchaToken: captchaToken, // 5. SEND THE TOKEN TO SUPABASE
         emailRedirectTo: `${window.location.origin}/account`,
         data: {
           full_name: fullName,
@@ -99,6 +112,7 @@ const RegisterPage = () => {
     if (authError) {
       setError(authError.message);
       setLoading(false);
+      setCaptchaToken(null); // Reset token on error
       return;
     }
 
@@ -124,14 +138,14 @@ const RegisterPage = () => {
     );
   }
 
-  const isRegisterDisabled = loading || checkingInvite || !email || !password || !fullName || !phoneNumber || !termsAccepted;
+  const isRegisterDisabled = loading || checkingInvite || !email || !password || !fullName || !phoneNumber || !termsAccepted || !captchaToken
 
   return (
     <div className="flex justify-center items-center py-12 min-h-screen bg-gray-900">
       <Card className="w-full max-w-md bg-gray-800 border-gray-700 text-white">
         <CardHeader>
           <Link to="/" className="text-sm text-gray-400 hover:text-amber-400 transition">&larr; Back Home</Link>
-          <CardTitle className="text-2xl text-amber-400">Register</CardTitle>
+            <CardTitle className="text-2xl text-amber-400">Register</CardTitle>
           <CardDescription className='text-gray-300'>Create an account to earn rewards.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -210,6 +224,13 @@ const RegisterPage = () => {
                 , including the wallet refund policy.
               </Label>
             </div>
+
+            {/* 7. ADD THE INVISIBLE TURNSTILE WIDGET */}
+            <Turnstile
+              sitekey={TURNSTILE_SITE_KEY}
+              onSuccess={setCaptchaToken}
+              theme="dark" // Set the theme to dark to match your site
+            />
 
             <Button type="submit" disabled={isRegisterDisabled} className="w-full bg-amber-600 hover:bg-amber-700">
               {loading ? 'Creating Account...' : 'Register'}
