@@ -58,8 +58,25 @@ const Account = ({ session }: { session: Session }) => {
         supabase.from('verified_phones').select('user_id').eq('user_id', user.id).maybeSingle()
       ]);
 
-      if (profileRes.data) setProfileData(profileRes.data);
-
+      // --- THIS IS THE FIX ---
+      // Check if the profile query returned data
+      if (profileRes.data) {
+        setProfileData(profileRes.data);
+      } else {
+        // If profileRes.data is null, it means the user exists in auth
+        // but not in our profiles table (a "ghost session").
+        // We must sign them out immediately.
+        console.error("Ghost session detected: No profile found for auth user. Signing out.");
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.error("Error signing out:", error);
+        }
+        // Force navigation to the home page (which will redirect to login)
+        // This ensures the user is kicked out even if the auth listener is slow.
+        navigate('/'); 
+        return; // Stop further execution
+      }
+      // --- END OF FIX ---
       if (rewardsRes.data && rewardsRes.data.length > 0) {
         setRewardsAvailable(true);
         if (profileRes.data) {
