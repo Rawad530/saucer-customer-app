@@ -1,13 +1,14 @@
-// supabase/functions/verify-sms-and-grant-bonus/index.ts
-
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// FIXED: Using 'npm:' to be stable
+import { createClient } from 'npm:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
 const VONAGE_API_KEY = Deno.env.get('VONAGE_API_KEY')
 const VONAGE_API_SECRET = Deno.env.get('VONAGE_API_SECRET')
 
 Deno.serve(async (req) => {
-  console.log("Function invoked."); // New log
+  console.log("Function invoked.");
+  
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -18,10 +19,14 @@ Deno.serve(async (req) => {
       console.error("Missing request_id, code, or phone.");
       throw new Error("Request ID, code, and phone number are required.")
     }
-    console.log(`Payload received: request_id=${request_id}, phone=${phone}`);
+
+    // 🛡️ SECURITY FIX: Sanitize Phone Number (Remove spaces)
+    const cleanPhone = phone.replace(/\s+/g, '').trim();
+    console.log(`Payload received: request_id=${request_id}, phone=${cleanPhone}`);
     
     // 1. Get the user's JWT from the request
-    const authHeader = req.headers.get('Authorization')!
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) throw new Error("Authorization header missing.")
     
     // 2. Create a Supabase client with the user's auth
     const supabaseClient = createClient(
@@ -51,7 +56,6 @@ Deno.serve(async (req) => {
 
     const data = await vonageResponse.json()
     console.log("Vonage response status:", vonageResponse.status);
-    console.log("Vonage response body:", data);
 
     if (vonageResponse.status !== 200) { // 200 is the success code for checking
       throw new Error(`Vonage error: ${data.title || 'Invalid or expired code.'}`)
@@ -64,12 +68,12 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // 6. THE CRITICAL FRAUD CHECK
-    console.log(`Checking 'verified_phones' table for phone: ${phone}`);
+    // 6. THE CRITICAL FRAUD CHECK (Using cleanPhone)
+    console.log(`Checking 'verified_phones' table for phone: ${cleanPhone}`);
     const { data: existingPhone, error: phoneError } = await supabaseAdmin
       .from('verified_phones')
       .select('phone_number')
-      .eq('phone_number', phone)
+      .eq('phone_number', cleanPhone)
       .maybeSingle()
       
     if (phoneError) {
@@ -78,16 +82,16 @@ Deno.serve(async (req) => {
     }
     
     if (existingPhone) {
-      console.warn(`Fraud attempt: Phone ${phone} already exists.`);
+      console.warn(`Fraud attempt: Phone ${cleanPhone} already exists.`);
       throw new Error("This phone number has already been used to claim a bonus.")
     }
     console.log("Phone number is unique.");
 
-    // 7. SUCCESS: Call our database function
+    // 7. SUCCESS: Call our database function (Using cleanPhone)
     console.log(`Calling 'grant_signup_bonus' for user ${user.id}`);
     const { error: rpcError } = await supabaseAdmin.rpc('grant_signup_bonus', {
       p_user_id: user.id,
-      p_phone_number: phone,
+      p_phone_number: cleanPhone, 
       p_bonus_amount: 5
     })
     
@@ -103,7 +107,7 @@ Deno.serve(async (req) => {
     })
 
   } catch (error) {
-    console.error("Function failed:", error.message); // This will be the REAL error
+    console.error("Function failed:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
