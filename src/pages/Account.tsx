@@ -1,6 +1,6 @@
 // src/pages/Account.tsx
 
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
@@ -37,6 +37,7 @@ const Account = ({ session }: { session: Session }) => {
   const [rewardsAvailable, setRewardsAvailable] = useState(false);
   const { t } = useLanguage(); 
   const navigate = useNavigate();
+  const location = useLocation(); 
   const clearDeliveryDetails = useCartStore((state) => state.clearDeliveryDetails);
 
   // --- NEW STATE FOR BONUS ---
@@ -127,7 +128,7 @@ const Account = ({ session }: { session: Session }) => {
     };
 
     fetchDashboardData();
-  }, [session, t]);
+  }, [session, t, location.hash]); //**CHANGE 2: ADD location.hash TO DEPENDENCY ARRAY**
 
   const handlePickUpClick = () => {
     clearDeliveryDetails();

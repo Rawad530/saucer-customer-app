@@ -30,6 +30,7 @@ const VerifyPhonePage = () => {
   const [code, setCode] = useState('') 
   const [step, setStep] = useState(1) 
   const [requestId, setRequestId] = useState('') 
+  const [isClaimStatusChecked, setIsClaimStatusChecked] = useState(false); // <--- THIS LINE WAS MISSING
   const navigate = useNavigate()
   const { toast } = useToast()
 
@@ -52,6 +53,8 @@ const VerifyPhonePage = () => {
                 return;
             }
         }
+        // Only set the check flag to true if no redirect occurred
+        setIsClaimStatusChecked(true);
     };
 
     checkClaimStatus();
