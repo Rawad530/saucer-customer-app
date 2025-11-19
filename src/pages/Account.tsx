@@ -36,6 +36,8 @@ const Account = ({ session }: { session: Session }) => {
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
   const [rewardsAvailable, setRewardsAvailable] = useState(false);
   const { t } = useLanguage(); 
+
+
   const navigate = useNavigate();
   const clearDeliveryDetails = useCartStore((state) => state.clearDeliveryDetails);
 
@@ -112,10 +114,14 @@ const Account = ({ session }: { session: Session }) => {
     fetchDashboardData();
   }, [session, t]);
 
+
   const handlePickUpClick = () => {
+
     clearDeliveryDetails();
+
     navigate('/order');
   };
+
 
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">{t.account_loading}</div>;
@@ -161,11 +167,15 @@ const Account = ({ session }: { session: Session }) => {
             <div className="bg-amber-600 p-8 rounded-lg text-center">
               <h2 className="text-3xl font-bold mb-6">{t.account_readyForRound}</h2>
               {isRestaurantOpen === null ? (
+
                 <button className="w-full md:w-auto px-12 py-4 text-lg font-bold bg-gray-500 text-white rounded-md cursor-not-allowed mb-2">
                   {t.account_checkingHours}
                 </button>
               ) : isRestaurantOpen ? (
+
                 <div className="flex flex-col md:flex-row justify-center gap-4">
+
+
                   <div className="flex-1 md:flex-none flex flex-col items-center">
                     <Link
                       to="/delivery-location"
@@ -175,17 +185,23 @@ const Account = ({ session }: { session: Session }) => {
                     </Link>
                     <p className="text-sm text-amber-100 mt-2">{t.account_deliveryNote}</p>
                   </div>
+
+
                   <div className="flex-1 md:flex-none flex flex-col items-center">
+
                     <button
                       onClick={handlePickUpClick}
                       className="w-full inline-flex items-center justify-center px-8 py-4 text-lg font-bold bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
                     >
                       <ShoppingBag className="w-5 h-5 mr-2" /> {t.account_pickup}
                     </button>
+
                     <p className="text-sm text-amber-100 mt-2">{t.account_pickupNote}</p>
                   </div>
+
                 </div>
               ) : (
+
                 <div className="text-center py-4"> 
                   <p className="text-lg font-semibold text-red-100 bg-black/75 px-4 py-2 rounded-md inline-block">
                     {t.account_closed}
@@ -193,6 +209,7 @@ const Account = ({ session }: { session: Session }) => {
                 </div>
               )}
             </div>
+
 
             {/* Rewards Card (Your original DIV structure) */}
             <div className="bg-gray-800 p-6 rounded-lg">
