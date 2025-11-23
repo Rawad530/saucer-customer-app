@@ -12,6 +12,17 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // --- NEW SECURITY: GEO-BLOCK ---
+    // Most bot farms are in Russia, China, or USA. Real customers are in Georgia.
+    const country = req.headers.get('cf-ipcountry') || 'XX'
+    
+    // If the request is NOT from Georgia (GE) and not local dev (XX), BLOCK IT.
+    if (country !== 'GE' && country !== 'XX') {
+      console.error(`🚨 BLOCKED: Foreign IP from ${country}`)
+      // We throw a generic error so the bot doesn't know why it failed
+      throw new Error("Service unavailable in your region.")
+    }
+    
     // 1. VALIDATE INPUT
     const { phone } = await req.json()
     if (!phone) throw new Error("Phone number is required.")
