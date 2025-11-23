@@ -10,6 +10,14 @@ import GoogleIcon from '@/components/GoogleIcon';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
+// --- FIX: Defined OUTSIDE the component to prevent flashing/re-animating on every keystroke ---
+const TipBubble = ({ text }: { text: string }) => (
+  <div className="absolute left-0 bottom-full mb-2 w-72 p-3 bg-white text-black text-xs font-medium rounded-xl shadow-xl z-20 animate-in fade-in zoom-in-95 duration-200">
+    {text}
+    <div className="absolute top-full left-6 -mt-1 border-8 border-transparent border-t-white"></div>
+  </div>
+);
+
 const RegisterPage = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -168,14 +176,6 @@ const RegisterPage = () => {
     setSuccess(true);
     setLoading(false);
   };
-
-  // Reusable Bubble Component
-  const TipBubble = ({ text }: { text: string }) => (
-    <div className="absolute left-0 bottom-full mb-2 w-72 p-3 bg-white text-black text-xs font-medium rounded-xl shadow-xl z-20 animate-in fade-in zoom-in-95 duration-200">
-      {text}
-      <div className="absolute top-full left-6 -mt-1 border-8 border-transparent border-t-white"></div>
-    </div>
-  );
 
   if (success) {
     return (
