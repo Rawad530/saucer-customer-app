@@ -200,7 +200,7 @@ const LandingPage = () => {
                 <p>{t.footer_address_line1}</p>
                 <p>{t.footer_address_line2}</p>
               </a>
-              <p className="text-gray-400"><strong>{t.footer_hours}</strong> 14:00 PM - 00:00 AM</p>
+              <p className="text-gray-400"><strong>{t.footer_hours}</strong> 07:00 PM - 00:00 AM</p>
             </div>
             <div>
               <h4 className="text-xl font-bold text-amber-400 mb-4">{t.footer_quickLinks}</h4>
