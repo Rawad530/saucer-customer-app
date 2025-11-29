@@ -145,23 +145,6 @@ const Account = ({ session }: { session: Session }) => {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-
-            {/* --- FIX 3: Conditional rendering logic is simplified --- */}
-            {!isPhoneVerified && (
-              <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-lg">
-                <h3 className="flex items-center text-xl font-bold mb-2">
-                  <Gift className="w-6 h-6 mr-2" />
-                  {t.account_claim_title}
-                </h3>
-                <p className="text-blue-100 mb-4">
-                  {t.account_claim_desc}
-                </p>
-                <Link to="/verify-phone" className="inline-flex items-center justify-center px-4 py-2 font-bold bg-white text-blue-700 rounded-md hover:bg-gray-200">
-                  <Phone className="w-4 h-4 mr-2" />
-                  {t.account_claim_button}
-                </Link>
-              </div>
-            )}
             
             {/* Ordering Section */}
             <div className="bg-amber-600 p-8 rounded-lg text-center">

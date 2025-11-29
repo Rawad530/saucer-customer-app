@@ -33,8 +33,6 @@ import DeliveryLocationPage from './pages/DeliveryLocationPage';
 import ShippingReturnPolicyPage from './pages/ShippingReturnPolicyPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 
-// --- 1. IMPORT THE NEW PAGE ---
-import VerifyPhonePage from './pages/VerifyPhonePage';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -74,9 +72,6 @@ function App() {
           <Route path="/terms-of-use" element={<TermsOfUsePage />} />
           <Route path="/shipping-return-policy" element={<ShippingReturnPolicyPage />} />
           <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-          
-          {/* --- 2. ADD THE NEW PROTECTED ROUTE --- */}
-          <Route path="/verify-phone" element={session ? <VerifyPhonePage /> : <Navigate to="/login" replace />} />
 
           {/* Application Routes (Wrapped in the standard Layout) */}
           <Route element={<Layout />}>
