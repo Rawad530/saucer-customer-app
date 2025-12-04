@@ -388,12 +388,12 @@ const OrderPage = () => {
          if (session) setWalletBalance(prev => prev - walletCreditApplied);
 
          // --- FIRE THE PURCHASE EVENT FOR WALLET PAYMENTS ---
-        if (window.fbq) {
-          window.fbq('track', 'Purchase', {
-            value: 0.00,  // We set this to 0 for simplicity
-            currency: 'USD' // Must match your ad account (USD)
+        // @ts-ignore
+        window.fbq('track', 'Purchase', {
+          value: 0.00,  // We set this to 0 for simplicity
+          currency: 'USD' // Must match your ad account (USD)
           });
-        }
+        
         // --- END OF META CODE ---
        } else if (functionData?.redirectUrl) { // Card payment needed
          // --- FIX: Remember the order type BEFORE navigating away ---
