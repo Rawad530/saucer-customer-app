@@ -26,7 +26,8 @@ const PaymentStatusPage = () => {
       setStatus('success');
 
       // --- FIRE THE PURCHASE EVENT FOR CARD PAYMENTS ---
-      if (paymentType === 'order' && window.fbq) {
+      if (paymentType === 'order') {
+        // @ts-ignore
         window.fbq('track', 'Purchase', {
           value: 0.00,  // We set this to 0 for simplicity
           currency: 'USD' // Must match your ad account (USD)

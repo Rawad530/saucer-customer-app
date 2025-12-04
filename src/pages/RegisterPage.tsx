@@ -189,11 +189,11 @@ const RegisterPage = () => {
     // ---------------------------------------------------------
     try {
       // @ts-ignore - Ignores TypeScript error if fbq is not typed on window
-      if (window.fbq) {
+      
         // @ts-ignore
         window.fbq('track', 'CompleteRegistration');
         console.log("Pixel Fired: CompleteRegistration");
-      }
+      
     } catch (pixelError) {
       console.error("Pixel Error:", pixelError);
     }
