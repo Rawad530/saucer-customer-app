@@ -388,16 +388,21 @@ const OrderPage = () => {
          if (session) setWalletBalance(prev => prev - walletCreditApplied);
 
          // --- FIRE THE PURCHASE EVENT FOR WALLET PAYMENTS ---
-        // @ts-ignore
-        window.fbq('track', 'Purchase', {
-          value: 0.00,  // We set this to 0 for simplicity
-          currency: 'USD' // Must match your ad account (USD)
-          });
-        
-        // --- END OF META CODE ---
+         // @ts-ignore
+         window.fbq('track', 'Purchase', {
+           value: walletCreditApplied, // ✅ REAL MONEY
+           currency: 'GEL',            // ✅ REAL CURRENCY
+           content_name: 'Saucer Burger Wallet Order'
+         });
+         
+         // --- END OF META CODE ---
        } else if (functionData?.redirectUrl) { // Card payment needed
          // --- FIX: Remember the order type BEFORE navigating away ---
          setCompletedOrderType(orderType);
+         
+         // ✅ SAVE PRICE FOR PIXEL ON NEXT PAGE
+         sessionStorage.setItem('pendingOrderTotal', totalPrice.toString());
+
          // --- END FIX ---
          window.location.href = functionData.redirectUrl;
        } else { throw new Error("Invalid response from payment function."); }
@@ -598,4 +603,3 @@ const OrderPage = () => {
 };
 
 export default OrderPage;
-
