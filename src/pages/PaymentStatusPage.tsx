@@ -25,7 +25,7 @@ const PaymentStatusPage = () => {
     if (paymentStatus === 'success') {
       setStatus('success');
 
-      // --- FIRE THE PURCHASE EVENT FOR CARD PAYMENTS ---
+      //--- FIRE THE PURCHASE EVENT FOR CARD PAYMENTS ---
       // We check for 'order' OR if the type is missing (defaults to order)
       if (!paymentType || paymentType === 'order') {
         
@@ -34,15 +34,14 @@ const PaymentStatusPage = () => {
         // 2. Use saved price, or fallback to 30.00 to avoid "0.00" garbage data
         const finalValue = savedPrice ? Number(savedPrice) : 30.00;
 
+        // 3. FIRE IMMEDIATELY (No "if" check - trusting index.html stub)
         // @ts-ignore
-        if (typeof window !== 'undefined' && window.fbq) {
-            window.fbq('track', 'Purchase', {
-              value: finalValue, // ✅ Sends Real Price (e.g. 25.50)
-              currency: 'GEL'    // ✅ Correct Currency
-            });
-        }
+        window.fbq('track', 'Purchase', {
+           value: finalValue, // ✅ Sends Real Price (e.g. 25.50)
+           currency: 'GEL'    // ✅ Correct Currency
+        });
         
-        // 3. Clean up (remove the saved price so we don't use it again)
+        // 4. Clean up (remove the saved price)
         sessionStorage.removeItem('pendingOrderTotal');
       }
       // --- END OF META CODE ---
