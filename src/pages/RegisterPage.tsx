@@ -19,63 +19,63 @@ const TipBubble = ({ text }: { text: string }) => (
 );
 
 const RegisterPage = () => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // Registration Data
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  // Registration Data
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
 
   // Verification Data
   const [otpCode, setOtpCode] = useState('');
   const [step, setStep] = useState(1); // 1 = Form, 2 = Email Verification
 
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
-  const [isEmailLocked, setIsEmailLocked] = useState(false);
-  const [checkingInvite, setCheckingInvite] = useState(true);
+  const [isEmailLocked, setIsEmailLocked] = useState(false);
+  const [checkingInvite, setCheckingInvite] = useState(true);
 
   // State to track which field is currently focused
   const [activeField, setActiveField] = useState<string | null>(null);
 
-  const [searchParams] = useSearchParams();
-  const [inviteCode, setInviteCode] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const [inviteCode, setInviteCode] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const fetchInviteDetails = async () => {
-      const code = searchParams.get('invite_code');
-      if (code) {
-        setInviteCode(code);
-        try {
+  useEffect(() => {
+    const fetchInviteDetails = async () => {
+      const code = searchParams.get('invite_code');
+      if (code) {
+        setInviteCode(code);
+        try {
           // This uses the updated RPC function from Step 3A
-          const { data, error } = await supabase.rpc('get_invite_details', {
-            p_invite_code: code,
-          });
+          const { data, error } = await supabase.rpc('get_invite_details', {
+            p_invite_code: code,
+          });
 
-          if (error) throw error;
+          if (error) throw error;
 
-          if (data) {
-            setEmail(data);
-            setIsEmailLocked(true);
-          } else {
+          if (data) {
+            setEmail(data);
+            setIsEmailLocked(true);
+          } else {
             // MODIFICATION: Handle invalid or already used codes gracefully
             setError("The invitation code is invalid or has already been used. You can still register, but the referral bonus will not apply.");
             setInviteCode(null); // Clear the code if it's invalid so it's not attached to the user
           }
-        } catch (error) {
-          console.error("Error fetching invite details:", error);
-          setError("An error occurred while validating the invitation.");
-        }
-      }
-      setCheckingInvite(false);
-    };
+        } catch (error) {
+          console.error("Error fetching invite details:", error);
+          setError("An error occurred while validating the invitation.");
+        }
+      }
+      setCheckingInvite(false);
+    };
 
-    fetchInviteDetails();
-  }, [searchParams]);
+    fetchInviteDetails();
+  }, [searchParams]);
 
   // --- Live Validation Checks (Used for Bubble Visibility) ---
   
@@ -183,22 +183,6 @@ const RegisterPage = () => {
       return;
     }
 
-    // ---------------------------------------------------------
-    // META PIXEL EVENT: CompleteRegistration
-    // Fired only if sign up was successful (no authError)
-    // ---------------------------------------------------------
-    try {
-      // @ts-ignore - Ignores TypeScript error if fbq is not typed on window
-      
-        // @ts-ignore
-        window.fbq('track', 'CompleteRegistration');
-        console.log("Pixel Fired: CompleteRegistration");
-      
-    } catch (pixelError) {
-      console.error("Pixel Error:", pixelError);
-    }
-    // ---------------------------------------------------------
-
     // Move to Step 2 (Verification) instead of showing success card
     setStep(2);
   };
@@ -301,7 +285,7 @@ const RegisterPage = () => {
                     Password
                   </label>
                   {activeField === 'password' && !isPasswordValid(password) && (
-                     <TipBubble text="Password must be at least 8 characters, contain Upper, Lower, Number, Special Character, and no repeating characters." />
+                      <TipBubble text="Password must be at least 8 characters, contain Upper, Lower, Number, Special Character, and no repeating characters." />
                   )}
                   <Input 
                     id="password" 

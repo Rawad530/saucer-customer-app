@@ -31,15 +31,19 @@ const PaymentStatusPage = () => {
         
         // 1. Retrieve the saved price from sessionStorage
         const savedPrice = sessionStorage.getItem('pendingOrderTotal');
-        // 2. Use saved price, or fallback to 30.00 to avoid "0.00" garbage data
-        const finalValue = savedPrice ? Number(savedPrice) : 30.00;
+        
+        // 2. Use saved price, or fallback to 20.00 (Minimum Order Value) 
+        // This prevents the 30.00 ghost data while ensuring a valid minimum is tracked if session is lost.
+        const finalValue = savedPrice ? Number(savedPrice) : 20.00;
 
-        // 3. FIRE IMMEDIATELY (No "if" check - trusting index.html stub)
-        // @ts-ignore
-        window.fbq('track', 'Purchase', {
-           value: finalValue, // ✅ Sends Real Price (e.g. 25.50)
-           currency: 'GEL'    // ✅ Correct Currency
-        });
+        // 3. FIRE ONLY if value > 0 (prevents ghost/zero tracking)
+        if (finalValue > 0) {
+            // @ts-ignore
+            window.fbq('track', 'Purchase', {
+                value: finalValue, 
+                currency: 'GEL'
+            });
+        }
         
         // 4. Clean up (remove the saved price)
         sessionStorage.removeItem('pendingOrderTotal');
