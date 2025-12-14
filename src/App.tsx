@@ -11,6 +11,9 @@ import { Toaster } from "@/components/ui/toaster";
 // Import the Language Provider
 import { LanguageProvider } from './contexts/LanguageContext';
 
+// 🚀 IMPORT PIXEL TRACKER HERE
+import { PixelTracker } from './components/PixelTracker';
+
 // Page Imports
 import Layout from './components/Layout';
 import Account from './pages/Account';
@@ -62,6 +65,9 @@ function App() {
     <LanguageProvider>
       <>
         <ScrollToTop />
+
+        <PixelTracker />
+        
         <Routes>
           {/* Standalone Routes */}
           <Route path="/" element={!session ? <LandingPage /> : <Navigate to="/account" replace />} />
