@@ -230,7 +230,7 @@ export const translations = {
     privacy_h12: "12. Contact Information",
     privacy_p12_1: "If you have any questions, concerns, or requests regarding this Privacy Policy or our data practices, please contact us at:",
     privacy_p12_2: "<strong>Privacy Contact / Data Protection Officer:</strong>",
-    privacy_p12_3: "Saucer Burger Support via the chat feature<br/>Email: saucerburger@gmail.com<br/>Address: 45 Petre Kavtaradze, Saburtalo, T'bilisi, Georgia",
+    privacy_p12_3: "Saucer Burger Support via the chat feature<br/>Email: support@saucerburger.ge<br/>Address: 45 Petre Kavtaradze, Saburtalo, T'bilisi, Georgia",
 
     // --- Shipping Policy Page ---
     shipping_back_button: "Back",
@@ -493,7 +493,7 @@ export const translations = {
     privacy_h12: "12. საკონტაქტო ინფორმაცია",
     privacy_p12_1: "თუ თქვენ გაქვთ რაიმე შეკითხვები, შეშფოთება ან მოთხოვნები ამ კონფიდენციალურობის პოლიტიკასთან ან ჩვენს მონაცემთა პრაქტიკასთან დაკავშირებით, გთხოვთ, დაგვიკავშირდეთ:",
     privacy_p12_2: "<strong>კონფიდენციალურობის საკონტაქტო / მონაცემთა დაცვის ოფიცერი:</strong>",
-    privacy_p12_3: "Saucer Burger-ის მხარდაჭერა ჩატის ფუნქციის საშუალებით<br/>ელ. ფოსტა: saucerburger@gmail.com<br/>მისამართი: პეტრე ქავთარაძის ქ. 45, საბურთალო, თბილისი, საქართველო",
+    privacy_p12_3: "Saucer Burger-ის მხარდაჭერა ჩატის ფუნქციის საშუალებით<br/>ელ. ფოსტა: support@saucerburger.ge<br/>მისამართი: პეტრე ქავთარაძის ქ. 45, საბურთალო, თბილისი, საქართველო",
 
     // --- Shipping Policy Page ---
     shipping_back_button: "უკან",

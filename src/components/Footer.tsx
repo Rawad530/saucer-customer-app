@@ -41,7 +41,7 @@ const Footer = () => {
                 <Phone className="w-4 h-4" />
                 <span>{t.footer_callUs}</span>
               </a>
-              <a href="mailto:saucerburger@gmail.com" className="flex items-center gap-2 hover:text-white transition-colors">
+              <a href="mailto:support@saucerburger.ge" className="flex items-center gap-2 hover:text-white transition-colors">
                 <Mail className="w-4 h-4" />
                 <span>{t.footer_mailUs}</span>
               </a>

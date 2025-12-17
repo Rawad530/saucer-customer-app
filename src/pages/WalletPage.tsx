@@ -58,6 +58,10 @@ const WalletPage = () => {
     setIsAddingFunds(true);
     const transactionId = crypto.randomUUID(); // A unique ID for this specific transaction
 
+    // ✅ ADD THIS LINE HERE:
+    // We save the amount so PaymentStatusPage can fire the pixel when they return.
+    sessionStorage.setItem('pendingWalletTopup', amount.toString());
+
     // NOTE: localStorage usage is REMOVED. The backend now tracks the pending top-up.
 
     try {
