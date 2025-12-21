@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
         // CRITICAL UPDATE: Added type=wallet context parameter
         redirect_urls: {
             fail: `https://saucerburger.ge/payment-status?status=fail&type=wallet`,
-            success: `https://saucerburger.ge/payment-status?status=success&type=wallet&transaction_id${transactionId}`
+            success: `https://saucerburger.ge/payment-status?status=success&type=wallet&transaction_id=${transactionId}`
         }
     };
     

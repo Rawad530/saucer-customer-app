@@ -13,7 +13,7 @@ declare global {
 
 const PaymentStatusPage = () => {
   const location = useLocation();
-  const navigate = useNavigate(); // This line has been restored.
+  const navigate = useNavigate();
   const [status, setStatus] = useState<'loading' | 'success' | 'fail'>('loading');
   const [type, setType] = useState<'order' | 'wallet'>('order');
 
@@ -21,54 +21,68 @@ const PaymentStatusPage = () => {
     const params = new URLSearchParams(location.search);
     const paymentStatus = params.get('status');
     const paymentType = params.get('type');
+    const transactionIdFromUrl = params.get('transaction_id');
 
+    // 1. Set Visual State
+    if (paymentType === 'wallet') {
+        setType('wallet');
+    } else {
+        setType('order');
+    }
+
+    // 2. Handle Payment Status
     if (paymentStatus === 'success') {
       setStatus('success');
 
-      //--- FIRE THE PURCHASE EVENT FOR CARD PAYMENTS ---
-      // We check for 'order' OR if the type is missing (defaults to order)
-      if (!paymentType || paymentType === 'order') {
-        
-        // 1. Retrieve the saved price from sessionStorage
-        const savedPrice = sessionStorage.getItem('pendingOrderTotal');
-        
-        // 2. Use saved price, or fallback to 20.00 (Minimum Order Value) 
-        // This prevents the 30.00 ghost data while ensuring a valid minimum is tracked if session is lost.
-        const finalValue = savedPrice ? Number(savedPrice) : 20.00;
-
-        // 3. FIRE ONLY if value > 0 (prevents ghost/zero tracking)
-        if (finalValue > 0) {
-            // @ts-ignore
-            window.fbq('track', 'Purchase', {
-                value: finalValue, 
-                currency: 'GEL'
-            });
-        }
-        
-        // 4. Clean up (remove the saved price)
-        sessionStorage.removeItem('pendingOrderTotal');
-      }
-      // --- END OF META CODE ---
+      // --- TRACKING LOGIC START ---
+      // Get the Event ID for deduplication (Prefer URL, fallback to session)
+      const eventID = transactionIdFromUrl || sessionStorage.getItem('pendingOrderId');
       
+      let amountToTrack = 0;
+      let contentName = 'Saucer Burger Order';
+
+      // CHECK: Is this a Wallet Top-Up or a Food Order?
+      if (paymentType === 'wallet') {
+          // CASE A: WALLET TOP-UP
+          const savedWalletAmount = sessionStorage.getItem('pendingWalletTopup');
+          if (savedWalletAmount) {
+              amountToTrack = parseFloat(savedWalletAmount);
+              contentName = 'Wallet Top Up';
+              // Cleanup immediately
+              sessionStorage.removeItem('pendingWalletTopup'); 
+          }
+      } else {
+          // CASE B: FOOD ORDER (Default)
+          const savedOrderTotal = sessionStorage.getItem('pendingOrderTotal');
+          // Fallback to 20 if lost to ensure we catch the event
+          amountToTrack = savedOrderTotal ? parseFloat(savedOrderTotal) : 20.00;
+          contentName = 'Saucer Burger Order';
+          
+          // Cleanup
+          sessionStorage.removeItem('pendingOrderTotal');
+          sessionStorage.removeItem('pendingOrderId');
+      }
+
+      // FIRE THE PIXEL (Only if we have a valid amount)
+      if (amountToTrack > 0 && window.fbq) {
+          // @ts-ignore
+          window.fbq('track', 'Purchase', {
+              value: amountToTrack,
+              currency: 'GEL',
+              content_name: contentName,
+              event_id: eventID // ✅ DEDUPLICATION KEY
+          });
+      }
+      // --- TRACKING LOGIC END ---
+
     } else {
       // Default to fail if status is missing, invalid, or 'fail'
       setStatus('fail');
     }
-
-    if (paymentType === 'wallet') {
-        setType('wallet');
-    } else {
-        // Default to order if type is missing or 'order'
-        setType('order');
-    }
-
-    // Note: The actual confirmation of payment happens securely via the
-    // bog-callback-handler Edge Function. This page is purely informational.
     
   }, [location.search]);
 
   // This handler sets a flag in sessionStorage before navigating back.
-  // This lets the order page know that the user is returning from a failed payment.
   const handleReturnToOrder = () => {
     sessionStorage.setItem('paymentFailed', 'true');
     navigate('/order');
@@ -115,7 +129,6 @@ const PaymentStatusPage = () => {
                 The transaction was not successful. Please ensure you are using a supported card (e.g., Georgian-issued card) or try again.
             </p>
             {type === 'order' ? (
-               // Use the handler on the button instead of a Link component
               <button 
                   onClick={handleReturnToOrder} 
                   className="mt-6 inline-block px-6 py-2 font-bold text-white bg-red-600 rounded-md hover:bg-red-700"

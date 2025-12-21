@@ -392,7 +392,8 @@ const OrderPage = () => {
          window.fbq('track', 'Purchase', {
            value: walletCreditApplied, // ✅ REAL MONEY
            currency: 'GEL',            // ✅ REAL CURRENCY
-           content_name: 'Saucer Burger Wallet Order'
+           content_name: 'Saucer Burger Wallet Order',
+           event_id: orderId  // <--- ADD THIS! This links it to the backend event.
          });
          
          // --- END OF META CODE ---
@@ -401,6 +402,7 @@ const OrderPage = () => {
          setCompletedOrderType(orderType);
          
          // ✅ SAVE PRICE FOR PIXEL ON NEXT PAGE
+         sessionStorage.setItem('pendingOrderId', orderId); // <--- ADD THIS
          sessionStorage.setItem('pendingOrderTotal', totalPrice.toString());
 
          // --- END FIX ---
