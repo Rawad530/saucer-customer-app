@@ -8,6 +8,7 @@ import { Loader2, CheckCircle, XCircle } from 'lucide-react';
 declare global {
   interface Window {
     fbq: (...args: any[]) => void;
+    gtag: (...args: any[]) => void; // <-- Added Google Tag here
   }
 }
 
@@ -63,15 +64,28 @@ const PaymentStatusPage = () => {
           sessionStorage.removeItem('pendingOrderId');
       }
 
-      // FIRE THE PIXEL (Only if we have a valid amount)
-      if (amountToTrack > 0 && window.fbq) {
-          // @ts-ignore
-          window.fbq('track', 'Purchase', {
-              value: amountToTrack,
-              currency: 'GEL',
-              content_name: contentName,
-              event_id: eventID // ✅ DEDUPLICATION KEY
-          });
+      // FIRE THE PIXELS (Only if we have a valid amount)
+      if (amountToTrack > 0) {
+          
+          // 1. Meta / Facebook Pixel
+          if (window.fbq) {
+              // @ts-ignore
+              window.fbq('track', 'Purchase', {
+                  value: amountToTrack,
+                  currency: 'GEL',
+                  content_name: contentName,
+                  event_id: eventID // ✅ DEDUPLICATION KEY
+              });
+          }
+
+          // 2. Google Ads Tracking (NEW)
+          if (window.gtag) {
+              window.gtag('event', 'purchase', {
+                  value: amountToTrack,
+                  currency: 'GEL',
+                  transaction_id: eventID
+              });
+          }
       }
       // --- TRACKING LOGIC END ---
 
