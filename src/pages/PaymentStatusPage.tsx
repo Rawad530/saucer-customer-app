@@ -74,8 +74,7 @@ const PaymentStatusPage = () => {
                   value: amountToTrack,
                   currency: 'GEL',
                   content_name: contentName,
-                  event_id: eventID // ✅ DEDUPLICATION KEY
-              });
+              },  { event_id: eventID }); // ✅ DEDUPLICATION KEY
           }
 
           // 2. Google Ads Tracking (NEW)
