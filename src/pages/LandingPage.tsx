@@ -229,7 +229,7 @@ const LandingPage = () => {
                   <Mail className="w-4 h-4" />
                   <span>{t.footer_mailUs}</span>
                 </a>
-                <a href="https://wa.me/995591229658" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-400 hover:text-white hover:underline w-fit">
+                <a href="https://wa.me/995591920665" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-gray-400 hover:text-white hover:underline w-fit">
                   <MessageCircle className="w-4 h-4" />
                   <span>{t.footer_chatUs}</span>
                 </a>
