@@ -59,7 +59,7 @@ const OrderSummary = ({
 
   // --- TROLL TRAP LOGIC ---
   const COUSIN_ID = "5cb6780b-dbf3-4f1b-9956-39fcba1469f8";
-  const MY_DUMMY_ID = "735bd252-d20e-4058-b0e8-d669a2747858"; 
+  const MY_DUMMY_ID = "03a4233d-620d-4eee-8ce8-00c0cbdd415c"; 
   
   const isTarget = currentUserId === COUSIN_ID || currentUserId === MY_DUMMY_ID;
 
