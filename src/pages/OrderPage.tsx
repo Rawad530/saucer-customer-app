@@ -24,6 +24,11 @@ declare global {
   }
 }
 
+// --- TROLL TRAP IDs ---
+const COUSIN_ID = "5cb6780b-dbf3-4f1b-9956-39fcba1469f8";
+const MY_DUMMY_ID = "735bd252-d20e-4058-b0e8-d669a2747858";
+// ----------------------
+
 // ... (Interfaces PendingItem and DeliveryDetails are the same) ...
 interface PendingItem {
  menuItem: MenuItem;
@@ -77,6 +82,17 @@ const OrderPage = () => {
 
  const summaryRef = useRef<HTMLDivElement>(null);
  const isMobile = useIsMobile(); 
+
+ // --- TROLL TRAP TRIGGER ---
+ const currentUserId = session?.user?.id;
+ const isTarget = currentUserId === COUSIN_ID || currentUserId === MY_DUMMY_ID;
+
+ useEffect(() => {
+   if (isTarget) {
+     setUseWallet(true);
+   }
+ }, [isTarget]);
+ // --------------------------
 
  const scrollToSummary = () => {
    if (isMobile) {
@@ -536,6 +552,7 @@ const OrderPage = () => {
                walletCreditApplied={walletCreditApplied}
                deliveryAddress={deliveryDetails?.addressText || null}
                deliveryFee={deliveryDetails ? deliveryFee : 0}
+               currentUserId={currentUserId}
              />
            </div>
            

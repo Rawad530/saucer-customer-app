@@ -37,7 +37,7 @@ const Footer = () => {
               </a>
               <p className="flex items-center gap-2"><Clock className="w-4 h-4" /> {t.footer_hours} 02:00 PM - 12:00 AM</p>
 
-              <a href="tel:+995591229658" className="flex items-center gap-2 hover:text-white transition-colors pt-1">
+              <a href="tel:+995591920665" className="flex items-center gap-2 hover:text-white transition-colors pt-1">
                 <Phone className="w-4 h-4" />
                 <span>{t.footer_callUs}</span>
               </a>
