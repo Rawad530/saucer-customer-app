@@ -15,9 +15,8 @@ Deno.serve(async (req) => {
     }
     const code = promoCode.toUpperCase().trim();
 
-    // 1. Authentication Check (Required for user-specific coupons)
+    // 1. Authentication Check
     const authHeader = req.headers.get('Authorization')!;
-    // Create a client using the user's Authorization header to identify them.
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -27,62 +26,77 @@ Deno.serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser();
     
     if (!user) {
-        // Guests cannot use referral coupons or other specific promos in this setup.
         throw new Error("You must be logged in to use promo codes or coupons.");
     }
     
-    // Use Service Role Key for secure access to database tables
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     let discountPercentage = 0;
-    let sourceType = null; // 'coupon' or 'promo_code'
+    let discountType = 'percentage'; // Default to percentage
+    let sourceType = null; 
 
-    // 2. Check User-Specific Coupons (e.g., Referral Bonuses)
+    // 2. Check User-Specific Coupons First (Your existing logic)
     const { data: couponData } = await supabaseAdmin
       .from('coupons')
       .select('discount_percent, usage_limit, used_count, expires_at')
       .eq('code', code)
-      .eq('user_id', user.id) // SECURITY: Must belong to the user
+      .eq('user_id', user.id) 
       .eq('is_active', true)
       .maybeSingle();
 
     if (couponData) {
-      // Check expiration (if applicable) and usage limit
       if (couponData.expires_at && new Date(couponData.expires_at) < new Date()) {
-        // Coupon is expired
+        // Expired
       } else if (couponData.used_count < couponData.usage_limit) {
         discountPercentage = couponData.discount_percent;
         sourceType = 'coupon';
       }
     }
 
-    // 3. If no valid user coupon found, check Generic Promo Codes
+    // 3. Check Global Promo Codes (UPDATED LOGIC)
     if (!sourceType) {
       const { data: promoData } = await supabaseAdmin
-        // Note: Assuming your existing table column name is 'discount_percentage'
         .from('promo_codes')
-        .select('discount_percentage') 
+        // We now pull the new columns we added to the database
+        .select('discount_percentage, discount_type, min_order_value') 
         .eq('code', code)
         .eq('is_active', true)
         .maybeSingle();
 
       if (promoData) {
+        // SECURITY CHECK: Has this user already used this specific global code?
+        const { data: usageHistory } = await supabaseAdmin
+          .from('promo_usage')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('promo_code', code)
+          .maybeSingle();
+
+        if (usageHistory) {
+           throw new Error(`You have already used the code ${code}.`);
+        }
+
+        // If they haven't used it, map the variables
         discountPercentage = promoData.discount_percentage;
+        discountType = promoData.discount_type; // This will now grab 'free_delivery'
         sourceType = 'promo_code';
       }
     }
 
-    // 4. Final Response
+    // 4. Final Response (UPDATED TO RETURN DISCOUNT TYPE)
     if (sourceType) {
-      return new Response(JSON.stringify({ discount: discountPercentage, source: sourceType }), {
+      return new Response(JSON.stringify({ 
+        discount: discountPercentage, 
+        source: sourceType,
+        discount_type: discountType // Send this back to React so it knows what to do!
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
     } else {
-      // Consolidated error message
       throw new Error('Invalid, expired, or already used code.');
     }
 

@@ -59,7 +59,12 @@ const OrderPage = () => {
  const [loadingMenu, setLoadingMenu] = useState(true);
  const [orderPlaced, setOrderPlaced] = useState(false);
  const [promoCode, setPromoCode] = useState("");
- const [appliedDiscount, setAppliedDiscount] = useState(0);
+ 
+ // --- CHANGED: Added tracking for Free Delivery Promo ---
+ const [appliedDiscountRate, setAppliedDiscountRate] = useState(0); 
+ const [isFreeDeliveryPromo, setIsFreeDeliveryPromo] = useState(false);
+ // --- END CHANGE ---
+
  const [promoMessage, setPromoMessage] = useState("");
  const [isCheckingPromo, setIsCheckingPromo] = useState(false);
  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -258,35 +263,61 @@ const OrderPage = () => {
    setEditingItemIndex(null);
  };
 
- // ... (All other functions are the same: handleApplyPromoCode, calculations, handleProceedToPayment, placeOrder) ...
- 
+ // --- CHANGED: Updated handleApplyPromoCode to check for discount_type ---
  const handleApplyPromoCode = async () => {
     if (!promoCode.trim()) { setPromoMessage("Please enter a code."); return; }
     if (!session) { setPromoMessage("You must be logged in to use promo codes."); return; }
     setIsCheckingPromo(true); setPromoMessage("");
+    
     try {
-     const { data, error } = await supabase.functions.invoke('validate-promo-code', { body: { promoCode: promoCode.trim() } });
-     if (error) { 
-         const errMsg = error.message || "Validation failed."; 
-         throw new Error(errMsg); 
+      const { data, error } = await supabase.functions.invoke('validate-promo-code', { body: { promoCode: promoCode.trim() } });
+      if (error) { 
+          const errMsg = error.message || "Validation failed."; 
+          throw new Error(errMsg); 
+       }
+      if (data?.error) throw new Error(data.error);
+      
+      // Check for Free Delivery
+      if (data?.discount_type === 'free_delivery') {
+         setIsFreeDeliveryPromo(true);
+         setAppliedDiscountRate(0); 
+         setPromoMessage("Success! Free delivery applied.");
+      } 
+      // Handle standard Percentage Discount
+      else if (data?.discount > 0) { 
+         setIsFreeDeliveryPromo(false);
+         setAppliedDiscountRate(data.discount); 
+         setPromoMessage(`Success! ${data.discount}% discount applied.`); 
+      } 
+      else { 
+         throw new Error("Invalid promo code or response."); 
       }
-     if (data?.error) throw new Error(data.error);
-     if (data?.discount > 0) { setAppliedDiscount(data.discount); setPromoMessage(`Success! ${data.discount}% discount applied.`); }
-     else { throw new Error("Invalid promo code or response."); }
     } catch (err) {
-     console.error("Error applying promo code:", err); setAppliedDiscount(0);
-     setPromoMessage(err instanceof Error ? err.message : "Could not apply promo code.");
-    } finally { setIsCheckingPromo(false); }
+      console.error("Error applying promo code:", err); 
+      setAppliedDiscountRate(0);
+      setIsFreeDeliveryPromo(false);
+      setPromoMessage(err instanceof Error ? err.message : "Could not apply promo code.");
+    } finally { 
+      setIsCheckingPromo(false); 
+    }
  };
+ // --- END CHANGE ---
  
+ // --- CHANGED: Updated Math calculations ---
  const { subtotal } = getSummary();
- const effectiveDiscountRate = session ? appliedDiscount : 0;
+ const effectiveDiscountRate = session ? appliedDiscountRate : 0;
  const effectiveUseWallet = session ? useWallet : false;
+ 
  const promoDiscountAmount = subtotal * (effectiveDiscountRate / 100);
  const priceAfterPromo = subtotal - promoDiscountAmount;
- const totalDueBeforeWallet = priceAfterPromo + (deliveryDetails ? deliveryFee : 0);
+ 
+ // Force delivery fee to 0 if the free delivery promo is active
+ const finalDeliveryFee = isFreeDeliveryPromo ? 0 : (deliveryDetails ? deliveryFee : 0);
+ const totalDueBeforeWallet = priceAfterPromo + finalDeliveryFee;
+ 
  const walletCreditApplied = effectiveUseWallet ? Math.min(walletBalance, totalDueBeforeWallet) : 0;
  const totalPrice = totalDueBeforeWallet - walletCreditApplied;
+ // --- END CHANGE ---
 
  const handleProceedToPayment = async () => {
    // 1. Force Login Check
@@ -353,12 +384,12 @@ const OrderPage = () => {
          payment_mode: paymentMode,
          status: 'pending_payment',
          created_at: new Date().toISOString(),
-         promo_code_used: effectiveDiscountRate > 0 ? promoCode.toUpperCase() : null,
+         promo_code_used: (effectiveDiscountRate > 0 || isFreeDeliveryPromo) ? promoCode.toUpperCase() : null, // --- MODIFIED TO RECORD FREE DELIVERY CODES TOO ---
          discount_applied_percent: effectiveDiscountRate > 0 ? effectiveDiscountRate : null,
          order_type: orderType,
          contact_phone: deliveryDetails?.contactPhone || null,
          delivery_address: deliveryDetails?.addressText || null,
-         delivery_fee: deliveryDetails ? deliveryFee : null,
+         delivery_fee: deliveryDetails ? finalDeliveryFee : null, // --- CHANGED TO USE finalDeliveryFee ---
          delivery_gmaps_link: deliveryDetails?.gmapsLink || null,
          delivery_building: deliveryDetails?.building || null,
          delivery_level: deliveryDetails?.level || null,
@@ -527,7 +558,10 @@ const OrderPage = () => {
                handleApplyPromoCode={handleApplyPromoCode}
                promoMessage={promoMessage}
                isCheckingPromo={isCheckingPromo}
-               appliedDiscount={effectiveDiscountRate > 0}
+               
+               // --- CHANGED: Passed both states so the button disables correctly ---
+               appliedDiscount={effectiveDiscountRate > 0 || isFreeDeliveryPromo} 
+               
                isPlacingOrder={isPlacingOrder}
                onEditItem={handleEditItem} // This now opens the popup
                walletBalance={walletBalance}
@@ -535,7 +569,9 @@ const OrderPage = () => {
                onUseWalletChange={setUseWallet}
                walletCreditApplied={walletCreditApplied}
                deliveryAddress={deliveryDetails?.addressText || null}
-               deliveryFee={deliveryDetails ? deliveryFee : 0}
+               
+               // --- CHANGED: Passed the new final fee down ---
+               deliveryFee={finalDeliveryFee} 
              />
            </div>
            
