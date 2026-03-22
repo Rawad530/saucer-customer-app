@@ -29,7 +29,13 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
       config: { presence: { key: currentUserId } }
     });
 
-    channel.subscribe(async (status) => {
+    // FIX: You MUST listen to 'sync' for the presence engine to initialize 
+    // properly before tracking, even if you don't use the sync data here.
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        console.log('Customer presence engine synced.');
+      })
+      .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         // This track payload gives the POS the 'user_id' it needs to turn the dot green
         await channel.track({
