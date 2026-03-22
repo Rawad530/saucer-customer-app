@@ -35,10 +35,11 @@ Deno.serve(async (req) => {
     );
 
     let discountPercentage = 0;
-    let discountType = 'percentage'; // Default to percentage
+    let discountType = 'percentage';
     let sourceType = null; 
+    let minOrderValue = 0; // Added to track minimums
 
-    // 2. Check User-Specific Coupons First (Your existing logic)
+    // 2. Check User-Specific Coupons
     const { data: couponData } = await supabaseAdmin
       .from('coupons')
       .select('discount_percent, usage_limit, used_count, expires_at')
@@ -56,42 +57,52 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 3. Check Global Promo Codes (UPDATED LOGIC)
+    // 3. Check Global Promo Codes (THE SMART DATABASE CHECK)
     if (!sourceType) {
       const { data: promoData } = await supabaseAdmin
         .from('promo_codes')
-        // We now pull the new columns we added to the database
         .select('discount_percentage, discount_type, min_order_value') 
         .eq('code', code)
         .eq('is_active', true)
         .maybeSingle();
 
       if (promoData) {
-        // SECURITY CHECK: Has this user already used this specific global code?
-        const { data: usageHistory } = await supabaseAdmin
-          .from('promo_usage')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('promo_code', code)
-          .maybeSingle();
+        // If it's SAUCERDROP, check the transactions table
+        if (code === 'SAUCERDROP') {
+            const { data: pastOrders } = await supabaseAdmin
+              .from('transactions')
+              .select('status')
+              .eq('user_id', user.id)
+              .eq('promo_code_used', code);
 
-        if (usageHistory) {
-           throw new Error(`You have already used the code ${code}.`);
+            if (pastOrders && pastOrders.length > 0) {
+                const hasSuccessfulOrder = pastOrders.some(order => 
+                    order.status !== 'pending_payment' && 
+                    order.status !== 'failed' && 
+                    order.status !== 'cancelled'
+                );
+
+                if (hasSuccessfulOrder) {
+                    throw new Error(`You have already claimed this one-time free delivery code!`);
+                }
+            }
         }
 
-        // If they haven't used it, map the variables
+        // Code is valid and hasn't been successfully used yet!
         discountPercentage = promoData.discount_percentage;
-        discountType = promoData.discount_type; // This will now grab 'free_delivery'
+        discountType = promoData.discount_type; 
+        minOrderValue = promoData.min_order_value || 0; // Capture the min order value
         sourceType = 'promo_code';
       }
     }
 
-    // 4. Final Response (UPDATED TO RETURN DISCOUNT TYPE)
+    // 4. Final Response
     if (sourceType) {
       return new Response(JSON.stringify({ 
         discount: discountPercentage, 
         source: sourceType,
-        discount_type: discountType // Send this back to React so it knows what to do!
+        discount_type: discountType,
+        min_order_value: minOrderValue // Send it back to the frontend
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
@@ -100,7 +111,7 @@ Deno.serve(async (req) => {
       throw new Error('Invalid, expired, or already used code.');
     }
 
-  } catch (error) {
+  } catch (error: any) { // Typed as any to safely read error.message
     console.error("Validation error:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

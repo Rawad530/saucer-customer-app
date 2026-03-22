@@ -1,3 +1,5 @@
+// src/pages/OrderPage.tsx
+
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { OrderItem, MenuItem, PaymentMode } from "../types/order";
@@ -21,10 +23,10 @@ import SimpleItemDialog from "../components/SimpleItemDialog";
 declare global {
   interface Window {
     fbq: (...args: any[]) => void;
+    gtag: (...args: any[]) => void; // Added for Google Ads
   }
 }
 
-// ... (Interfaces PendingItem and DeliveryDetails are the same) ...
 interface PendingItem {
  menuItem: MenuItem;
  quantity: number;
@@ -60,10 +62,8 @@ const OrderPage = () => {
  const [orderPlaced, setOrderPlaced] = useState(false);
  const [promoCode, setPromoCode] = useState("");
  
- // --- CHANGED: Added tracking for Free Delivery Promo ---
  const [appliedDiscountRate, setAppliedDiscountRate] = useState(0); 
  const [isFreeDeliveryPromo, setIsFreeDeliveryPromo] = useState(false);
- // --- END CHANGE ---
 
  const [promoMessage, setPromoMessage] = useState("");
  const [isCheckingPromo, setIsCheckingPromo] = useState(false);
@@ -76,9 +76,7 @@ const OrderPage = () => {
  const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
  const [simpleAddItem, setSimpleAddItem] = useState<MenuItem | null>(null);
 
- // --- FIX: Add state to remember the order type after cart is cleared ---
  const [completedOrderType, setCompletedOrderType] = useState<'delivery' | 'app_pickup' | null>(null);
- // --- END FIX ---
 
  const summaryRef = useRef<HTMLDivElement>(null);
  const isMobile = useIsMobile(); 
@@ -101,19 +99,13 @@ const OrderPage = () => {
  const clearCart = useCartStore((state) => state.clearCart);
  const getSummary = useCartStore((state) => state.getSummary);
 
-
- // --- RESTRUCTURED useEffect HOOKS ---
-
- // --- FIX: Added try/catch/finally to prevent infinite loading ---
  useEffect(() => {
    const fetchSessionAndMenu = async () => {
      try {
-       setLoadingMenu(true); // Start loading
-       // Get Session
+       setLoadingMenu(true);
        const { data: { session: currentSession } } = await supabase.auth.getSession();
        setSession(currentSession);
 
-       // Fetch menu
        const menuResult = await supabase.from('menu_items').select('*').eq('is_available', true).order('id');
        
        if (menuResult.error) {
@@ -122,68 +114,55 @@ const OrderPage = () => {
        }
        
        if (menuResult.data) {
-         setMenuItems(menuResult.data as MenuItem[]); // Cast to MenuItem[]
+         setMenuItems(menuResult.data as MenuItem[]); 
        }
        
      } catch (error) {
        console.error("Failed to load page data:", error);
-       // You could show an error message here
      } finally {
-       // This is the most important part
-       // This will run NO MATTER WHAT, even if Supabase fails
-       setLoadingMenu(false); // Stop loading
+       setLoadingMenu(false); 
      }
    };
    
    fetchSessionAndMenu();
-   // --- END FIX ---
 
-   // Check if returning from a failed payment
    const paymentFailedFlag = sessionStorage.getItem('paymentFailed');
    if (paymentFailedFlag) {
        console.log("Detected return from failed payment.");
        sessionStorage.removeItem('paymentFailed');
    }
-    // Set up auth listener for session changes (login/logout during the session)
-   const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
        setSession(session);
    });
 
    return () => {
        authListener.subscription.unsubscribe();
    };
- }, []); // Empty dependency array: runs once on mount
+ }, []); 
 
- // 2. Fetch Wallet Balance (Depends on session and loadingMenu completion)
  useEffect(() => {
    const fetchWallet = async () => {
      if (session?.user) {
        const walletResult = await supabase.from('customer_profiles').select('wallet_balance').eq('id', session.user.id).single();
        if (walletResult?.data) setWalletBalance(walletResult.data.wallet_balance || 0);
      } else {
-       setWalletBalance(0); // Reset balance if logged out
+       setWalletBalance(0); 
      }
    };
-   // Only run if loadingMenu is false to ensure session is settled
    if (!loadingMenu) {
        fetchWallet();
    }
  }, [session, loadingMenu]);
 
- // 3. Manage Guest State (Clear cart & "muddy boots")
  useEffect(() => {
-   // Wait until the menu/session is loaded AND the store has hydrated
    if (loadingMenu || !hasHydrated) return;
 
    if (!session) {
-     // This is a GUEST.
-     // As you said, they should have an empty cart.
      clearCart();
    }
  }, [session, loadingMenu, hasHydrated, clearCart]); 
 
 
- // --- Modify addItemToOrder to use BOTH popups ---
  const addItemToOrder = (menuItem: MenuItem) => {
    if (!session) {
      alert("Please log in or create an account to add items to your cart.");
@@ -192,16 +171,12 @@ const OrderPage = () => {
    }
 
    if (menuItem.requires_sauce || menuItem.is_combo || ['mains', 'value'].includes(menuItem.category)) {
-     // This is a CONFIGURABLE item. Open the config popup.
      setConfiguringItem({ menuItem, addons: [], spicy: false, discount: 0, quantity: 1 });
    } else {
-     // This is a SIMPLE item. Open the simple quantity popup.
      setSimpleAddItem(menuItem);
    }
  };
- // --- END ---
 
- // ... (confirmConfiguredItem is the same) ...
  const confirmConfiguredItem = () => {
    if (!configuringItem) return;
     if ((configuringItem.menuItem.requires_sauce && configuringItem.menuItem.category !== 'value' && !configuringItem.sauce) ||
@@ -234,7 +209,6 @@ const OrderPage = () => {
    scrollToSummary();
  };
 
- // --- Add a handler for the NEW simple popup ---
  const confirmSimpleItem = (quantity: number) => {
    if (!simpleAddItem) return;
    addItem({ 
@@ -244,26 +218,21 @@ const OrderPage = () => {
      spicy: false, 
      discount: 0 
    });
-   setSimpleAddItem(null); // Close the popup
-   scrollToSummary(); // Scroll for feedback
+   setSimpleAddItem(null); 
+   scrollToSummary(); 
  };
- // --- END ---
  
- // ... (handleEditItem is the same) ...
  const handleEditItem = (index: number) => {
    const itemToEdit = selectedItems[index];
    setEditingItemIndex(index);
-   // Open popup with the item's details
    setConfiguringItem({ ...itemToEdit, addons: itemToEdit.addons || [], spicy: itemToEdit.spicy ?? false, quantity: itemToEdit.quantity });
  };
  
- // ... (handleCancelConfiguringItem is the same) ...
  const handleCancelConfiguringItem = () => {
    setConfiguringItem(null);
    setEditingItemIndex(null);
  };
 
- // --- CHANGED: Updated handleApplyPromoCode to check for discount_type ---
  const handleApplyPromoCode = async () => {
     if (!promoCode.trim()) { setPromoMessage("Please enter a code."); return; }
     if (!session) { setPromoMessage("You must be logged in to use promo codes."); return; }
@@ -271,19 +240,25 @@ const OrderPage = () => {
     
     try {
       const { data, error } = await supabase.functions.invoke('validate-promo-code', { body: { promoCode: promoCode.trim() } });
-      if (error) { 
-          const errMsg = error.message || "Validation failed."; 
-          throw new Error(errMsg); 
-       }
+      if (error) { throw new Error(error.message || "Validation failed."); }
       if (data?.error) throw new Error(data.error);
+
+      // 1. Check Minimum Order Value First
+      const currentSubtotal = getSummary().subtotal; 
+      const minOrderValue = data?.min_order_value || 0;
       
-      // Check for Free Delivery
+      if (currentSubtotal < minOrderValue) {
+          const amountShort = (minOrderValue - currentSubtotal).toFixed(2);
+          throw new Error(`Spend ₾${amountShort} more to use this code. (Minimum: ₾${minOrderValue})`);
+      }
+
+      // 2. Check for Free Delivery
       if (data?.discount_type === 'free_delivery') {
          setIsFreeDeliveryPromo(true);
          setAppliedDiscountRate(0); 
          setPromoMessage("Success! Free delivery applied.");
       } 
-      // Handle standard Percentage Discount
+      // 3. Handle standard Percentage Discount
       else if (data?.discount > 0) { 
          setIsFreeDeliveryPromo(false);
          setAppliedDiscountRate(data.discount); 
@@ -292,18 +267,16 @@ const OrderPage = () => {
       else { 
          throw new Error("Invalid promo code or response."); 
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error applying promo code:", err); 
       setAppliedDiscountRate(0);
       setIsFreeDeliveryPromo(false);
-      setPromoMessage(err instanceof Error ? err.message : "Could not apply promo code.");
+      setPromoMessage(err.message || "Could not apply promo code.");
     } finally { 
       setIsCheckingPromo(false); 
     }
  };
- // --- END CHANGE ---
  
- // --- CHANGED: Updated Math calculations ---
  const { subtotal } = getSummary();
  const effectiveDiscountRate = session ? appliedDiscountRate : 0;
  const effectiveUseWallet = session ? useWallet : false;
@@ -311,43 +284,37 @@ const OrderPage = () => {
  const promoDiscountAmount = subtotal * (effectiveDiscountRate / 100);
  const priceAfterPromo = subtotal - promoDiscountAmount;
  
- // Force delivery fee to 0 if the free delivery promo is active
  const finalDeliveryFee = isFreeDeliveryPromo ? 0 : (deliveryDetails ? deliveryFee : 0);
  const totalDueBeforeWallet = priceAfterPromo + finalDeliveryFee;
  
  const walletCreditApplied = effectiveUseWallet ? Math.min(walletBalance, totalDueBeforeWallet) : 0;
  const totalPrice = totalDueBeforeWallet - walletCreditApplied;
- // --- END CHANGE ---
 
  const handleProceedToPayment = async () => {
-   // 1. Force Login Check
    if (!session) {
      alert("Please log in or create an account to place an order.");
      navigate('/login', { state: { from: location.pathname } });
      return;
    }
    
-   // 2. Empty Cart Check
    if (selectedItems.length === 0) { 
      alert("Your cart is empty."); 
      return; 
    }
    
-   // 3. Delivery Address Check
    if (deliveryDetails && !deliveryDetails.addressText) { 
      alert("Delivery address is missing."); 
      navigate('/delivery-location'); 
      return; 
    }
 
-   // 4. MINIMUM ORDER FOR DELIVERY
-   const MINIMUM_ORDER_AMOUNT = 20;
+   // CHANGED TO 15 GEL
+   const MINIMUM_ORDER_AMOUNT = 15;
    if (deliveryDetails && subtotal < MINIMUM_ORDER_AMOUNT) {
      alert(`The minimum order for delivery is ₾${MINIMUM_ORDER_AMOUNT}. Your current subtotal is ₾${subtotal.toFixed(2)}.`);
      return;
    }
 
-   // 5. All checks passed. Proceed to payment.
    placeOrder(); 
  };
 
@@ -384,12 +351,12 @@ const OrderPage = () => {
          payment_mode: paymentMode,
          status: 'pending_payment',
          created_at: new Date().toISOString(),
-         promo_code_used: (effectiveDiscountRate > 0 || isFreeDeliveryPromo) ? promoCode.toUpperCase() : null, // --- MODIFIED TO RECORD FREE DELIVERY CODES TOO ---
+         promo_code_used: (effectiveDiscountRate > 0 || isFreeDeliveryPromo) ? promoCode.toUpperCase() : null, 
          discount_applied_percent: effectiveDiscountRate > 0 ? effectiveDiscountRate : null,
          order_type: orderType,
          contact_phone: deliveryDetails?.contactPhone || null,
          delivery_address: deliveryDetails?.addressText || null,
-         delivery_fee: deliveryDetails ? finalDeliveryFee : null, // --- CHANGED TO USE finalDeliveryFee ---
+         delivery_fee: deliveryDetails ? finalDeliveryFee : null, 
          delivery_gmaps_link: deliveryDetails?.gmapsLink || null,
          delivery_building: deliveryDetails?.building || null,
          delivery_level: deliveryDetails?.level || null,
@@ -410,33 +377,37 @@ const OrderPage = () => {
        if (functionError) throw new Error(`Payment Init Error: ${functionError.message}`);
        if (functionData?.error) throw new Error(`Payment Init Error: ${functionData.error}`);
 
-       if (functionData?.paymentComplete) { // Wallet only case
-         // --- FIX: Remember the order type BEFORE clearing the cart ---
+       if (functionData?.paymentComplete) { 
          setCompletedOrderType(orderType);
-         // --- END FIX ---
          clearCart(); 
          setOrderPlaced(true);
          if (session) setWalletBalance(prev => prev - walletCreditApplied);
 
-         // --- FIRE THE PURCHASE EVENT FOR WALLET PAYMENTS ---
-         // @ts-ignore
-         window.fbq('track', 'Purchase', {
-           value: walletCreditApplied, // ✅ REAL MONEY
-           currency: 'GEL',            // ✅ REAL CURRENCY
-           content_name: 'Saucer Burger Wallet Order',
-           event_id: orderId  // <--- ADD THIS! This links it to the backend event.
-         });
+         // Meta / Facebook Tracking
+         if (typeof window.fbq === 'function') {
+           window.fbq('track', 'Purchase', {
+             value: walletCreditApplied, 
+             currency: 'GEL',            
+             content_name: 'Wallet Order',
+             event_id: orderId  
+           });
+         }
+
+         // Google Ads Tracking
+         if (typeof window.gtag === 'function') {
+           window.gtag('event', 'purchase', {
+             value: walletCreditApplied,
+             currency: 'GEL',
+             transaction_id: orderId
+           });
+         }
          
-         // --- END OF META CODE ---
-       } else if (functionData?.redirectUrl) { // Card payment needed
-         // --- FIX: Remember the order type BEFORE navigating away ---
+       } else if (functionData?.redirectUrl) { 
          setCompletedOrderType(orderType);
          
-         // ✅ SAVE PRICE FOR PIXEL ON NEXT PAGE
-         sessionStorage.setItem('pendingOrderId', orderId); // <--- ADD THIS
+         sessionStorage.setItem('pendingOrderId', orderId); 
          sessionStorage.setItem('pendingOrderTotal', totalPrice.toString());
 
-         // --- END FIX ---
          window.location.href = functionData.redirectUrl;
        } else { throw new Error("Invalid response from payment function."); }
 
@@ -468,9 +439,7 @@ const OrderPage = () => {
              <p className="text-sm text-gray-400">Your Order Number is:</p>
              <p className="text-2xl md:text-3xl font-bold tracking-wider break-all px-2">{completedOrderNumber}</p>
              <p className="text-xs text-gray-400 mt-2">
-                 {/* --- FIX: This now checks the 'completedOrderType' state variable --- */}
                  {completedOrderType === 'delivery' ? "Your order will be delivered soon." : "Please use this number for pickup."}
-                 {/* --- END FIX --- */}
              </p>
            </div>
          )}
@@ -483,17 +452,14 @@ const OrderPage = () => {
    );
  }
 
- // --- MODIFICATION: Simplified loading check ---
  if (loadingMenu) {
    return (<div className="flex justify-center items-center h-64 text-white">Loading...</div>);
  }
- // --- END MODIFICATION ---
 
  return (
    <>
      <div className="p-4 bg-gray-900 text-white min-h-screen">
        <div className="max-w-6xl mx-auto">
-         {/* ... (Header is the same) ... */}
          <div className="flex justify-between items-start mb-6">
              <div>
                <h1 className="text-3xl font-bold">
@@ -516,7 +482,6 @@ const OrderPage = () => {
              )}
          </div>
 
-         {/* ... (Delivery info box is the same) ... */}
          {deliveryDetails && deliveryDetails.addressText && (
            <div className="mb-6 p-4 bg-blue-900/30 border border-blue-700 rounded-md flex justify-between items-center gap-3">
              <div className="flex items-center gap-3">
@@ -530,9 +495,7 @@ const OrderPage = () => {
            </div>
          )}
 
-         {/* ... (Grid is the same) ... */}
          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-           {/* Menu Section */}
            <div className="space-y-6">
              {Object.entries(categorizedItems).map(([category, items]) => (
                <MenuSection
@@ -544,7 +507,6 @@ const OrderPage = () => {
              ))}
            </div>
            
-           {/* ... (Summary div is the same) ... */}
            <div ref={summaryRef} className="sticky top-16 self-start">
              <OrderSummary
                selectedItems={selectedItems}
@@ -558,19 +520,14 @@ const OrderPage = () => {
                handleApplyPromoCode={handleApplyPromoCode}
                promoMessage={promoMessage}
                isCheckingPromo={isCheckingPromo}
-               
-               // --- CHANGED: Passed both states so the button disables correctly ---
                appliedDiscount={effectiveDiscountRate > 0 || isFreeDeliveryPromo} 
-               
                isPlacingOrder={isPlacingOrder}
-               onEditItem={handleEditItem} // This now opens the popup
+               onEditItem={handleEditItem} 
                walletBalance={walletBalance}
                useWallet={effectiveUseWallet}
                onUseWalletChange={setUseWallet}
                walletCreditApplied={walletCreditApplied}
                deliveryAddress={deliveryDetails?.addressText || null}
-               
-               // --- CHANGED: Passed the new final fee down ---
                deliveryFee={finalDeliveryFee} 
              />
            </div>
@@ -579,9 +536,6 @@ const OrderPage = () => {
        </div>
      </div>
      
-     {/* --- ADD BOTH dialogs to the page --- */}
-     
-     {/* 1. The Configuration Dialog (for complex items) */}
      <Dialog 
        open={!!configuringItem} 
        onOpenChange={(isOpen) => {
@@ -603,15 +557,12 @@ const OrderPage = () => {
              onUpdatePendingItem={setConfiguringItem}
              onConfirm={confirmConfiguredItem}
              onCancel={handleCancelConfiguringItem}
-             // --- THIS IS THE FIX ---
              isEditing={editingItemIndex !== null}
-             // --- END FIX ---
            />
          )}
        </DialogContent>
      </Dialog>
 
-     {/* 2. The Simple Dialog (for Coke, Fries, etc.) */}
      <Dialog
        open={!!simpleAddItem}
        onOpenChange={(isOpen) => {
@@ -635,7 +586,6 @@ const OrderPage = () => {
          )}
        </DialogContent>
      </Dialog>
-     {/* --- END --- */}
    </>
  );
 };

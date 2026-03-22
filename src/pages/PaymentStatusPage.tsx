@@ -1,14 +1,13 @@
 // src/pages/PaymentStatusPage.tsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-// Using lucide-react icons (ensure it's installed: npm install lucide-react)
 import { Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient'; 
 
-// ADD THIS SO TYPESCRIPT DOESN'T COMPLAIN
 declare global {
   interface Window {
     fbq: (...args: any[]) => void;
-    gtag: (...args: any[]) => void; // <-- Added Google Tag here
+    gtag: (...args: any[]) => void;
   }
 }
 
@@ -18,84 +17,99 @@ const PaymentStatusPage = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'fail'>('loading');
   const [type, setType] = useState<'order' | 'wallet'>('order');
 
+  // The Gatekeeper Ref to prevent duplicate pixel fires
+  const hasTracked = useRef(false);
+
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const paymentStatus = params.get('status');
-    const paymentType = params.get('type');
-    const transactionIdFromUrl = params.get('transaction_id');
+    const handleTracking = async () => {
+      // 1. GATEKEEPER: Prevent double firing
+      if (hasTracked.current) return;
 
-    // 1. Set Visual State
-    if (paymentType === 'wallet') {
-        setType('wallet');
-    } else {
-        setType('order');
-    }
+      const params = new URLSearchParams(location.search);
+      const paymentStatus = params.get('status');
+      const paymentType = params.get('type');
+      const transactionIdFromUrl = params.get('transaction_id');
 
-    // 2. Handle Payment Status
-    if (paymentStatus === 'success') {
-      setStatus('success');
+      // Set Visual State
+      setType(paymentType === 'wallet' ? 'wallet' : 'order');
 
-      // --- TRACKING LOGIC START ---
-      // Get the Event ID for deduplication (Prefer URL, fallback to session)
-      const eventID = transactionIdFromUrl || sessionStorage.getItem('pendingOrderId');
-      
-      let amountToTrack = 0;
-      let contentName = 'Saucer Burger Order';
+      if (paymentStatus === 'success') {
+        setStatus('success');
+        
+        // --- SECURE TRACKING LOGIC ---
+        let finalAmount = 0;
+        let contentName = 'Saucer Burger Order';
+        const eventID = transactionIdFromUrl || sessionStorage.getItem('pendingOrderId');
 
-      // CHECK: Is this a Wallet Top-Up or a Food Order?
-      if (paymentType === 'wallet') {
-          // CASE A: WALLET TOP-UP
-          const savedWalletAmount = sessionStorage.getItem('pendingWalletTopup');
-          if (savedWalletAmount) {
-              amountToTrack = parseFloat(savedWalletAmount);
-              contentName = 'Wallet Top Up';
-              // Cleanup immediately
-              sessionStorage.removeItem('pendingWalletTopup'); 
+        try {
+          // A. Try to get the REAL price from the Database first
+          if (transactionIdFromUrl) {
+            const { data, error } = await supabase
+              .from('transactions')
+              .select('total_price')
+              .eq('transaction_id', transactionIdFromUrl)
+              .single();
+
+            if (!error && data) {
+              finalAmount = data.total_price;
+            }
           }
-      } else {
-          // CASE B: FOOD ORDER (Default)
-          const savedOrderTotal = sessionStorage.getItem('pendingOrderTotal');
-          // Fallback to 20 if lost to ensure we catch the event
-          amountToTrack = savedOrderTotal ? parseFloat(savedOrderTotal) : 20.00;
-          contentName = 'Saucer Burger Order';
-          
-          // Cleanup
-          sessionStorage.removeItem('pendingOrderTotal');
-          sessionStorage.removeItem('pendingOrderId');
-      }
 
-      // FIRE THE PIXELS (Only if we have a valid amount)
-      if (amountToTrack > 0) {
-          
-          // 1. Meta / Facebook Pixel
-          if (window.fbq) {
-              // @ts-ignore
+          // B. Fallback to Session Storage if DB fetch failed or ID missing
+          if (finalAmount <= 0) {
+            const savedTotal = paymentType === 'wallet' 
+              ? sessionStorage.getItem('pendingWalletTopup')
+              : sessionStorage.getItem('pendingOrderTotal');
+            
+            if (savedTotal) {
+              finalAmount = parseFloat(savedTotal);
+            }
+          }
+
+          // C. Set Content Name
+          if (paymentType === 'wallet') contentName = 'Wallet Top Up';
+
+          // D. FIRE PIXELS (Only if we have a valid amount)
+          if (finalAmount > 0) {
+            // Meta / Facebook
+            if (typeof window.fbq === 'function') {
               window.fbq('track', 'Purchase', {
-                  value: amountToTrack,
-                  currency: 'GEL',
-                  content_name: contentName,
-              },  { event_id: eventID }); // ✅ DEDUPLICATION KEY
-          }
+                value: finalAmount,
+                currency: 'GEL',
+                content_name: contentName,
+              }, { event_id: eventID });
+            }
 
-          // 2. Google Ads Tracking (NEW)
-          if (window.gtag) {
+            // Google Ads
+            if (typeof window.gtag === 'function') {
               window.gtag('event', 'purchase', {
-                  value: amountToTrack,
-                  currency: 'GEL',
-                  transaction_id: eventID
+                value: finalAmount,
+                currency: 'GEL',
+                transaction_id: eventID
               });
+            }
+            console.log(`Successfully tracked purchase: ${finalAmount} GEL`);
           }
-      }
-      // --- TRACKING LOGIC END ---
+        } catch (err) {
+          console.error("Tracking Error:", err);
+        }
 
-    } else {
-      // Default to fail if status is missing, invalid, or 'fail'
-      setStatus('fail');
-    }
-    
+        // Clean up memory
+        sessionStorage.removeItem('pendingOrderTotal');
+        sessionStorage.removeItem('pendingOrderId');
+        sessionStorage.removeItem('pendingWalletTopup');
+        
+        // LOCK THE GATE
+        hasTracked.current = true;
+
+      } else {
+        setStatus('fail');
+      }
+    };
+
+    handleTracking();
   }, [location.search]);
 
-  // This handler sets a flag in sessionStorage before navigating back.
   const handleReturnToOrder = () => {
     sessionStorage.setItem('paymentFailed', 'true');
     navigate('/order');
