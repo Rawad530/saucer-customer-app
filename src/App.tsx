@@ -101,8 +101,8 @@ function App() {
         </Routes>
 
         <Toaster />
-        
-        {/* The Chat Widget - Injected globally with the session */}
+
+        {/* This is what connects the Chat to your Login Session */}
         <LiveChatWidget session={session} />
       </>
     </LanguageProvider>
