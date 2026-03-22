@@ -15,22 +15,26 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const currentUser = session?.user;
+  
+  // FIX: Extract the primitive strings here so React doesn't thrash the connection
+  const currentUserId = currentUser?.id;
+  const currentUserEmail = currentUser?.email;
 
   // 1. THE BEACON: Tells the POS exactly who is online
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUserId) return;
 
     // This channel MUST match the POS exactly
     const channel = supabase.channel('online-users', {
-      config: { presence: { key: currentUser.id } }
+      config: { presence: { key: currentUserId } }
     });
 
     channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         // This track payload gives the POS the 'user_id' it needs to turn the dot green
         await channel.track({
-          user_id: currentUser.id,
-          email: currentUser.email || 'Customer',
+          user_id: currentUserId,
+          email: currentUserEmail || 'Customer',
           online_at: new Date().toISOString(),
         });
         console.log("🟢 Presence beacon active - POS can see you now.");
@@ -38,7 +42,8 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
     });
 
     return () => { supabase.removeChannel(channel); };
-  }, [currentUser]);
+    // FIX: Only depend on the strings, not the full session/currentUser object
+  }, [currentUserId, currentUserEmail]);
 
   // 2. LIVE MESSAGE LISTENER: Loads history and listens for manager replies
   useEffect(() => {
@@ -121,7 +126,7 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
             )}
             {messages.map((msg, i) => (
               <div key={msg.id || i} className={`p-3 rounded-2xl text-sm max-w-[85%] ${
-                msg.sender_id === currentUser.id 
+                msg.sender_id === currentUser?.id 
                   ? 'bg-orange-600 text-white self-end rounded-br-sm' 
                   : 'bg-gray-800 text-gray-200 self-start rounded-bl-sm'
               }`}>
