@@ -1,5 +1,3 @@
-// src/App.tsx
-
 import { useState, useEffect } from 'react';
 import { supabase } from './lib/supabaseClient';
 import { Session } from '@supabase/supabase-js';
@@ -13,6 +11,9 @@ import { LanguageProvider } from './contexts/LanguageContext';
 
 // 🚀 IMPORT PIXEL TRACKER HERE
 import { PixelTracker } from './components/PixelTracker';
+
+// Import Live Chat Widget
+import LiveChatWidget from './components/LiveChatWidget';
 
 // Page Imports
 import Layout from './components/Layout';
@@ -100,6 +101,9 @@ function App() {
         </Routes>
 
         <Toaster />
+        
+        {/* The Chat Widget - Injected globally with the session */}
+        <LiveChatWidget session={session} />
       </>
     </LanguageProvider>
   );
