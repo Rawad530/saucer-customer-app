@@ -7,4 +7,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Supabase URL and anon key are required.");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// 1. Declare the instance variable outside the export
+let supabaseInstance: any = null;
+
+// 2. Only execute createClient if an instance doesn't already exist
+if (!supabaseInstance) {
+  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  console.log("🛠️ Supabase Client Initialized (Locked to single instance)");
+}
+
+// 3. Export the locked instance
+export const supabase = supabaseInstance;
