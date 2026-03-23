@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
-import { supabase } from "../lib/supabaseClient"; 
+// FIX 1: Point to the singleton client we just built
+import { supabase } from "@/integrations/supabase/client"; 
 import { Session } from '@supabase/supabase-js';
 
 interface LiveChatWidgetProps {
@@ -13,10 +14,14 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [unreadCount, setUnreadCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  // FIX 2: Use a ref for isOpen so the websocket doesn't crash when you click the chat button
+  const isOpenRef = useRef(isOpen);
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
 
   const currentUser = session?.user;
-  
-  // FIX: Extract the primitive strings here so React doesn't thrash the connection
   const currentUserId = currentUser?.id;
   const currentUserEmail = currentUser?.email;
 
@@ -24,20 +29,16 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
   useEffect(() => {
     if (!currentUserId) return;
 
-    // This channel MUST match the POS exactly
     const channel = supabase.channel('saucer-presence-room', {
       config: { presence: { key: currentUserId } }
     });
 
-    // FIX: You MUST listen to 'sync' for the presence engine to initialize 
-    // properly before tracking, even if you don't use the sync data here.
     channel
       .on('presence', { event: 'sync' }, () => {
         console.log('Customer presence engine synced.');
       })
       .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        // This track payload gives the POS the 'user_id' it needs to turn the dot green
         await channel.track({
           user_id: currentUserId,
           email: currentUserEmail || 'Customer',
@@ -47,81 +48,78 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
       }
     });
 
-    //return () => { supabase.removeChannel(channel); };
-    // FIX: Only depend on the strings, not the full session/currentUser object
+    // FIX 3: Restore the cleanup function since the singleton is fixed!
+    return () => { supabase.removeChannel(channel); };
   }, [currentUserId, currentUserEmail]);
 
   // 2. LIVE MESSAGE LISTENER: Loads history and listens for manager replies
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUserId) return; 
 
     const fetchMessages = async () => {
       const { data } = await (supabase as any)
         .from('messages')
         .select('*')
-        .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
+        .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
         .order('created_at', { ascending: true });
       
       if (data && data.length > 0) {
-        // If they have chat history, just load it normally
         setMessages(data);
       } else {
-        // AUTOMATED GREETING LOGIC
-        // If they have no history, wait 4 seconds then drop a friendly greeting
         setTimeout(() => {
           setMessages(prev => {
-            // Check to make sure they haven't sent a message in those 4 seconds
             if (prev.length > 0) return prev; 
             
+            // Safe check: Only pop the badge if the chat is currently closed
+            if (!isOpenRef.current) {
+              setUnreadCount(prevCount => prevCount + 1);
+            }
+
             return [{
               id: 'system-greeting',
-              sender_id: 'system', // Not the user's ID, so it renders on the left side
+              sender_id: 'system', 
               content: "👋 Welcome to Saucer Burger and Wrap! Let us know if you need any help deciding or placing your order.",
               created_at: new Date().toISOString()
             }];
           });
-          
-          // Pop up the red notification badge to grab their attention
-          setUnreadCount(prev => prev + 1);
-        }, 4000); // 4000ms = 4 seconds
+        }, 4000); 
       }
     };
 
     fetchMessages();
 
-    const messageChannel = supabase.channel(`chat-customer-${currentUser.id}`)
+    const messageChannel = supabase.channel(`chat-customer-${currentUserId}`)
       .on('postgres_changes', { 
         event: 'INSERT', 
         schema: 'public', 
         table: 'messages' as any 
       }, (payload) => {
         const msg = payload.new;
-        if (msg.sender_id === currentUser.id || msg.receiver_id === currentUser.id) {
+        if (msg.sender_id === currentUserId || msg.receiver_id === currentUserId) {
           setMessages(prev => {
-            // Remove the system greeting if they reply, so it doesn't get awkward
             const filteredPrev = prev.filter(p => p.id !== 'system-greeting');
             return [...filteredPrev, msg];
           });
-          // Add unread badge if chat is closed and manager sent a message
-          if (!isOpen && msg.sender_id !== currentUser.id) {
+          
+          if (!isOpenRef.current && msg.sender_id !== currentUserId) {
             setUnreadCount(prev => prev + 1);
           }
         }
-      }
-    )
-    .subscribe();
+      })
+      .subscribe();
 
     return () => { supabase.removeChannel(messageChannel); };
-  }, [currentUser, isOpen]);
+    // FIX 4: Removed isOpen and currentUser from dependency array to stop violent reconnects
+  }, [currentUserId]);
 
   // 3. SEND FUNCTION: Pushes message to the database
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !currentUser?.id) return;
+    if (!newMessage.trim() || !currentUserId) return;
 
     const payload = {
-      sender_id: currentUser.id,
+      sender_id: currentUserId,
       content: newMessage.trim(),
-      receiver_id: null, // null means it's sent to the general POS/Store
+      receiver_id: null, 
     };
 
     const { error } = await (supabase as any).from('messages').insert([payload]);
@@ -130,7 +128,7 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
       console.error("SEND FAILED:", error.message);
       alert("Database error: " + error.message);
     } else {
-      setNewMessage(""); // Clear input on success
+      setNewMessage(""); 
     }
   };
 
@@ -141,7 +139,7 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
     }
   }, [messages, isOpen]);
 
-  if (!session) return null; // Don't show chat if they aren't logged in
+  if (!session) return null; 
 
   return (
     <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end">
@@ -160,7 +158,7 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
             )}
             {messages.map((msg, i) => (
               <div key={msg.id || i} className={`p-3 rounded-2xl text-sm max-w-[85%] ${
-                msg.sender_id === currentUser?.id 
+                msg.sender_id === currentUserId 
                   ? 'bg-orange-600 text-white self-end rounded-br-sm' 
                   : 'bg-gray-800 text-gray-200 self-start rounded-bl-sm'
               }`}>
