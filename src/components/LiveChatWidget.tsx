@@ -25,32 +25,33 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
   const currentUserId = currentUser?.id;
   const currentUserEmail = currentUser?.email;
 
-  // 1. THE BEACON: Tells the POS exactly who is online
+  // ==========================================
+  // 1. THE BEACON: HEARTBEAT ENGINE
+  // Bypasses Supabase Presence completely. Screams "I am here" every 3 seconds.
+  // ==========================================
   useEffect(() => {
     if (!currentUserId) return;
 
-    const channel = supabase.channel('saucer-presence-room', {
-      config: { presence: { key: currentUserId } }
-    });
+    const channel = supabase.channel('saucer-heartbeat-room');
 
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        console.log('Customer presence engine synced.');
-      })
-      .subscribe(async (status) => {
+    channel.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
-        await channel.track({
-          user_id: currentUserId,
-          email: currentUserEmail || 'Customer',
-          online_at: new Date().toISOString(),
-        });
-        console.log("🟢 Presence beacon active - POS can see you now.");
+        console.log("🟢 Heartbeat connected - Broadcasting to POS...");
+        // Send first pulse immediately upon connection
+        channel.send({ type: 'broadcast', event: 'ping', payload: { user_id: currentUserId } });
       }
     });
 
-    // FIX 3: Restore the cleanup function since the singleton is fixed!
-    //return () => { supabase.removeChannel(channel); };
-  }, [currentUserId, currentUserEmail]);
+    // Broadcast a ping every 3 seconds to keep the dot green on the POS
+    const pingInterval = setInterval(() => {
+      channel.send({ type: 'broadcast', event: 'ping', payload: { user_id: currentUserId } });
+    }, 3000);
+
+    return () => { 
+      clearInterval(pingInterval);
+      supabase.removeChannel(channel); 
+    };
+  }, [currentUserId]);
 
   // 2. LIVE MESSAGE LISTENER: Loads history and listens for manager replies
   useEffect(() => {
@@ -101,6 +102,7 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
             return [...filteredPrev, msg];
           });
           
+          // Trigger the blinking unread badge if chat is closed
           if (!isOpenRef.current && msg.sender_id !== currentUserId) {
             setUnreadCount(prev => prev + 1);
           }
@@ -109,7 +111,6 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
       .subscribe();
 
     return () => { supabase.removeChannel(messageChannel); };
-    // FIX 4: Removed isOpen and currentUser from dependency array to stop violent reconnects
   }, [currentUserId]);
 
   // 3. SEND FUNCTION: Pushes message to the database
