@@ -25,7 +25,7 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
     if (!currentUserId) return;
 
     // This channel MUST match the POS exactly
-    const channel = supabase.channel('online-users', {
+    const channel = supabase.channel('saucer-presence-room', {
       config: { presence: { key: currentUserId } }
     });
 
