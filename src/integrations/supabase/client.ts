@@ -10,16 +10,23 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // This check makes sure the variables are being read
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-  throw new Error("Supabase URL and Anon Key must be defined in the environment variables");
+  throw new Error("Supabase URL and Anon Key must be defined in the environment variables");
 }
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+// 1. Declare the instance variable outside the export
+let supabaseInstance: any = null;
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
+// 2. Only create the client if it doesn't already exist
+if (!supabaseInstance) {
+  supabaseInstance = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      storage: localStorage,
+      persistSession: true,
+      autoRefreshToken: true,
+    }
+  });
+  console.log("🛠️ Supabase Client Initialized (Locked to single instance in client.ts)");
+}
+
+// 3. Export the locked instance
+export const supabase = supabaseInstance;
