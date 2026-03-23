@@ -47,7 +47,7 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
       }
     });
 
-    return () => { supabase.removeChannel(channel); };
+    //return () => { supabase.removeChannel(channel); };
     // FIX: Only depend on the strings, not the full session/currentUser object
   }, [currentUserId, currentUserEmail]);
 
