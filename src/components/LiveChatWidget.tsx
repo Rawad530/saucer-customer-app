@@ -49,7 +49,7 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
     });
 
     // FIX 3: Restore the cleanup function since the singleton is fixed!
-    return () => { supabase.removeChannel(channel); };
+    //return () => { supabase.removeChannel(channel); };
   }, [currentUserId, currentUserEmail]);
 
   // 2. LIVE MESSAGE LISTENER: Loads history and listens for manager replies
