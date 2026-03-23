@@ -62,7 +62,29 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
         .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
         .order('created_at', { ascending: true });
       
-      if (data) setMessages(data);
+      if (data && data.length > 0) {
+        // If they have chat history, just load it normally
+        setMessages(data);
+      } else {
+        // AUTOMATED GREETING LOGIC
+        // If they have no history, wait 4 seconds then drop a friendly greeting
+        setTimeout(() => {
+          setMessages(prev => {
+            // Check to make sure they haven't sent a message in those 4 seconds
+            if (prev.length > 0) return prev; 
+            
+            return [{
+              id: 'system-greeting',
+              sender_id: 'system', // Not the user's ID, so it renders on the left side
+              content: "👋 Welcome to Saucer Burger and Wrap! Let us know if you need any help deciding or placing your order.",
+              created_at: new Date().toISOString()
+            }];
+          });
+          
+          // Pop up the red notification badge to grab their attention
+          setUnreadCount(prev => prev + 1);
+        }, 4000); // 4000ms = 4 seconds
+      }
     };
 
     fetchMessages();
@@ -75,13 +97,19 @@ const LiveChatWidget = ({ session }: LiveChatWidgetProps) => {
       }, (payload) => {
         const msg = payload.new;
         if (msg.sender_id === currentUser.id || msg.receiver_id === currentUser.id) {
-          setMessages(prev => [...prev, msg]);
+          setMessages(prev => {
+            // Remove the system greeting if they reply, so it doesn't get awkward
+            const filteredPrev = prev.filter(p => p.id !== 'system-greeting');
+            return [...filteredPrev, msg];
+          });
           // Add unread badge if chat is closed and manager sent a message
           if (!isOpen && msg.sender_id !== currentUser.id) {
             setUnreadCount(prev => prev + 1);
           }
         }
-      }).subscribe();
+      }
+    )
+    .subscribe();
 
     return () => { supabase.removeChannel(messageChannel); };
   }, [currentUser, isOpen]);
