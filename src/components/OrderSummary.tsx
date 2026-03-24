@@ -33,11 +33,8 @@ interface OrderSummaryProps {
   walletCreditApplied: number;
   deliveryAddress?: string | null;
   deliveryFee?: number;
-  // NEW PROPS FOR ANTI-FRAUD PAYMENT
   paymentMethod: 'card' | 'transfer' | 'shop';
   setPaymentMethod: (method: 'card' | 'transfer' | 'shop') => void;
-  bankReference: string;
-  setBankReference: (ref: string) => void;
   customerPhone: string;
   setCustomerPhone: (phone: string) => void;
 }
@@ -65,8 +62,6 @@ const OrderSummary = ({
   deliveryFee,
   paymentMethod,
   setPaymentMethod,
-  bankReference,
-  setBankReference,
   customerPhone,
   setCustomerPhone
 }: OrderSummaryProps) => {
@@ -74,7 +69,6 @@ const OrderSummary = ({
   const isWalletDisabled = walletBalance <= 0;
   const isDelivery = !!deliveryAddress;
   
-  // Calculate if we have a phone number (delivery puts it in a global state usually, but here we enforce locally if blank)
   const hasValidPhone = customerPhone.trim().length > 5;
 
   return (
@@ -116,7 +110,6 @@ const OrderSummary = ({
             ))}
           </div>
 
-          {/* Promo Code */}
           <div className="border-t border-b border-gray-700 py-4 space-y-2">
             <div className="flex gap-2">
               <Input
@@ -142,7 +135,6 @@ const OrderSummary = ({
             )}
           </div>
 
-          {/* Wallet Toggle */}
           <div className="border-b border-gray-700 pb-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="use-wallet" className={`flex flex-col ${isWalletDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
@@ -182,27 +174,25 @@ const OrderSummary = ({
             {paymentMethod === 'transfer' && (
                <div className="bg-gray-900 p-4 rounded-md border border-gray-700 space-y-2 mt-2">
                    <p className="text-sm text-amber-400 font-bold">Bank of Georgia (BOG)</p>
-                   <p className="text-xs text-gray-300 font-mono">IBAN: GE00BG0000000000000000</p>
+                   <p className="text-xs text-gray-300 font-mono">IBAN: GE92BG0000000607340404</p>
                    <p className="text-xs text-gray-300">Name: Saucer Burger LLC</p>
-                   <div className="pt-2">
-                     <Label className="text-xs text-gray-400">Transaction Reference Number *</Label>
-                     <Input
-                         placeholder="e.g. TRN-123456"
-                         value={bankReference}
-                         onChange={(e) => setBankReference(e.target.value)}
-                         className="bg-gray-800 border-gray-600 text-white mt-1 h-8 text-sm"
-                     />
+                   <div className="pt-2 border-t border-gray-700 mt-2">
+                     <p className="text-xs text-gray-400 leading-relaxed">
+                       1. Transfer the total amount.<br/>
+                       2. Click "Confirm and Place Order".<br/>
+                       3. A button will appear to send your receipt via WhatsApp.
+                     </p>
                    </div>
                </div>
             )}
 
-            {/* Phone Number requirement for anti-fraud (Google Sign In fallback) */}
+            {/* Phone Number requirement for anti-fraud */}
             {(paymentMethod === 'shop' || paymentMethod === 'transfer') && !hasValidPhone && (
                <div className="bg-red-900/20 p-3 rounded-md border border-red-800 space-y-2 mt-2">
                    <p className="text-xs text-red-400 font-bold">Phone Verification Required</p>
                    <p className="text-xs text-gray-300 leading-snug">To protect against fake orders, we require a valid phone number. We will call you to confirm your order.</p>
                    <Input
-                       placeholder="Enter your mobile number"
+                       placeholder="e.g., +995 555 123 456"
                        value={customerPhone}
                        onChange={(e) => setCustomerPhone(e.target.value)}
                        className="bg-gray-800 border-red-800 focus:border-amber-500 text-white mt-1 h-9 text-sm"
@@ -210,9 +200,7 @@ const OrderSummary = ({
                </div>
             )}
           </div>
-          {/* --- END NEW PAYMENT METHOD --- */}
 
-          {/* Totals Section */}
           <div className="space-y-2 pt-2">
             <div className="flex justify-between items-center text-md">
               <span className="text-gray-400">Subtotal:</span>
@@ -246,7 +234,6 @@ const OrderSummary = ({
             </div>
           </div>
 
-          {/* Confirm Button */}
           <Button
             onClick={onProceedToPayment}
             className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 text-lg font-semibold mt-2"

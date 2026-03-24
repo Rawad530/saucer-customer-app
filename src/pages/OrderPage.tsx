@@ -304,7 +304,7 @@ const OrderPage = () => {
       // Strict Phone Regex: Optional '+', followed by 8 to 15 digits (allows spaces and dashes)
       const phoneRegex = /^\+?[0-9\s-]{8,15}$/;
       if (!phoneRegex.test(activePhone)) {
-        alert("Please enter a valid phone number (e.g., +995 555 123 456).");
+        alert("Please enter a valid phone number (e.g., +995 591 920 665).");
         return;
       }
     }

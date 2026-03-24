@@ -100,6 +100,8 @@ const OrderHistoryPage = () => {
     switch (paymentMode) {
       case 'Cash':
         return "bg-slate-600 text-slate-100 border-slate-500 hover:bg-slate-600";
+      case 'Bank Transfer': // <-- ADDED THIS FOR YOUR NEW METHOD
+        return "bg-indigo-900/60 text-indigo-300 border-indigo-700 hover:bg-indigo-900/60";
       case 'Card - Terminal':
         return "bg-purple-900/60 text-purple-300 border-purple-700 hover:bg-purple-900/60";
       case 'Card - Online':
