@@ -192,7 +192,7 @@ const OrderSummary = ({
                    <p className="text-sm text-amber-400 font-bold">Phone Verification</p>
                    <p className="text-xs text-gray-300 leading-snug">We require a valid phone number to call and confirm this order.</p>
                    <Input
-                       placeholder="e.g., +995 555 123 456"
+                       placeholder="e.g., +995 591 92 06 65"
                        value={customerPhone}
                        onChange={(e) => setCustomerPhone(e.target.value)}
                        className="bg-gray-800 border-gray-600 focus:border-amber-500 text-white mt-1 h-9 text-sm"

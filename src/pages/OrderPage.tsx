@@ -441,7 +441,7 @@ const OrderPage = () => {
   };
 
   // REPLACE THIS STRING WITH YOUR ACTUAL RESTAURANT WHATSAPP NUMBER (Including Country Code, NO '+' or spaces)
-  const WHATSAPP_NUMBER = "+995 591 92 06 65"; 
+  const WHATSAPP_NUMBER = "995591920665"; 
 
   if (orderPlaced) {
     return (
