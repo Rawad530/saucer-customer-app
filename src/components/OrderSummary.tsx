@@ -1,4 +1,4 @@
-// src/components/OrderSummary.tsx (Fixed)
+// src/components/OrderSummary.tsx
 
 import React from "react";
 import { Link } from "react-router-dom";
@@ -9,6 +9,7 @@ import OrderItem from "./OrderItem";
 import { addOnOptions, bunOptions } from "@/data/menu";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Truck, Pencil } from "lucide-react";
 
 interface OrderSummaryProps {
@@ -32,6 +33,13 @@ interface OrderSummaryProps {
   walletCreditApplied: number;
   deliveryAddress?: string | null;
   deliveryFee?: number;
+  // NEW PROPS FOR ANTI-FRAUD PAYMENT
+  paymentMethod: 'card' | 'transfer' | 'shop';
+  setPaymentMethod: (method: 'card' | 'transfer' | 'shop') => void;
+  bankReference: string;
+  setBankReference: (ref: string) => void;
+  customerPhone: string;
+  setCustomerPhone: (phone: string) => void;
 }
 
 const OrderSummary = ({
@@ -55,10 +63,19 @@ const OrderSummary = ({
   walletCreditApplied,
   deliveryAddress,
   deliveryFee,
+  paymentMethod,
+  setPaymentMethod,
+  bankReference,
+  setBankReference,
+  customerPhone,
+  setCustomerPhone
 }: OrderSummaryProps) => {
 
   const isWalletDisabled = walletBalance <= 0;
   const isDelivery = !!deliveryAddress;
+  
+  // Calculate if we have a phone number (delivery puts it in a global state usually, but here we enforce locally if blank)
+  const hasValidPhone = customerPhone.trim().length > 5;
 
   return (
     <div className="space-y-4 bg-gray-800 p-6 rounded-lg">
@@ -85,7 +102,6 @@ const OrderSummary = ({
             </div>
           )}
 
-          {/* --- FIX: I have REMOVED the max-h[...] and overflow-y-auto from this div --- */}
           <div className="space-y-3 pr-2">
             {selectedItems.map((item, index) => (
               <OrderItem
@@ -99,7 +115,6 @@ const OrderSummary = ({
               />
             ))}
           </div>
-          {/* --- END FIX --- */}
 
           {/* Promo Code */}
           <div className="border-t border-b border-gray-700 py-4 space-y-2">
@@ -143,6 +158,60 @@ const OrderSummary = ({
             </div>
           </div>
 
+          {/* --- NEW: PAYMENT METHOD SELECTOR --- */}
+          <div className="border-b border-gray-700 pb-4 space-y-3">
+            <Label className="text-gray-300 font-medium block">Payment Method</Label>
+            <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)} className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="card" id="pm-card" className="text-amber-500 border-gray-500" />
+                <Label htmlFor="pm-card" className="text-gray-200 cursor-pointer">Card / Apple Pay / Google Pay</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="transfer" id="pm-transfer" className="text-amber-500 border-gray-500" />
+                <Label htmlFor="pm-transfer" className="text-gray-200 cursor-pointer">Bank Transfer</Label>
+              </div>
+              {!isDelivery && (
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="shop" id="pm-shop" className="text-amber-500 border-gray-500" />
+                  <Label htmlFor="pm-shop" className="text-gray-200 cursor-pointer">Pay at Counter</Label>
+                </div>
+              )}
+            </RadioGroup>
+
+            {/* Sub-menu for Bank Transfer */}
+            {paymentMethod === 'transfer' && (
+               <div className="bg-gray-900 p-4 rounded-md border border-gray-700 space-y-2 mt-2">
+                   <p className="text-sm text-amber-400 font-bold">Bank of Georgia (BOG)</p>
+                   <p className="text-xs text-gray-300 font-mono">IBAN: GE00BG0000000000000000</p>
+                   <p className="text-xs text-gray-300">Name: Saucer Burger LLC</p>
+                   <div className="pt-2">
+                     <Label className="text-xs text-gray-400">Transaction Reference Number *</Label>
+                     <Input
+                         placeholder="e.g. TRN-123456"
+                         value={bankReference}
+                         onChange={(e) => setBankReference(e.target.value)}
+                         className="bg-gray-800 border-gray-600 text-white mt-1 h-8 text-sm"
+                     />
+                   </div>
+               </div>
+            )}
+
+            {/* Phone Number requirement for anti-fraud (Google Sign In fallback) */}
+            {(paymentMethod === 'shop' || paymentMethod === 'transfer') && !hasValidPhone && (
+               <div className="bg-red-900/20 p-3 rounded-md border border-red-800 space-y-2 mt-2">
+                   <p className="text-xs text-red-400 font-bold">Phone Verification Required</p>
+                   <p className="text-xs text-gray-300 leading-snug">To protect against fake orders, we require a valid phone number. We will call you to confirm your order.</p>
+                   <Input
+                       placeholder="Enter your mobile number"
+                       value={customerPhone}
+                       onChange={(e) => setCustomerPhone(e.target.value)}
+                       className="bg-gray-800 border-red-800 focus:border-amber-500 text-white mt-1 h-9 text-sm"
+                   />
+               </div>
+            )}
+          </div>
+          {/* --- END NEW PAYMENT METHOD --- */}
+
           {/* Totals Section */}
           <div className="space-y-2 pt-2">
             <div className="flex justify-between items-center text-md">
@@ -180,10 +249,10 @@ const OrderSummary = ({
           {/* Confirm Button */}
           <Button
             onClick={onProceedToPayment}
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 text-lg font-semibold"
+            className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 text-lg font-semibold mt-2"
             disabled={selectedItems.length === 0 || isPlacingOrder}
           >
-            {isPlacingOrder ? "Processing..." : `Confirm and Pay ₾${totalPrice.toFixed(2)}`}
+            {isPlacingOrder ? "Processing..." : `Confirm and Place Order`}
           </Button>
         </>
       )}
