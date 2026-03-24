@@ -175,7 +175,7 @@ const OrderSummary = ({
                <div className="bg-gray-900 p-4 rounded-md border border-gray-700 space-y-2 mt-2">
                    <p className="text-sm text-amber-400 font-bold">Bank of Georgia (BOG)</p>
                    <p className="text-xs text-gray-300 font-mono">IBAN: GE92BG0000000607340404</p>
-                   <p className="text-xs text-gray-300">Name: Saucer Burger LLC</p>
+                   <p className="text-xs text-gray-300">Name: I/E Ahmad Jalwan</p>
                    <div className="pt-2 border-t border-gray-700 mt-2">
                      <p className="text-xs text-gray-400 leading-relaxed">
                        1. Transfer the total amount.<br/>
