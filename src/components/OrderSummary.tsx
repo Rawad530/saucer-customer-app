@@ -187,15 +187,15 @@ const OrderSummary = ({
             )}
 
             {/* Phone Number requirement for anti-fraud */}
-            {(paymentMethod === 'shop' || paymentMethod === 'transfer') && !hasValidPhone && (
-               <div className="bg-red-900/20 p-3 rounded-md border border-red-800 space-y-2 mt-2">
-                   <p className="text-xs text-red-400 font-bold">Phone Verification Required</p>
-                   <p className="text-xs text-gray-300 leading-snug">To protect against fake orders, we require a valid phone number. We will call you to confirm your order.</p>
+            {(paymentMethod === 'shop' || paymentMethod === 'transfer') && (
+               <div className="bg-gray-900 p-4 rounded-md border border-gray-700 space-y-2 mt-2">
+                   <p className="text-sm text-amber-400 font-bold">Phone Verification</p>
+                   <p className="text-xs text-gray-300 leading-snug">We require a valid phone number to call and confirm this order.</p>
                    <Input
                        placeholder="e.g., +995 555 123 456"
                        value={customerPhone}
                        onChange={(e) => setCustomerPhone(e.target.value)}
-                       className="bg-gray-800 border-red-800 focus:border-amber-500 text-white mt-1 h-9 text-sm"
+                       className="bg-gray-800 border-gray-600 focus:border-amber-500 text-white mt-1 h-9 text-sm"
                    />
                </div>
             )}

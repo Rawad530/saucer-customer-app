@@ -301,15 +301,15 @@ const OrderPage = () => {
         return;
       }
       
-      // Strict Phone Regex: Optional '+', followed by 8 to 15 digits (allows spaces and dashes)
-      const phoneRegex = /^\+?[0-9\s-]{8,15}$/;
-      if (!phoneRegex.test(activePhone)) {
-        alert("Please enter a valid phone number (e.g., +995 591 920 665).");
+      // Smarter validation: Counts the actual digits, ignoring spaces, dashes, or brackets.
+      const digitCount = activePhone.replace(/[^0-9]/g, '').length;
+      if (digitCount < 8 || digitCount > 15) {
+        alert("Please enter a valid phone number (e.g., +995 555 123 456).");
         return;
       }
     }
 
-    placeOrder(); 
+    placeOrder();
   };
 
   const placeOrder = async () => {
