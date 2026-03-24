@@ -8,7 +8,7 @@ import MenuSection from "../components/MenuSection";
 import OrderSummary from "../components/OrderSummary";
 import { Session } from "@supabase/supabase-js";
 import { useCartStore } from "../store/cartStore";
-import { Truck, MapPin } from "lucide-react";
+import { Truck, MapPin, MessageCircle } from "lucide-react"; // <-- Added MessageCircle for the WhatsApp button
 import { useIsMobile } from "../hooks/use-mobile"; 
 import {
   Dialog,
@@ -57,9 +57,8 @@ const OrderPage = () => {
   const [walletBalance, setWalletBalance] = useState(0);
   const [useWallet, setUseWallet] = useState(false);
   
-  // --- NEW PAYMENT & ANTI-FRAUD STATES ---
+  // --- NEW PAYMENT STATES (Removed bankReference) ---
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'shop'>('card');
-  const [bankReference, setBankReference] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   // ---------------------------------------
 
@@ -134,7 +133,6 @@ const OrderPage = () => {
   useEffect(() => {
     const fetchProfileData = async () => {
       if (session?.user) {
-        // Also fetch phone number to pre-fill if they have one (Google users might not)
         const res = await supabase.from('customer_profiles').select('wallet_balance, phone').eq('id', session.user.id).single();
         if (res?.data) {
           setWalletBalance(res.data.wallet_balance || 0);
@@ -295,17 +293,20 @@ const OrderPage = () => {
       return;
     }
 
-    // --- NEW ANTI-FRAUD VALIDATIONS ---
-    if (paymentMethod === 'transfer' && !bankReference.trim()) {
-      alert("Please enter the Bank Transaction Reference Number so we can verify your payment.");
-      return;
-    }
-
-    // Require phone number for offline/transfer methods so POS can call them
-    const hasPhone = !!customerPhone?.trim() || !!deliveryDetails?.contactPhone?.trim();
-    if ((paymentMethod === 'shop' || paymentMethod === 'transfer') && !hasPhone) {
-      alert("A valid phone number is required to verify this order. Please enter it in the payment section.");
-      return;
+    // --- ANTI-FRAUD PHONE VALIDATION ---
+    const activePhone = customerPhone?.trim() || deliveryDetails?.contactPhone?.trim() || "";
+    if (paymentMethod === 'shop' || paymentMethod === 'transfer') {
+      if (!activePhone) {
+        alert("A phone number is required to verify this order. Please enter it in the payment section.");
+        return;
+      }
+      
+      // Strict Phone Regex: Optional '+', followed by 8 to 15 digits (allows spaces and dashes)
+      const phoneRegex = /^\+?[0-9\s-]{8,15}$/;
+      if (!phoneRegex.test(activePhone)) {
+        alert("Please enter a valid phone number (e.g., +995 555 123 456).");
+        return;
+      }
     }
 
     placeOrder(); 
@@ -338,18 +339,16 @@ const OrderPage = () => {
         if (walletCreditApplied > 0) {
             if (totalPrice < 0.01) {
               finalPaymentMode = 'Wallet Only';
-              // Leave status as pending_payment to let Edge function finalize it, or push direct.
-              // We will let the Edge function handle Wallet Only so logic remains identical to before.
             }
             else if (paymentMethod === 'card') {
               finalPaymentMode = 'Wallet/Card Combo';
             }
         }
 
-        // Attach Bank Reference to the Notes so the POS can see it clearly
+        // Attach WhatsApp notice to the Notes so the POS can see it clearly
         let finalNotes = deliveryDetails?.notes || "";
         if (paymentMethod === 'transfer') {
-            finalNotes = `[BANK REF: ${bankReference}] ${finalNotes}`.trim();
+            finalNotes = `[RECEIPT VIA WHATSAPP] ${finalNotes}`.trim();
         }
 
         const transactionData = {
@@ -374,7 +373,7 @@ const OrderPage = () => {
           delivery_building: deliveryDetails?.building || null,
           delivery_level: deliveryDetails?.level || null,
           delivery_unit: deliveryDetails?.unit || null,
-          delivery_address_notes: finalNotes || null, // Includes Bank Ref
+          delivery_address_notes: finalNotes || null, 
           delivery_lat: deliveryDetails?.lat || null,
           delivery_lng: deliveryDetails?.lng || null,
         };
@@ -441,9 +440,12 @@ const OrderPage = () => {
     drinks: menuItems.filter(item => item.category === 'drinks'),
   };
 
+  // REPLACE THIS STRING WITH YOUR ACTUAL RESTAURANT WHATSAPP NUMBER (Including Country Code, NO '+' or spaces)
+  const WHATSAPP_NUMBER = "995555123456"; 
+
   if (orderPlaced) {
     return (
-        <div className="flex flex-col justify-center items-center h-96 text-center p-4 text-white">
+        <div className="flex flex-col justify-center items-center min-h-[500px] text-center p-4 text-white">
           <h1 className="text-4xl font-bold text-amber-500 mb-2">Thank You{
              session?.user?.user_metadata?.full_name ? `, ${session.user.user_metadata.full_name}` :
              '!'
@@ -453,21 +455,39 @@ const OrderPage = () => {
               ? "Your order has been placed successfully." 
               : "Your order has been sent to the kitchen for approval!"}
           </p>
+          
           {completedOrderNumber && (
-            <div className="bg-gray-800 p-4 rounded-lg mb-6 border border-gray-700">
-              <p className="text-sm text-gray-400">Your Order Number is:</p>
-              <p className="text-2xl md:text-3xl font-bold tracking-wider break-all px-2">{completedOrderNumber}</p>
-              <p className="text-xs text-amber-400 mt-2 font-bold">
+            <div className="bg-gray-800 p-6 rounded-xl mb-6 border border-gray-700 max-w-md w-full shadow-lg">
+              <p className="text-sm text-gray-400 uppercase tracking-widest">Order Number</p>
+              <p className="text-3xl md:text-4xl font-bold tracking-wider text-white my-2">{completedOrderNumber}</p>
+              
+              {paymentMethod === 'transfer' ? (
+                <div className="mt-6 pt-6 border-t border-gray-700">
+                  <p className="text-sm text-gray-300 mb-4">Please send us a screenshot of your bank transfer to confirm this order.</p>
+                  <a 
+                    href={`https://wa.me/${WHATSAPP_NUMBER}?text=Hi!%20Here%20is%20the%20payment%20receipt%20for%20my%20order:%20${completedOrderNumber}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 px-6 py-4 font-bold text-white bg-[#25D366] rounded-xl hover:bg-[#20bd5a] transition-colors w-full shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                  >
+                    <MessageCircle className="w-6 h-6" />
+                    Send Receipt via WhatsApp
+                  </a>
+                </div>
+              ) : (
+                <p className="text-sm text-amber-400 mt-4 font-bold">
                   {completedOrderType === 'delivery' 
                     ? "Our staff will review and accept your order shortly." 
                     : "Please keep your phone nearby! We will call to confirm."}
-              </p>
+                </p>
+              )}
             </div>
           )}
-          <div className="flex justify-center items-center gap-4">
-            {session && (<Link to="/history" className="px-6 py-2 font-bold text-amber-500 border border-amber-500 rounded-md hover:bg-amber-500 hover:text-white transition-colors">Track Order</Link>)}
-            {session ? (<Link to="/account" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">Back to Account</Link>)
-                     : (<Link to="/" className="px-6 py-2 font-bold text-white bg-amber-600 rounded-md hover:bg-amber-700">Back to Home</Link>)}
+
+          <div className="flex flex-wrap justify-center items-center gap-4">
+            {session && (<Link to="/history" className="px-6 py-3 font-bold text-amber-500 border-2 border-amber-500 rounded-lg hover:bg-amber-500 hover:text-white transition-colors">Track Order</Link>)}
+            {session ? (<Link to="/account" className="px-6 py-3 font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors">Back to Account</Link>)
+                     : (<Link to="/" className="px-6 py-3 font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors">Back to Home</Link>)}
           </div>
         </div>
     );
@@ -550,11 +570,8 @@ const OrderPage = () => {
                 walletCreditApplied={walletCreditApplied}
                 deliveryAddress={deliveryDetails?.addressText || null}
                 deliveryFee={finalDeliveryFee}
-                // PASSED NEW PROPS TO SUMMARY
                 paymentMethod={paymentMethod}
                 setPaymentMethod={setPaymentMethod}
-                bankReference={bankReference}
-                setBankReference={setBankReference}
                 customerPhone={customerPhone}
                 setCustomerPhone={setCustomerPhone}
               />
