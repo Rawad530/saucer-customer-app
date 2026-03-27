@@ -8,7 +8,7 @@ import MenuSection from "../components/MenuSection";
 import OrderSummary from "../components/OrderSummary";
 import { Session } from "@supabase/supabase-js";
 import { useCartStore } from "../store/cartStore";
-import { Truck, MapPin, MessageCircle } from "lucide-react"; // <-- Added MessageCircle for the WhatsApp button
+import { Truck, MapPin, MessageCircle, AlertTriangle } from "lucide-react"; // <-- Added AlertTriangle
 import { useIsMobile } from "../hooks/use-mobile"; 
 import {
   Dialog,
@@ -57,16 +57,17 @@ const OrderPage = () => {
   const [walletBalance, setWalletBalance] = useState(0);
   const [useWallet, setUseWallet] = useState(false);
   
-  // --- NEW PAYMENT STATES (Removed bankReference) ---
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'shop'>('card');
   const [customerPhone, setCustomerPhone] = useState("");
-  // ---------------------------------------
 
   const [configuringItem, setConfiguringItem] = useState<PendingItem | null>(null);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [completedOrderNumber, setCompletedOrderNumber] = useState<string | null>(null);
   const [simpleAddItem, setSimpleAddItem] = useState<MenuItem | null>(null);
   const [completedOrderType, setCompletedOrderType] = useState<'delivery' | 'app_pickup' | null>(null);
+
+  // --- NEW STATE: RESTAURANT OPEN STATUS ---
+  const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
 
   const summaryRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile(); 
@@ -89,7 +90,6 @@ const OrderPage = () => {
   const clearCart = useCartStore((state) => state.clearCart);
   const getSummary = useCartStore((state) => state.getSummary);
 
-  // Force 'card' if they switch from pickup to delivery (Shop pay not allowed for delivery)
   useEffect(() => {
     if (deliveryDetails && paymentMethod === 'shop') {
       setPaymentMethod('card');
@@ -97,16 +97,27 @@ const OrderPage = () => {
   }, [deliveryDetails, paymentMethod]);
 
   useEffect(() => {
-    const fetchSessionAndMenu = async () => {
+    const fetchPageData = async () => {
       try {
         setLoadingMenu(true);
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         setSession(currentSession);
 
-        const menuResult = await supabase.from('menu_items').select('*').eq('is_available', true).order('id');
+        // --- FETCH RESTAURANT STATUS CONCURRENTLY ---
+        const [menuResult, statusRes] = await Promise.all([
+           supabase.from('menu_items').select('*').eq('is_available', true).order('id'),
+           supabase.functions.invoke('check-restaurant-status')
+        ]);
         
         if (menuResult.error) throw menuResult.error;
         if (menuResult.data) setMenuItems(menuResult.data as MenuItem[]); 
+
+        if (statusRes.error) {
+            console.error("Error checking restaurant status:", statusRes.error);
+            setIsRestaurantOpen(false); // Default closed if error
+        } else {
+            setIsRestaurantOpen(statusRes.data?.isOpen ?? false);
+        }
         
       } catch (error) {
         console.error("Failed to load page data:", error);
@@ -115,7 +126,7 @@ const OrderPage = () => {
       }
     };
     
-    fetchSessionAndMenu();
+    fetchPageData();
 
     const paymentFailedFlag = sessionStorage.getItem('paymentFailed');
     if (paymentFailedFlag) {
@@ -152,12 +163,16 @@ const OrderPage = () => {
     if (!session) clearCart();
   }, [session, loadingMenu, hasHydrated, clearCart]); 
 
+  // --- UPDATED ADD ITEM FUNCTION ---
+  // Optional: You can choose to block them from even adding to the cart,
+  // or let them build a cart but block checkout. I'm letting them add, but blocking checkout.
   const addItemToOrder = (menuItem: MenuItem) => {
     if (!session) {
       alert("Please log in or create an account to add items to your cart.");
       navigate('/login', { state: { from: location.pathname } });
       return; 
     }
+    
     if (menuItem.requires_sauce || menuItem.is_combo || ['mains', 'value'].includes(menuItem.category)) {
       setConfiguringItem({ menuItem, addons: [], spicy: false, discount: 0, quantity: 1 });
     } else {
@@ -269,7 +284,14 @@ const OrderPage = () => {
   const walletCreditApplied = effectiveUseWallet ? Math.min(walletBalance, totalDueBeforeWallet) : 0;
   const totalPrice = totalDueBeforeWallet - walletCreditApplied;
 
+  // --- UPDATED PAYMENT HANDLER ---
   const handleProceedToPayment = async () => {
+    // 1. HARD STOP IF RESTAURANT IS CLOSED
+    if (isRestaurantOpen === false) {
+      alert("Sorry, we are currently closed. Please check our opening hours and try again later.");
+      return;
+    }
+
     if (!session) {
       alert("Please log in or create an account to place an order.");
       navigate('/login', { state: { from: location.pathname } });
@@ -293,7 +315,6 @@ const OrderPage = () => {
       return;
     }
 
-    // --- ANTI-FRAUD PHONE VALIDATION ---
     const activePhone = customerPhone?.trim() || deliveryDetails?.contactPhone?.trim() || "";
     if (paymentMethod === 'shop' || paymentMethod === 'transfer') {
       if (!activePhone) {
@@ -301,7 +322,6 @@ const OrderPage = () => {
         return;
       }
       
-      // Smarter validation: Counts the actual digits, ignoring spaces, dashes, or brackets.
       const digitCount = activePhone.replace(/[^0-9]/g, '').length;
       if (digitCount < 8 || digitCount > 15) {
         alert("Please enter a valid phone number (e.g., +995 555 123 456).");
@@ -324,16 +344,15 @@ const OrderPage = () => {
         const orderNumber = orderNumberData.orderNumber;
         setCompletedOrderNumber(orderNumber);
 
-        // --- DETERMINE FINAL PAYMENT MODE & STATUS ---
         let finalPaymentMode: PaymentMode = 'Card - Online';
         let initialStatus = 'pending_payment';
 
         if (paymentMethod === 'transfer') {
             finalPaymentMode = 'Bank Transfer';
-            initialStatus = 'pending_approval'; // Drops into POS red alert box
+            initialStatus = 'pending_approval'; 
         } else if (paymentMethod === 'shop') {
             finalPaymentMode = 'Cash'; 
-            initialStatus = 'pending_approval'; // Drops into POS red alert box
+            initialStatus = 'pending_approval'; 
         }
 
         if (walletCreditApplied > 0) {
@@ -345,7 +364,6 @@ const OrderPage = () => {
             }
         }
 
-        // Attach WhatsApp notice to the Notes so the POS can see it clearly
         let finalNotes = deliveryDetails?.notes || "";
         if (paymentMethod === 'transfer') {
             finalNotes = `[RECEIPT VIA WHATSAPP] ${finalNotes}`.trim();
@@ -366,7 +384,7 @@ const OrderPage = () => {
           promo_code_used: (effectiveDiscountRate > 0 || isFreeDeliveryPromo) ? promoCode.toUpperCase() : null, 
           discount_applied_percent: effectiveDiscountRate > 0 ? effectiveDiscountRate : null,
           order_type: orderType,
-          contact_phone: deliveryDetails?.contactPhone || customerPhone || null, // Capture phone
+          contact_phone: deliveryDetails?.contactPhone || customerPhone || null, 
           delivery_address: deliveryDetails?.addressText || null,
           delivery_fee: deliveryDetails ? finalDeliveryFee : null, 
           delivery_gmaps_link: deliveryDetails?.gmapsLink || null,
@@ -384,9 +402,7 @@ const OrderPage = () => {
           throw new Error(`Database Insert Failed: ${insertError.message}`);
         }
 
-        // --- BYPASS BOG EDGE FUNCTION IF TRANSFER OR SHOP ---
         if (paymentMethod === 'card' || (walletCreditApplied > 0 && totalPrice < 0.01)) {
-            // Original BOG Flow
             const { data: functionData, error: functionError } = await supabase.functions.invoke('initiate-payment', { body: { orderId } });
             if (functionError) throw new Error(`Payment Init Error: ${functionError.message}`);
             if (functionData?.error) throw new Error(`Payment Init Error: ${functionData.error}`);
@@ -410,13 +426,11 @@ const OrderPage = () => {
               window.location.href = functionData.redirectUrl;
             } else { throw new Error("Invalid response from payment function."); }
         } else {
-            // Bypass BOG - Order is successfully sent to POS as "Pending Approval"
             setCompletedOrderType(orderType);
             clearCart();
             setOrderPlaced(true);
             if (session) setWalletBalance(prev => prev - walletCreditApplied);
             
-            // Fire tracking for manual payment
             if (typeof window.fbq === 'function') {
               window.fbq('track', 'Purchase', { value: totalPrice, currency: 'GEL', content_name: `Manual Order - ${paymentMethod}`, event_id: orderId });
             }
@@ -440,57 +454,57 @@ const OrderPage = () => {
     drinks: menuItems.filter(item => item.category === 'drinks'),
   };
 
-  // REPLACE THIS STRING WITH YOUR ACTUAL RESTAURANT WHATSAPP NUMBER (Including Country Code, NO '+' or spaces)
   const WHATSAPP_NUMBER = "995591920665"; 
 
   if (orderPlaced) {
+    // ... (Your existing orderPlaced return block) ...
     return (
-        <div className="flex flex-col justify-center items-center min-h-[500px] text-center p-4 text-white">
-          <h1 className="text-4xl font-bold text-amber-500 mb-2">Thank You{
-             session?.user?.user_metadata?.full_name ? `, ${session.user.user_metadata.full_name}` :
-             '!'
-          }</h1>
-          <p className="text-lg mb-4">
-            {paymentMethod === 'card' || (walletCreditApplied > 0 && totalPrice < 0.01) 
-              ? "Your order has been placed successfully." 
-              : "Your order has been sent to the kitchen for approval!"}
-          </p>
-          
-          {completedOrderNumber && (
-            <div className="bg-gray-800 p-6 rounded-xl mb-6 border border-gray-700 max-w-md w-full shadow-lg">
-              <p className="text-sm text-gray-400 uppercase tracking-widest">Order Number</p>
-              <p className="text-3xl md:text-4xl font-bold tracking-wider text-white my-2">{completedOrderNumber}</p>
-              
-              {paymentMethod === 'transfer' ? (
-                <div className="mt-6 pt-6 border-t border-gray-700">
-                  <p className="text-sm text-gray-300 mb-4">Please send us a screenshot of your bank transfer to confirm this order.</p>
-                  <a 
-                    href={`https://wa.me/${WHATSAPP_NUMBER}?text=Hi!%20Here%20is%20the%20payment%20receipt%20for%20my%20order:%20${completedOrderNumber}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center justify-center gap-2 px-6 py-4 font-bold text-white bg-[#25D366] rounded-xl hover:bg-[#20bd5a] transition-colors w-full shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-                  >
-                    <MessageCircle className="w-6 h-6" />
-                    Send Receipt via WhatsApp
-                  </a>
-                </div>
-              ) : (
-                <p className="text-sm text-amber-400 mt-4 font-bold">
-                  {completedOrderType === 'delivery' 
-                    ? "Our staff will review and accept your order shortly." 
-                    : "Please keep your phone nearby! We will call to confirm."}
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className="flex flex-wrap justify-center items-center gap-4">
-            {session && (<Link to="/history" className="px-6 py-3 font-bold text-amber-500 border-2 border-amber-500 rounded-lg hover:bg-amber-500 hover:text-white transition-colors">Track Order</Link>)}
-            {session ? (<Link to="/account" className="px-6 py-3 font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors">Back to Account</Link>)
-                     : (<Link to="/" className="px-6 py-3 font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors">Back to Home</Link>)}
+      <div className="flex flex-col justify-center items-center min-h-[500px] text-center p-4 text-white">
+        <h1 className="text-4xl font-bold text-amber-500 mb-2">Thank You{
+           session?.user?.user_metadata?.full_name ? `, ${session.user.user_metadata.full_name}` :
+           '!'
+        }</h1>
+        <p className="text-lg mb-4">
+          {paymentMethod === 'card' || (walletCreditApplied > 0 && totalPrice < 0.01) 
+            ? "Your order has been placed successfully." 
+            : "Your order has been sent to the kitchen for approval!"}
+        </p>
+        
+        {completedOrderNumber && (
+          <div className="bg-gray-800 p-6 rounded-xl mb-6 border border-gray-700 max-w-md w-full shadow-lg">
+            <p className="text-sm text-gray-400 uppercase tracking-widest">Order Number</p>
+            <p className="text-3xl md:text-4xl font-bold tracking-wider text-white my-2">{completedOrderNumber}</p>
+            
+            {paymentMethod === 'transfer' ? (
+              <div className="mt-6 pt-6 border-t border-gray-700">
+                <p className="text-sm text-gray-300 mb-4">Please send us a screenshot of your bank transfer to confirm this order.</p>
+                <a 
+                  href={`https://wa.me/${WHATSAPP_NUMBER}?text=Hi!%20Here%20is%20the%20payment%20receipt%20for%20my%20order:%20${completedOrderNumber}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-4 font-bold text-white bg-[#25D366] rounded-xl hover:bg-[#20bd5a] transition-colors w-full shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+                >
+                  <MessageCircle className="w-6 h-6" />
+                  Send Receipt via WhatsApp
+                </a>
+              </div>
+            ) : (
+              <p className="text-sm text-amber-400 mt-4 font-bold">
+                {completedOrderType === 'delivery' 
+                  ? "Our staff will review and accept your order shortly." 
+                  : "Please keep your phone nearby! We will call to confirm."}
+              </p>
+            )}
           </div>
+        )}
+
+        <div className="flex flex-wrap justify-center items-center gap-4">
+          {session && (<Link to="/history" className="px-6 py-3 font-bold text-amber-500 border-2 border-amber-500 rounded-lg hover:bg-amber-500 hover:text-white transition-colors">Track Order</Link>)}
+          {session ? (<Link to="/account" className="px-6 py-3 font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors">Back to Account</Link>)
+                   : (<Link to="/" className="px-6 py-3 font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors">Back to Home</Link>)}
         </div>
-    );
+      </div>
+  );
   }
 
   if (loadingMenu) {
@@ -501,6 +515,18 @@ const OrderPage = () => {
     <>
       <div className="p-4 bg-gray-900 text-white min-h-screen">
         <div className="max-w-6xl mx-auto">
+          
+          {/* --- NEW: CLOSED RESTAURANT BANNER --- */}
+          {isRestaurantOpen === false && (
+            <div className="mb-6 bg-red-900/50 border border-red-500 rounded-lg p-4 flex items-start gap-3 shadow-lg">
+              <AlertTriangle className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-bold text-red-400 text-lg">We are currently closed!</h3>
+                <p className="text-red-200 text-sm mt-1">You are welcome to browse our menu, but we cannot accept new orders until we reopen. Check our operating hours in the footer.</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-between items-start mb-6">
               <div>
                 <h1 className="text-3xl font-bold">
@@ -574,6 +600,8 @@ const OrderPage = () => {
                 setPaymentMethod={setPaymentMethod}
                 customerPhone={customerPhone}
                 setCustomerPhone={setCustomerPhone}
+                // --- NEW PROP PASSED TO ORDER SUMMARY ---
+                isRestaurantOpen={isRestaurantOpen} 
               />
             </div>
             

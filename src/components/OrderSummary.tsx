@@ -37,6 +37,7 @@ interface OrderSummaryProps {
   setPaymentMethod: (method: 'card' | 'transfer' | 'shop') => void;
   customerPhone: string;
   setCustomerPhone: (phone: string) => void;
+  isRestaurantOpen: boolean | null; // <-- ADDED PROP
 }
 
 const OrderSummary = ({
@@ -63,7 +64,8 @@ const OrderSummary = ({
   paymentMethod,
   setPaymentMethod,
   customerPhone,
-  setCustomerPhone
+  setCustomerPhone,
+  isRestaurantOpen // <-- ADDED PROP DESTRUCTURING
 }: OrderSummaryProps) => {
 
   const isWalletDisabled = walletBalance <= 0;
@@ -150,7 +152,6 @@ const OrderSummary = ({
             </div>
           </div>
 
-          {/* --- NEW: PAYMENT METHOD SELECTOR --- */}
           <div className="border-b border-gray-700 pb-4 space-y-3">
             <Label className="text-gray-300 font-medium block">Payment Method</Label>
             <RadioGroup value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as any)} className="space-y-2">
@@ -170,7 +171,6 @@ const OrderSummary = ({
               )}
             </RadioGroup>
 
-            {/* Sub-menu for Bank Transfer */}
             {paymentMethod === 'transfer' && (
                <div className="bg-gray-900 p-4 rounded-md border border-gray-700 space-y-2 mt-2">
                    <p className="text-sm text-amber-400 font-bold">Bank of Georgia (BOG)</p>
@@ -186,7 +186,6 @@ const OrderSummary = ({
                </div>
             )}
 
-            {/* Phone Number requirement for anti-fraud */}
             {(paymentMethod === 'shop' || paymentMethod === 'transfer') && (
                <div className="bg-gray-900 p-4 rounded-md border border-gray-700 space-y-2 mt-2">
                    <p className="text-sm text-amber-400 font-bold">Phone Verification</p>
@@ -234,12 +233,21 @@ const OrderSummary = ({
             </div>
           </div>
 
+          {/* --- UPDATED BUTTON --- */}
           <Button
             onClick={onProceedToPayment}
-            className="w-full bg-amber-600 hover:bg-amber-700 text-white py-3 text-lg font-semibold mt-2"
-            disabled={selectedItems.length === 0 || isPlacingOrder}
+            className={`w-full py-3 text-lg font-semibold mt-2 ${
+              isRestaurantOpen === false 
+                ? 'bg-gray-600 hover:bg-gray-600 text-gray-300 cursor-not-allowed' 
+                : 'bg-amber-600 hover:bg-amber-700 text-white'
+            }`}
+            disabled={selectedItems.length === 0 || isPlacingOrder || isRestaurantOpen === false}
           >
-            {isPlacingOrder ? "Processing..." : `Confirm and Place Order`}
+            {isRestaurantOpen === false 
+              ? "Restaurant Closed" 
+              : isPlacingOrder 
+                ? "Processing..." 
+                : "Confirm and Place Order"}
           </Button>
         </>
       )}
