@@ -1,6 +1,48 @@
 // supabase/functions/bog-callback-handler/index.ts
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from '@supabase/supabase-js'
 import { verifyBogSignature } from '../_shared/cryptoUtils.ts'
+
+// === META CONVERSIONS API HELPER (100% ISOLATED) ===
+async function sendToMeta(eventId: string, value: number, contentName: string) {
+  try {
+    const pixelId = Deno.env.get('META_PIXEL_ID');
+    const token = Deno.env.get('META_ACCESS_TOKEN');
+    
+    if (!pixelId || !token) {
+      console.log("Meta CAPI: Missing environment variables, skipping tracking.");
+      return;
+    }
+
+    const payload = {
+      data: [
+        {
+          event_name: "Purchase",
+          event_time: Math.floor(Date.now() / 1000),
+          action_source: "website",
+          event_id: eventId, 
+          user_data: { external_id: [eventId] },
+          custom_data: {
+            currency: "GEL",
+            value: value,
+            content_name: contentName
+          }
+        }
+      ]
+    };
+
+    const res = await fetch(`https://graph.facebook.com/v19.0/${pixelId}/events?access_token=${token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    
+    const json = await res.json();
+    console.log("Meta CAPI Ping Result:", json);
+  } catch (err: unknown) {
+    console.error("Meta CAPI Network Error:", err);
+  }
+}
+// =========================================================
 
 Deno.serve(async (req) => {
   // 1. Security Verification (Mandatory)
@@ -56,6 +98,16 @@ Deno.serve(async (req) => {
 
         if (topupSuccess) {
             console.log(`Successfully finalized wallet top-up: ${externalId}`);
+            
+            // ---> META TRACKING INJECTION FOR WALLET <---
+            try {
+                const amount = paymentDetails?.amount ? parseFloat(paymentDetails.amount) : 0;
+                if (amount > 0) {
+                   await sendToMeta(externalId, amount, "Wallet Top Up");
+                }
+            } catch (e: unknown) { console.error("Wallet Meta Ping Failed:", e); }
+            // --------------------------------------------
+
             return new Response("Wallet top-up finalized successfully.", { status: 200 });
         }
 
@@ -71,6 +123,21 @@ Deno.serve(async (req) => {
         }
 
         console.log(`Successfully confirmed order payment: ${externalId}`);
+        
+        // ---> META TRACKING INJECTION FOR ORDER <---
+        try {
+            const { data: trxData } = await supabaseAdmin
+                .from('transactions')
+                .select('total_price')
+                .eq('transaction_id', externalId)
+                .single();
+
+            if (trxData && trxData.total_price > 0) {
+                await sendToMeta(externalId, trxData.total_price, "Saucer Burger Order");
+            }
+        } catch (e: unknown) { console.error("Order Meta Ping Failed:", e); }
+        // -------------------------------------------
+
         return new Response("Order payment confirmed successfully.", { status: 200 });
 
     } else if (['rejected', 'failed', 'canceled', 'expired'].includes(status)) {
@@ -99,8 +166,9 @@ Deno.serve(async (req) => {
         return new Response(`Callback received. Status: ${status}.`, { status: 200 });
     }
 
-  } catch (error) {
-    console.error("Error processing callback (e.g., JSON parsing):", error.message);
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : String(error);
+    console.error("Error processing callback (e.g., JSON parsing):", errMessage);
     return new Response(JSON.stringify({ error: "Error processing callback" }), { status: 500 });
   }
-})
+});
