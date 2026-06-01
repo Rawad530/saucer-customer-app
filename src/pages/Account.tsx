@@ -37,7 +37,6 @@ const Account = ({ session }: { session: Session }) => {
   const [rewardsAvailable, setRewardsAvailable] = useState(false);
   const { t } = useLanguage(); 
 
-
   const navigate = useNavigate();
   const clearDeliveryDetails = useCartStore((state) => state.clearDeliveryDetails);
 
@@ -117,14 +116,10 @@ const Account = ({ session }: { session: Session }) => {
     fetchDashboardData();
   }, [session, t]);
 
-
   const handlePickUpClick = () => {
-
     clearDeliveryDetails();
-
     navigate('/order');
   };
-
 
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen bg-gray-900 text-white">{t.account_loading}</div>;
@@ -150,15 +145,11 @@ const Account = ({ session }: { session: Session }) => {
             <div className="bg-amber-600 p-8 rounded-lg text-center">
               <h2 className="text-3xl font-bold mb-6">{t.account_readyForRound}</h2>
               {isRestaurantOpen === null ? (
-
                 <button className="w-full md:w-auto px-12 py-4 text-lg font-bold bg-gray-500 text-white rounded-md cursor-not-allowed mb-2">
                   {t.account_checkingHours}
                 </button>
               ) : isRestaurantOpen ? (
-
                 <div className="flex flex-col md:flex-row justify-center gap-4">
-
-
                   <div className="flex-1 md:flex-none flex flex-col items-center">
                     <Link
                       to="/delivery-location"
@@ -169,22 +160,17 @@ const Account = ({ session }: { session: Session }) => {
                     <p className="text-sm text-amber-100 mt-2">{t.account_deliveryNote}</p>
                   </div>
 
-
                   <div className="flex-1 md:flex-none flex flex-col items-center">
-
                     <button
                       onClick={handlePickUpClick}
                       className="w-full inline-flex items-center justify-center px-8 py-4 text-lg font-bold bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors"
                     >
                       <ShoppingBag className="w-5 h-5 mr-2" /> {t.account_pickup}
                     </button>
-
                     <p className="text-sm text-amber-100 mt-2">{t.account_pickupNote}</p>
                   </div>
-
                 </div>
               ) : (
-
                 <div className="text-center py-4"> 
                   <p className="text-lg font-semibold text-red-100 bg-black/75 px-4 py-2 rounded-md inline-block">
                     {t.account_closed}
@@ -193,8 +179,7 @@ const Account = ({ session }: { session: Session }) => {
               )}
             </div>
 
-
-            {/* Rewards Card (Your original DIV structure) */}
+            {/* Rewards Card */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><Star className="w-6 h-6 mr-2 text-amber-400" /> {t.account_rewardsTitle}</h3>
               {profileData && (
@@ -228,12 +213,19 @@ const Account = ({ session }: { session: Session }) => {
                   <p className="text-sm text-gray-400 mt-1">{t.account_rewardsKeepCollecting}</p>
                 </div>
               )}
-              <Link to="/rewards" className="text-sm text-amber-400 hover:underline mt-4 inline-block">{t.account_rewardsViewAll}</Link>
+              
+              <Link 
+                to="/rewards" 
+                className="mt-6 flex items-center justify-center w-full px-4 py-3 text-lg font-bold text-gray-900 bg-amber-400 rounded-lg hover:bg-amber-500 transition-colors shadow-lg transform hover:-translate-y-1"
+              >
+                <Gift className="w-5 h-5 mr-2" />
+                {t.account_rewardsViewAll}
+              </Link>
             </div>
 
             <MyCoupons />
 
-            {/* Recent Activity Card (Your original DIV structure) */}
+            {/* Recent Activity Card */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><History className="w-6 h-6 mr-2 text-gray-300" /> {t.account_activityTitle}</h3>
               {lastOrder ? (
@@ -248,7 +240,7 @@ const Account = ({ session }: { session: Session }) => {
               <Link to="/history" className="text-sm text-amber-400 hover:underline mt-4 inline-block">{t.account_activityViewHistory}</Link>
             </div>
 
-            {/* Side Quests Card (Your original DIV structure) */}
+            {/* Side Quests Card */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4">
                 <Gift className="w-6 h-6 mr-2 text-purple-400" />
@@ -260,7 +252,7 @@ const Account = ({ session }: { session: Session }) => {
               </Link>
             </div>
 
-            {/* Announcements Card (Your original DIV structure) */}
+            {/* Announcements Card */}
             {announcements.length > 0 && (
               <div className="bg-gray-800 p-6 rounded-lg">
                 <h3 className="flex items-center text-xl font-bold mb-4"><Megaphone className="w-6 h-6 mr-2 text-blue-400" /> {t.account_announcementsTitle}</h3>
@@ -278,7 +270,7 @@ const Account = ({ session }: { session: Session }) => {
 
           {/* Right Column */}
           <div className="space-y-6">
-            {/* Profile & Wallet Card (Your original DIV structure) */}
+            {/* Profile & Wallet Card */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><User className="w-6 h-6 mr-2 text-gray-300" /> {t.account_profileTitle}</h3>
               <div className="text-center bg-gray-700/50 p-4 rounded-md mb-4">
@@ -296,7 +288,7 @@ const Account = ({ session }: { session: Session }) => {
               </div>
             </div>
 
-            {/* Loyalty Code Card (Your original DIV structure) */}
+            {/* Loyalty Code Card */}
             <div className="bg-gray-800 p-6 rounded-lg text-center">
               <h3 className="flex items-center justify-center text-xl font-bold mb-4"><QrCode className="w-6 h-6 mr-2 text-gray-300" /> {t.account_loyaltyTitle}</h3>
               <div className="bg-white p-4 rounded-md inline-block">
@@ -305,7 +297,7 @@ const Account = ({ session }: { session: Session }) => {
               <p className="text-xs text-gray-400 mt-2">{t.account_loyaltyDesc}</p>
             </div>
 
-            {/* Delivery Partners Card (Your original DIV structure) */}
+            {/* Delivery Partners Card */}
             <div className="bg-gray-800 p-6 rounded-lg">
               <h3 className="flex items-center text-xl font-bold mb-4"><Truck className="w-6 h-6 mr-2 text-gray-300" /> {t.account_partnersTitle}</h3>
               <p className="text-gray-400 mb-4 text-sm">{t.account_partnersDesc}</p>

@@ -17,7 +17,7 @@ export const drinkOptions = [
 
 export const addOnOptions = [
   { name: 'Add Cheese Slice', price: 2.00 },
-  { name: 'Add Jalapeno', price: 1.00 }
+  { name: 'Add Pickles', price: 1.00 }
 ];
 
 // This is the new array we need for the bun feature.

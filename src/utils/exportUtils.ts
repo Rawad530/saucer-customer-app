@@ -93,7 +93,7 @@ const parseItemDetails = (itemName: string) => {
   
   // Check for specific categories
   const isDrink = ['coca cola', 'fanta', 'sprite', 'cappy', 'ice tea', 'water'].some(drink => lowerName.includes(drink));
-  const isSauce = ['sauce', 'cup', 'jalapeno'].some(sauce => lowerName.includes(sauce));
+  const isSauce = ['sauce', 'cup', 'pickles'].some(sauce => lowerName.includes(sauce));
   const isSide = ['fries', 'onion rings', 'strips'].some(side => lowerName.includes(side));
   const isAddon = lowerName.includes('add ');
   

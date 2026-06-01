@@ -60,7 +60,7 @@ const calculateOrderSubtotal = (items: OrderItem[]) => {
     // (This matches your screenshot: 9.50 + 15.50 = 25.50... wait...
     // No, your screenshot `image_abe76d.png` has a subtotal of 30.00.
     // Let's re-check the math.
-    // Item 1: 9.50 (base) + 2.00 (cheese) + 1.00 (jalapeno) = 12.50
+    // Item 1: 9.50 (base) + 2.00 (cheese) + 1.00 (pickles) = 12.50
     // Item 2: 15.50 (base) + 2.00 (cheese) = 17.50
     // 12.50 + 17.50 = 30.00.
     // OK. The subtotal *includes* addons. My mistake.

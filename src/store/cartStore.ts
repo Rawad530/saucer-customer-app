@@ -40,7 +40,8 @@ interface CartState {
   setHasHydrated: (hydrated: boolean) => void;
   
   // Derived state
-  getSummary: () => { subtotal: number; itemCount: number };
+  // --- REWARDS UPDATE: Added pointsTotal to the return type ---
+  getSummary: () => { subtotal: number; itemCount: number; pointsTotal: number };
 }
 
 export const useCartStore = create<CartState>()(
@@ -61,6 +62,7 @@ export const useCartStore = create<CartState>()(
         // Logic to merge quantities if the exact same item configuration exists
         const existingIndex = state.items.findIndex(existing =>
             existing.menuItem.id === item.menuItem.id &&
+            existing.isReward === item.isReward && // <-- REWARDS UPDATE: Stop free items from merging with paid ones
             existing.bunType === item.bunType &&
             existing.sauce === item.sauce &&
             existing.sauceCup === item.sauceCup &&
@@ -117,6 +119,9 @@ export const useCartStore = create<CartState>()(
       getSummary: () => {
         const items = get().items;
         const subtotal = items.reduce((sum, item) => {
+            // --- REWARDS UPDATE: If it is a reward, it costs 0 GEL ---
+            if (item.isReward) return sum;
+
             let itemPrice = item.menuItem.price;
 
             // Add bun price if applicable
@@ -132,8 +137,13 @@ export const useCartStore = create<CartState>()(
             const itemDiscount = itemPrice * ((item.discount || 0) / 100);
             return sum + ((itemPrice - itemDiscount) * item.quantity);
         }, 0);
+        
         const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
-        return { subtotal, itemCount };
+        
+        // --- REWARDS UPDATE: Calculate how many points the items in the cart are using ---
+        const pointsTotal = items.reduce((sum, item) => sum + (item.isReward ? (item.pointsCost || 0) * item.quantity : 0), 0);
+        
+        return { subtotal, itemCount, pointsTotal };
       }
     }),
     {

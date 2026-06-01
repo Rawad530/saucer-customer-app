@@ -14,6 +14,7 @@ interface OrderItemProps {
 
 const OrderItem = ({ item, index, onUpdateQuantity, onEdit, addOnOptions, bunOptions }: OrderItemProps) => {
   const calculateItemTotal = () => {
+    if (item.isReward) return 0; // Ensure logic internally knows it's free
     let itemPrice = item.menuItem.price;
     // Add bun price if applicable
     if (item.bunType) {
@@ -35,7 +36,7 @@ const OrderItem = ({ item, index, onUpdateQuantity, onEdit, addOnOptions, bunOpt
         <div className="flex justify-between items-start">
           <div className="flex-1 mr-2">
             <h5 className="font-medium text-gray-800 text-sm">
-              {item.menuItem.name}
+              {item.menuItem.name} {item.isReward && <span className="text-amber-500 font-bold ml-1">(Reward)</span>}
             </h5>
             <div className="text-xs text-gray-600 space-y-0.5 mt-1">
               
@@ -57,6 +58,7 @@ const OrderItem = ({ item, index, onUpdateQuantity, onEdit, addOnOptions, bunOpt
               size="sm"
               variant="outline"
               className="w-7 h-7 p-0"
+              disabled={item.isReward} 
             >
               -
             </Button>
@@ -66,6 +68,7 @@ const OrderItem = ({ item, index, onUpdateQuantity, onEdit, addOnOptions, bunOpt
               size="sm"
               variant="outline"
               className="w-7 h-7 p-0"
+              disabled={item.isReward}
             >
               +
             </Button>
@@ -76,12 +79,14 @@ const OrderItem = ({ item, index, onUpdateQuantity, onEdit, addOnOptions, bunOpt
             <Button onClick={() => onUpdateQuantity(index, 0)} variant="ghost" size="sm" className="h-7 px-2 text-red-600 hover:bg-red-50 hover:text-red-700">
               <Trash2 className="h-4 w-4" />
             </Button>
+            {!item.isReward && (
             <Button onClick={() => onEdit(index)} variant="ghost" size="sm" className="h-7 px-2 text-blue-600 hover:bg-blue-50 hover:text-blue-700">
               <Pencil className="h-4 w-4" />
             </Button>
+            )}
           </div>
-          <span className="font-semibold text-amber-600">
-            ₾{itemTotalPrice.toFixed(2)}
+          <span className={`font-semibold ${item.isReward ? 'text-green-600' : 'text-amber-600'}`}>
+            {item.isReward ? `Free (-${item.pointsCost} Pts)` : `₾${itemTotalPrice.toFixed(2)}`}
           </span>
         </div>
       </CardContent>

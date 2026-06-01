@@ -8,7 +8,7 @@ import MenuSection from "../components/MenuSection";
 import OrderSummary from "../components/OrderSummary";
 import { Session } from "@supabase/supabase-js";
 import { useCartStore } from "../store/cartStore";
-import { Truck, MapPin, MessageCircle, AlertTriangle } from "lucide-react"; // <-- Added AlertTriangle
+import { Truck, MapPin, MessageCircle, AlertTriangle } from "lucide-react"; 
 import { useIsMobile } from "../hooks/use-mobile"; 
 import {
   Dialog,
@@ -37,6 +37,8 @@ interface PendingItem {
   spicy: boolean;
   remarks?: string;
   discount?: number;
+  isReward?: boolean;      
+  pointsCost?: number;     
 }
 
 const OrderPage = () => {
@@ -57,6 +59,9 @@ const OrderPage = () => {
   const [walletBalance, setWalletBalance] = useState(0);
   const [useWallet, setUseWallet] = useState(false);
   
+  const [userPoints, setUserPoints] = useState(0); 
+  const [availableRewards, setAvailableRewards] = useState<any[]>([]);
+  
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'transfer' | 'shop'>('card');
   const [customerPhone, setCustomerPhone] = useState("");
 
@@ -66,7 +71,6 @@ const OrderPage = () => {
   const [simpleAddItem, setSimpleAddItem] = useState<MenuItem | null>(null);
   const [completedOrderType, setCompletedOrderType] = useState<'delivery' | 'app_pickup' | null>(null);
 
-  // --- NEW STATE: RESTAURANT OPEN STATUS ---
   const [isRestaurantOpen, setIsRestaurantOpen] = useState<boolean | null>(null);
 
   const summaryRef = useRef<HTMLDivElement>(null);
@@ -103,7 +107,6 @@ const OrderPage = () => {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         setSession(currentSession);
 
-        // --- FETCH RESTAURANT STATUS CONCURRENTLY ---
         const [menuResult, statusRes] = await Promise.all([
            supabase.from('menu_items').select('*').eq('is_available', true).order('id'),
            supabase.functions.invoke('check-restaurant-status')
@@ -114,7 +117,7 @@ const OrderPage = () => {
 
         if (statusRes.error) {
             console.error("Error checking restaurant status:", statusRes.error);
-            setIsRestaurantOpen(false); // Default closed if error
+            setIsRestaurantOpen(false); 
         } else {
             setIsRestaurantOpen(statusRes.data?.isOpen ?? false);
         }
@@ -144,13 +147,22 @@ const OrderPage = () => {
   useEffect(() => {
     const fetchProfileData = async () => {
       if (session?.user) {
-        const res = await supabase.from('customer_profiles').select('wallet_balance, phone').eq('id', session.user.id).single();
+        const res = await supabase.from('customer_profiles').select('wallet_balance, phone, points').eq('id', session.user.id).single();
         if (res?.data) {
           setWalletBalance(res.data.wallet_balance || 0);
+          setUserPoints(res.data.points || 0); 
           if (res.data.phone) setCustomerPhone(res.data.phone);
         }
+
+        const rewardsRes = await supabase.from('rewards').select('*').eq('is_active', true);
+        if (rewardsRes.data) {
+          setAvailableRewards(rewardsRes.data);
+        }
+
       } else {
         setWalletBalance(0); 
+        setUserPoints(0);
+        setAvailableRewards([]);
       }
     };
     if (!loadingMenu) {
@@ -163,9 +175,6 @@ const OrderPage = () => {
     if (!session) clearCart();
   }, [session, loadingMenu, hasHydrated, clearCart]); 
 
-  // --- UPDATED ADD ITEM FUNCTION ---
-  // Optional: You can choose to block them from even adding to the cart,
-  // or let them build a cart but block checkout. I'm letting them add, but blocking checkout.
   const addItemToOrder = (menuItem: MenuItem) => {
     if (!session) {
       alert("Please log in or create an account to add items to your cart.");
@@ -177,6 +186,46 @@ const OrderPage = () => {
       setConfiguringItem({ menuItem, addons: [], spicy: false, discount: 0, quantity: 1 });
     } else {
       setSimpleAddItem(menuItem);
+    }
+  };
+
+  const handleAddReward = (reward: any) => {
+    const cartSummary = getSummary() as any; 
+    const currentPointsUsed = cartSummary.pointsTotal || 0;
+    const remainingPoints = userPoints - currentPointsUsed;
+
+    if (remainingPoints < reward.points_required) {
+      alert("Not enough points remaining for this reward!");
+      return;
+    }
+
+    const alreadyInCart = selectedItems.some(i => i.isReward && i.menuItem.id === reward.menu_item_id);
+    if (alreadyInCart) {
+        alert("You have already added this reward to your cart!");
+        return;
+    }
+
+    const matchedMenuItem = menuItems.find(m => m.id === reward.menu_item_id);
+    if (!matchedMenuItem) {
+       alert("Reward item not currently available on the menu.");
+       return;
+    }
+
+    const rewardItemProps = {
+       menuItem: matchedMenuItem,
+       quantity: 1,
+       addons: [],
+       spicy: false,
+       discount: 0,
+       isReward: true,
+       pointsCost: reward.points_required
+    };
+
+    if (matchedMenuItem.requires_sauce || matchedMenuItem.is_combo || ['mains', 'value'].includes(matchedMenuItem.category)) {
+       setConfiguringItem(rewardItemProps as PendingItem);
+    } else {
+       addItem(rewardItemProps as OrderItem);
+       scrollToSummary();
     }
   };
 
@@ -198,7 +247,9 @@ const OrderPage = () => {
       addons: configuringItem.addons, 
       spicy: configuringItem.spicy, 
       remarks: configuringItem.remarks, 
-      discount: configuringItem.discount
+      discount: configuringItem.discount,
+      isReward: configuringItem.isReward,     
+      pointsCost: configuringItem.pointsCost  
     };
     
     if (editingItemIndex !== null) {
@@ -271,7 +322,10 @@ const OrderPage = () => {
      }
   };
   
-  const { subtotal } = getSummary();
+  const cartSummary = getSummary() as any; 
+  const subtotal = cartSummary.subtotal;
+  const pointsTotal = cartSummary.pointsTotal || 0;
+
   const effectiveDiscountRate = session ? appliedDiscountRate : 0;
   const effectiveUseWallet = session ? useWallet : false;
   
@@ -284,9 +338,7 @@ const OrderPage = () => {
   const walletCreditApplied = effectiveUseWallet ? Math.min(walletBalance, totalDueBeforeWallet) : 0;
   const totalPrice = totalDueBeforeWallet - walletCreditApplied;
 
-  // --- UPDATED PAYMENT HANDLER ---
   const handleProceedToPayment = async () => {
-    // 1. HARD STOP IF RESTAURANT IS CLOSED
     if (isRestaurantOpen === false) {
       alert("Sorry, we are currently closed. Please check our opening hours and try again later.");
       return;
@@ -315,15 +367,20 @@ const OrderPage = () => {
       return;
     }
 
+    if (pointsTotal > userPoints) {
+       alert("You do not have enough points for these rewards. Please remove a reward item or check your balance.");
+       return;
+    }
+
     const activePhone = customerPhone?.trim() || deliveryDetails?.contactPhone?.trim() || "";
     if (paymentMethod === 'shop' || paymentMethod === 'transfer') {
-      if (!activePhone) {
+      if (!activePhone && totalPrice > 0) {
         alert("A phone number is required to verify this order. Please enter it in the payment section.");
         return;
       }
       
       const digitCount = activePhone.replace(/[^0-9]/g, '').length;
-      if (digitCount < 8 || digitCount > 15) {
+      if (totalPrice > 0 && (digitCount < 8 || digitCount > 15)) {
         alert("Please enter a valid phone number (e.g., +995 555 123 456).");
         return;
       }
@@ -369,15 +426,31 @@ const OrderPage = () => {
             finalNotes = `[RECEIPT VIA WHATSAPP] ${finalNotes}`.trim();
         }
 
+        const itemsPayload = selectedItems.map(item => {
+            if (item.isReward) {
+                return {
+                    ...item,
+                    menuItem: { 
+                        ...item.menuItem, 
+                        price: 0, 
+                        name: `${item.menuItem.name} (Free Reward)` 
+                    },
+                    discount: 100 
+                };
+            }
+            return item;
+        });
+
         const transactionData = {
           transaction_id: orderId,
           user_id: session?.user?.id || null,
           guest_name: null,
           guest_phone: null,
           order_number: orderNumber,
-          items: selectedItems as any,
+          items: itemsPayload as any,
           total_price: totalPrice,
           wallet_credit_applied: walletCreditApplied,
+          points_redeemed: pointsTotal, 
           payment_mode: finalPaymentMode,
           status: initialStatus,
           created_at: new Date().toISOString(),
@@ -457,7 +530,6 @@ const OrderPage = () => {
   const WHATSAPP_NUMBER = "995591920665"; 
 
   if (orderPlaced) {
-    // ... (Your existing orderPlaced return block) ...
     return (
       <div className="flex flex-col justify-center items-center min-h-[500px] text-center p-4 text-white">
         <h1 className="text-4xl font-bold text-amber-500 mb-2">Thank You{
@@ -516,7 +588,6 @@ const OrderPage = () => {
       <div className="p-4 bg-gray-900 text-white min-h-screen">
         <div className="max-w-6xl mx-auto">
           
-          {/* --- NEW: CLOSED RESTAURANT BANNER --- */}
           {isRestaurantOpen === false && (
             <div className="mb-6 bg-red-900/50 border border-red-500 rounded-lg p-4 flex items-start gap-3 shadow-lg">
               <AlertTriangle className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
@@ -591,7 +662,7 @@ const OrderPage = () => {
                 isPlacingOrder={isPlacingOrder}
                 onEditItem={handleEditItem} 
                 walletBalance={walletBalance}
-                useWallet={effectiveUseWallet}
+                useWallet={useWallet}
                 onUseWalletChange={setUseWallet}
                 walletCreditApplied={walletCreditApplied}
                 deliveryAddress={deliveryDetails?.addressText || null}
@@ -600,8 +671,10 @@ const OrderPage = () => {
                 setPaymentMethod={setPaymentMethod}
                 customerPhone={customerPhone}
                 setCustomerPhone={setCustomerPhone}
-                // --- NEW PROP PASSED TO ORDER SUMMARY ---
                 isRestaurantOpen={isRestaurantOpen} 
+                userPoints={userPoints - pointsTotal}
+                availableRewards={availableRewards} 
+                onAddReward={handleAddReward} 
               />
             </div>
             

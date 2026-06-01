@@ -36,6 +36,8 @@ export interface OrderItem {
   spicy?: boolean;
   remarks?: string;
   discount?: number;
+  isReward?: boolean;
+  pointsCost?: number;
 }
 
 // Represents data used during the item configuration process (Frontend state)
@@ -49,6 +51,8 @@ export interface PendingItem {
   spicy: boolean;
   remarks?: string;
   discount?: number;
+  isReward?: boolean;
+  pointsCost?: number;
 }
 
 // Represents a complete transaction record fetched from the database (snake_case).
