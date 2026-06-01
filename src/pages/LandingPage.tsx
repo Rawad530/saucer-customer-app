@@ -55,14 +55,22 @@ const LandingPage = () => {
     if (isRestaurantOpen === null) {
       return <StyledButton disabled>{t.hero_orderButton_checking}</StyledButton>;
     }
+    
+    // When the restaurant is OPEN
     if (isRestaurantOpen) {
-      return <Link to="/order" className="px-6 py-3 rounded-lg font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-md hover:shadow-lg transition-colors">{t.hero_orderButton_active}</Link>;
-    }
-    return (
-      <div className="text-center">
-        <StyledButton disabled>
+      return (
+        <Link to="/order" className="px-6 py-3 rounded-lg font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-md hover:shadow-lg transition-colors inline-block">
           {t.hero_orderButton_active}
-        </StyledButton>
+        </Link>
+      );
+    }
+    
+    // When the restaurant is CLOSED
+    return (
+      <div className="text-center flex flex-col items-center">
+        <Link to="/order" className="px-6 py-3 rounded-lg font-semibold text-white bg-amber-600 hover:bg-amber-700 shadow-md hover:shadow-lg transition-colors inline-block">
+          {t.hero_orderButton_active}
+        </Link>
         <p className="text-sm font-semibold text-red-500 mt-2">
           {t.hero_orderButton_closed}
         </p>
